@@ -1,0 +1,9 @@
+/* LoginPage.css */
+.loginPage.withBackground {
+    background: linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)), url(/src/assets/Images/bglogin.jpeg);    
+    background-size: cover;
+    background-position: center;
+    min-height: 100vh;
+    overflow: auto;
+    height: 100%;
+  }

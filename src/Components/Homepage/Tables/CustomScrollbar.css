@@ -1,0 +1,21 @@
+
+::-webkit-scrollbar {
+    width: 2px; /* Width of the scrollbar */
+    height: 10px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background-color: gray; /* Color of the scrollbar thumb */
+    border-radius: 25px; /* Rounded corners for the thumb */
+  }
+  
+  /* Target the scrollbar track on hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: silver; /* Color of the scrollbar thumb on hover */
+  }
+  
+  /* Target the scrollbar track background */
+  ::-webkit-scrollbar-track {
+    background-color: rgb(245, 245, 245); /* Background color of the scrollbar track */
+  }
+  
