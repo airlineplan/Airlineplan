@@ -32,6 +32,7 @@ const MainPage = () => {
   const [sector, setSector] = useState("sectors");
   const [activeStep, setActiveStep] = useState(0);
   const [flightsData, setFlightsData] = useState(null);
+  const [totalFlights, setTotalFlights] = useState(0);
   const navigate = useNavigate();
 
   const handleStep = (step) => () => {
@@ -57,44 +58,23 @@ const MainPage = () => {
     }, 2000);
   };
 
-  const fetchFlightsData = async () => {
+  const fetchFlightsData = async (page = 1, limit = 10) => {
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.get("https://airlineplan.com/flight", {
+      const response = await axios.get(`https://airlineplan.com/flight?page=${page}&limit=${limit}`, {
         headers: {
           "x-access-token": accessToken,
         },
       });
-      setFlightsData(response.data);
+  
+      // Set flights data and total count for pagination
+      setFlightsData(response.data.data); // Paginated data
+      setTotalFlights(response.data.total); // Total count
     } catch (error) {
       console.error("Error fetching data:", error);
     }
   };
-
-  // const createConnections = async () => {
-  //   try {
-  //     const accessToken = localStorage.getItem("accessToken");
-  //     localStorage.setItem("isConnectionsDone", false); // Set to false before making the request
-
-  //     const response = await axios.get("https://airlineplan.com/createConnections", {
-  //       headers: {
-  //         "x-access-token": accessToken,
-  //       },
-  //     });
-
-  //     // Check if the response is successful
-  //     if (response.status === 200) {
-  //       console.log("Create Connections");
-  //       localStorage.setItem("isConnectionsDone", true); // Set to true after a successful request
-  //     } else {
-  //       console.error("Error fetching data: Invalid response status");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching data:", error);
-  //     // Ensure to handle any errors properly, you might want to set isConnectionsDone to false here too, depending on your application logic
-  //     localStorage.setItem("isConnectionsDone", false);
-  //   }
-  // };
+  
 
   const isAnyTableWithData = () => {
     return (
@@ -114,7 +94,7 @@ const MainPage = () => {
 
     // Fetch flights data for all steps except step 3
     if (activeStep === 4) {
-      fetchFlightsData();
+      // fetchFlightsData();
     }
   }, [activeStep]);
 

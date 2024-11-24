@@ -30,6 +30,8 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [arrow, setArrow] = useState({ column: null, direction: "Up" });
   const [flgtsTableData, setFlgtsTableData] = useState([]);
+  const [RowsPerPage, setRowsPerPage] = useState(10);
+  const [totalFlights, setTotalFlights] = useState(0); // Total flights count
   const [date, setDate] = useState("");
   const [day, setDay] = useState("");
   const [flight, setFlight] = useState("");
@@ -166,9 +168,28 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
     setRotationNumber(event.target.value);
   };
 
+  const fetchFlightsData = async (page = 1, limit = 10) => {
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      console.log("page : ",page + "limit : ", limit);
+      const response = await axios.get(`https://airlineplan.com/flight?page=${page}&limit=${limit}`, {
+        headers: {
+          "x-access-token": accessToken,
+        },
+      });
+
+      setFlgtsTableData(response.data.data); // Update table data
+      setTotalFlights(response.data.total); // Update total flights count
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
+
   useEffect(() => {
-    setFlgtsTableData(flightsData);
-  }, [flightsData]);
+    fetchFlightsData(currentPage, RowsPerPage);
+  }, [currentPage, RowsPerPage]);
+
 
   console.log(flgtsTableData, "this is data");
 
@@ -1251,7 +1272,7 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                     ?.toLowerCase()
                     ?.includes(day?.toLowerCase())
               )
-              .slice(startIndex, endIndex)
+              // .slice(startIndex, endIndex)
 
               ?.map((row, index) => (
                 <TableRow key={index} sx={{ backgroundColor: index % 2 !== 0 ? '#f0f0f0' : 'inherit' }}>
@@ -1263,7 +1284,7 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                       textAlign: "center",
                     }}
                   >
-                    {(currentPage-1)*8 + index + 1}
+                    {(currentPage - 1) * 8 + index + 1}
                   </TableCell>
                   <TableCell
                     sx={{
@@ -1530,11 +1551,12 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
       </Stack>
       <Stack direction="row" justifyContent="end">
         <Pagination
-          count={Math.ceil(flgtsTableData?.length / RowsPerPage)}
-          page={currentPage}
-          onChange={handlePageChange}
+          count={Math.ceil(totalFlights / RowsPerPage)} // Total pages
+          page={currentPage} // Current page
+          onChange={handlePageChange} // Page change handler
           color="primary"
         />
+
       </Stack>
     </Stack>
   );
