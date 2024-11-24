@@ -1284,7 +1284,7 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                       textAlign: "center",
                     }}
                   >
-                    {(currentPage - 1) * 8 + index + 1}
+                    {(currentPage - 1) * 10 + index + 1}
                   </TableCell>
                   <TableCell
                     sx={{
