@@ -212,9 +212,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
       }
 
       // Filter out empty fields from the data
-      const filteredData = Object.fromEntries(
-        Object.entries(filters).filter(([_, value]) => value)
-      );
+      // const filteredData = Object.fromEntries(
+      //   Object.entries(filters).filter(([_, value]) => value)
+      // );
 
       // Ensure the filtered data is not empty
       // if (Object.keys(filteredData).length === 0) {
