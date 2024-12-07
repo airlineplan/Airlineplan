@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
   Table,
   TableHead,
@@ -21,9 +21,10 @@ import moment from "moment";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import DownloadIcon from "@mui/icons-material/Download";
+import debounce from "lodash.debounce";
 import "./CustomScrollbar.css";
 import axios from "axios";
-const RowsPerPage = 8;
+// const RowsPerPage = 10;
 const label = { inputProps: { "aria-label": "Checkbox demo" } };
 
 const FlgtsTable = ({ flightsData, isMaster }) => {
@@ -32,39 +33,65 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
   const [flgtsTableData, setFlgtsTableData] = useState([]);
   const [RowsPerPage, setRowsPerPage] = useState(10);
   const [totalFlights, setTotalFlights] = useState(0); // Total flights count
-  const [date, setDate] = useState("");
-  const [day, setDay] = useState("");
-  const [flight, setFlight] = useState("");
-  const [depStn, setDepStn] = useState("");
-  const [std, setStd] = useState("");
-  const [bt, setBt] = useState("");
-  const [sta, setSta] = useState("");
-  const [arrStn, setArrStn] = useState("");
-  const [sector, setSector] = useState("");
-  const [variant, setVariant] = useState("");
-  const [seats, setSeats] = useState("");
-  const [cargoCapT, setCargoCapT] = useState("");
-  const [dist, setDist] = useState("");
-  const [pax, setPax] = useState("");
-  const [cargoT, setCargoT] = useState("");
-  const [ask, setAsk] = useState("");
-  const [rsk, setRsk] = useState("");
-  const [cargoAtk, setCargoAtk] = useState("");
-  const [cargoRtk, setCargoRtk] = useState("");
-  const [domINTL, setDomIntl] = useState("");
-  const [userTag1, setUserTag1] = useState("");
-  const [userTag2, setUserTag2] = useState("");
-  const [remarks1, setRemarks1] = useState("");
-  const [remarks2, setRemarks2] = useState("");
-  const [rotationNumber, setRotationNumber] = useState("");
+  // const [date, setDate] = useState("");
+  // const [day, setDay] = useState("");
+  // const [flight, setFlight] = useState("");
+  // const [depStn, setDepStn] = useState("");
+  // const [std, setStd] = useState("");
+  // const [bt, setBt] = useState("");
+  // const [sta, setSta] = useState("");
+  // const [arrStn, setArrStn] = useState("");
+  // const [sector, setSector] = useState("");
+  // const [variant, setVariant] = useState("");
+  // const [seats, setSeats] = useState("");
+  // const [cargoCapT, setCargoCapT] = useState("");
+  // const [dist, setDist] = useState("");
+  // const [pax, setPax] = useState("");
+  // const [cargoT, setCargoT] = useState("");
+  // const [ask, setAsk] = useState("");
+  // const [rsk, setRsk] = useState("");
+  // const [cargoAtk, setCargoAtk] = useState("");
+  // const [cargoRtk, setCargoRtk] = useState("");
+  // const [domINTL, setDomIntl] = useState("");
+  // const [userTag1, setUserTag1] = useState("");
+  // const [userTag2, setUserTag2] = useState("");
+  // const [remarks1, setRemarks1] = useState("");
+  // const [remarks2, setRemarks2] = useState("");
+  // const [rotationNumber, setRotationNumber] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [arrowDirection, setArrowDirection] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [filters, setFilters] = useState({
+    date: "",
+    day: "",
+    flight: "",
+    depStn: "",
+    std: "",
+    bt: "",
+    sta: "",
+    arrStn: "",
+    sector: "",
+    variant: "",
+    seats: "",
+    cargoT: "",
+    dist: "",
+    pax: "",
+    ask: "",
+    rsk: "",
+    cargoAtk: "",
+    cargoRtk: "",
+    domIntl: "",
+    userTag1: "",
+    userTag2: "",
+    remarks1: "",
+    remarks2: "",
+    rotations: "",
+  });
 
-  const sortedData = () => {
+  const sortedData = useCallback(() => {
     if (!arrow.column) return flgtsTableData;
 
-    const sorted = [...flgtsTableData].sort((a, b) => {
+    return [...flgtsTableData].sort((a, b) => {
       const colA = a[arrow.column];
       const colB = b[arrow.column];
 
@@ -74,9 +101,8 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
         return colB.localeCompare(colA);
       }
     });
+  }, [arrow, flgtsTableData]);
 
-    return sorted;
-  };
 
   const handleArrow = (columnName) => {
     setArrow((prevArrow) => ({
@@ -92,103 +118,357 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
     setArrowDirection(!arrowDirection);
   };
 
-  const handleDate = (e) => {
-    setDate(e.target.value);
-  };
-  const handleDay = (e) => {
-    setDay(e.target.value);
-  };
-  const handleFlight = (event) => {
-    setFlight(event.target.value);
-  };
-  const handleDepStn = (event) => {
-    setDepStn(event.target.value);
-  };
-  const handleSTD = (event) => {
-    setStd(event.target.value);
-  };
-  const handleBT = (event) => {
-    setBt(event.target.value);
-  };
-  const handleSTA = (event) => {
-    setSta(event.target.value);
-  };
-  const handleArrStn = (event) => {
-    setArrStn(event.target.value);
-  };
-  const handleSector = (event) => {
-    setSector(event.target.value);
+
+  // const handleDate = (e) => {
+  //   setDate(e.target.value);
+  // };
+  // const handleDay = (e) => {
+  //   setDay(e.target.value);
+  // };
+  // const handleFlight = (event) => {
+  //   setFlight(event.target.value);
+  // };
+  // const handleDepStn = (event) => {
+  //   setDepStn(event.target.value);
+  // };
+  // const handleSTD = (event) => {
+  //   setStd(event.target.value);
+  // };
+  // const handleBT = (event) => {
+  //   setBt(event.target.value);
+  // };
+  // const handleSTA = (event) => {
+  //   setSta(event.target.value);
+  // };
+  // const handleArrStn = (event) => {
+  //   setArrStn(event.target.value);
+  // };
+  // const handleSector = (event) => {
+  //   setSector(event.target.value);
+  // };
+
+  // const handleVariant = (event) => {
+  //   setVariant(event.target.value);
+  // };
+  // const handleSeats = (event) => {
+  //   setSeats(event.target.value);
+  // };
+  // const handleCargoT = (event) => {
+  //   setCargoT(event.target.value);
+  // };
+  // const handleDist = (event) => {
+  //   setDist(event.target.value);
+  // };
+  // const handlePax = (event) => {
+  //   setPax(event.target.value);
+  // };
+  // const handleAsk = (event) => {
+  //   setAsk(event.target.value);
+  // };
+  // const handleRsk = (event) => {
+  //   setRsk(event.target.value);
+  // };
+
+  // const handleCargoAtk = (event) => {
+  //   setCargoAtk(event.target.value);
+  // };
+  // const handleCargoRtk = (event) => {
+  //   setCargoRtk(event.target.value);
+  // };
+  // const handleDomIntl = (event) => {
+  //   setDomIntl(event.target.value.toLowerCase());
+  // };
+  // const handleUserTag1 = (event) => {
+  //   setUserTag1(event.target.value);
+  // };
+  // const handleUserTag2 = (event) => {
+  //   setUserTag2(event.target.value);
+  // };
+  // const handleRemarks1 = (event) => {
+  //   setRemarks1(event.target.value);
+  // };
+  // const handleRemarks2 = (event) => {
+  //   setRemarks2(event.target.value);
+  // };
+
+  // const handleRotations = (event) => {
+  //   setRotationNumber(event.target.value);
+  // };
+
+  const handleFilterTextFieldChange = (e) => {
+    const { name, value } = e.target;
+    setFilters((prev) => {
+      const updatedFilters = { ...prev, [name]: value };
+      if (!value) delete updatedFilters[name]; // Remove empty filters
+      return updatedFilters;
+    });
   };
 
-  const handleVariant = (event) => {
-    setVariant(event.target.value);
-  };
-  const handleSeats = (event) => {
-    setSeats(event.target.value);
-  };
-  const handleCargoT = (event) => {
-    setCargoT(event.target.value);
-  };
-  const handleDist = (event) => {
-    setDist(event.target.value);
-  };
-  const handlePax = (event) => {
-    setPax(event.target.value);
-  };
-  const handleAsk = (event) => {
-    setAsk(event.target.value);
-  };
-  const handleRsk = (event) => {
-    setRsk(event.target.value);
-  };
-
-  const handleCargoAtk = (event) => {
-    setCargoAtk(event.target.value);
-  };
-  const handleCargoRtk = (event) => {
-    setCargoRtk(event.target.value);
-  };
-  const handleDomIntl = (event) => {
-    setDomIntl(event.target.value.toLowerCase());
-  };
-  const handleUserTag1 = (event) => {
-    setUserTag1(event.target.value);
-  };
-  const handleUserTag2 = (event) => {
-    setUserTag2(event.target.value);
-  };
-  const handleRemarks1 = (event) => {
-    setRemarks1(event.target.value);
-  };
-  const handleRemarks2 = (event) => {
-    setRemarks2(event.target.value);
-  };
-
-  const handleRotations = (event) => {
-    setRotationNumber(event.target.value);
-  };
-
-  const fetchFlightsData = async (page = 1, limit = 10) => {
+  const fetchResults = debounce(async () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
-      console.log("page : ",page + "limit : ", limit);
-      const response = await axios.get(`https://airlineplan.com/flight?page=${page}&limit=${limit}`, {
-        headers: {
-          "x-access-token": accessToken,
-        },
-      });
+      if (!accessToken) {
+        throw new Error("Access token is missing. Please log in again.");
+      }
+
+      // Filter out empty fields from the data
+      const filteredData = Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value)
+      );
+
+      // Ensure the filtered data is not empty
+      // if (Object.keys(filteredData).length === 0) {
+      //   return;
+      // }
+
+      // Make the POST request
+      const requestBody = {
+        ...filteredData,    // spread the existing filteredData properties
+        page: currentPage,         // add the page value
+        limit: RowsPerPage,       // add the limit value
+      };
+
+      const response = await axios.post(
+        "https://airlineplan.com/searchflights",
+        requestBody,
+        {
+          headers: {
+            "x-access-token": accessToken,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       setFlgtsTableData(response.data.data); // Update table data
       setTotalFlights(response.data.total); // Update total flights count
+
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching flight data:", error);
     }
-  };
+  }, 300); // Adjust debounce delay as needed (300ms here)
+
+  // Trigger fetchResults whenever filters changes
+  useEffect(() => {
+    fetchResults();
+  }, [filters, currentPage]);
+
+
+  // const fetchFlightsData = async (page = 1, limit = 10) => {
+  //   try {
+  //     const accessToken = localStorage.getItem("accessToken");
+  //     console.log("page : ", page + "limit : ", limit);
+  //     const response = await axios.get(`https://airlineplan.com/flight?page=${page}&limit=${limit}`, {
+  //       headers: {
+  //         "x-access-token": accessToken,
+  //       },
+  //     });
+
+  //     setFlgtsTableData(response.data.data); // Update table data
+  //     setTotalFlights(response.data.total); // Update total flights count
+  //   } catch (error) {
+  //     console.error("Error fetching data:", error);
+  //   }
+  // };
 
 
   useEffect(() => {
-    fetchFlightsData(currentPage, RowsPerPage);
+    fetchResults(currentPage, RowsPerPage);
   }, [currentPage, RowsPerPage]);
+
+
+  const filteredData = useMemo(() => {
+    return sortedData()?.map((row, index) => (
+      <TableRow key={index} sx={{ backgroundColor: index % 2 !== 0 ? "#f0f0f0" : "inherit" }}>
+        <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
+          {(currentPage - 1) * 10 + index + 1}
+        </TableCell>
+        <TableCell sx={{ whiteSpace: "nowrap", paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
+          {moment(row.date).format("DD-MMM-YY")}
+        </TableCell>
+        <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
+          {row.day}
+        </TableCell>
+        <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
+          {row.flight}
+        </TableCell>
+        <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
+          {row.depStn}
+        </TableCell>
+        <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
+          {row.std}
+        </TableCell>
+        <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
+          {row.bt}
+        </TableCell>
+        <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
+          {row.sta}
+        </TableCell>
+        <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
+          {row.arrStn}
+        </TableCell>
+        <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
+          {row.sector}
+        </TableCell>
+        <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
+          {row.variant}
+        </TableCell>
+        {isMaster && (
+          <>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {row.seats}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {parseFloat(row.CargoCapT).toFixed(1)}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {row.dist}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {parseInt(row?.pax)}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {parseFloat(row.CargoT).toFixed(1)}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {parseInt(row.ask)}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {parseInt(row.rsk)}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {parseInt(row.cargoAtk)}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {parseInt(row.cargoRtk)}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {row.domIntl}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {row.userTag1}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {row.userTag2}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {row.remarks1}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {row.remarks2}
+            </TableCell>
+            <TableCell
+              sx={{
+                paddingX: "0px",
+                paddingY: "12px",
+                fontSize: "12px",
+                textAlign: "center",
+              }}
+            >
+              {row.rotationNumber}
+            </TableCell>
+          </>
+        )}
+      </TableRow>
+    ));
+  }, [sortedData, currentPage]);
 
 
   console.log(flgtsTableData, "this is data");
@@ -286,7 +566,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                   variant="outlined"
                   size="small"
                   placeholder="Date"
-                  onChange={handleDate}
+                  onChange={handleFilterTextFieldChange}
+                  value={filters.date}
+                  name="date"
                   sx={{
                     minWidth: "10px",
                     fontSize: "10px",
@@ -299,7 +581,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                   variant="outlined"
                   size="small"
                   placeholder="Day"
-                  onChange={handleDay}
+                  name="day"
+                  value={filters.day}
+                  onChange={handleFilterTextFieldChange}
                   sx={{
                     minWidth: "10px",
                     fontSize: "10px",
@@ -312,7 +596,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                   variant="outlined"
                   size="small"
                   placeholder="Flight #"
-                  onChange={handleFlight}
+                  value={filters.flight}
+                  name="flight"
+                  onChange={handleFilterTextFieldChange}
                   sx={{
                     minWidth: "10px",
                     fontSize: "10px",
@@ -325,7 +611,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                   variant="outlined"
                   size="small"
                   placeholder="Dep Stn"
-                  onChange={handleDepStn}
+                  name="depStn"
+                  value={filters.depStn}
+                  onChange={handleFilterTextFieldChange}
                   sx={{
                     minWidth: "10px",
                     fontSize: "10px",
@@ -338,7 +626,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                   variant="outlined"
                   size="small"
                   placeholder="STD(LT)"
-                  onChange={handleSTD}
+                  value={filters.std}
+                  name="std"
+                  onChange={handleFilterTextFieldChange}
                   sx={{
                     minWidth: "10px",
                     fontSize: "10px",
@@ -351,7 +641,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                   variant="outlined"
                   size="small"
                   placeholder="BT"
-                  onChange={handleBT}
+                  value={filters.bt}
+                  name="bt"
+                  onChange={handleFilterTextFieldChange}
                   sx={{
                     minWidth: "10px",
                     fontSize: "10px",
@@ -364,7 +656,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                   variant="outlined"
                   size="small"
                   placeholder="STA(LT)"
-                  onChange={handleSTA}
+                  value={filters.sta}
+                  name="sta"
+                  onChange={handleFilterTextFieldChange}
                   sx={{
                     minWidth: "10px",
                     fontSize: "10px",
@@ -377,7 +671,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                   variant="outlined"
                   size="small"
                   placeholder="Arr Stn"
-                  onChange={handleArrStn}
+                  value={filters.arrStn}
+                  name="arrStn"
+                  onChange={handleFilterTextFieldChange}
                   sx={{
                     minWidth: "10px",
                     fontSize: "10px",
@@ -391,7 +687,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                     variant="outlined"
                     size="small"
                     placeholder="Sector"
-                    onChange={handleSector}
+                    value={filters.sector}
+                    name="sector"
+                    onChange={handleFilterTextFieldChange}
                     sx={{
                       minWidth: "10px",
                       fontSize: "10px",
@@ -405,7 +703,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                   variant="outlined"
                   size="small"
                   placeholder="Variant"
-                  onChange={handleVariant}
+                  name="variant"
+                  value={filters.variant}
+                  onChange={handleFilterTextFieldChange}
                   sx={{
                     minWidth: "10px",
                     fontSize: "10px",
@@ -420,7 +720,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                       variant="outlined"
                       size="small"
                       placeholder="Seats"
-                      onChange={handleSeats}
+                      name="seats"
+                      value={filters.seats}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -433,7 +735,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                       variant="outlined"
                       size="small"
                       placeholder="Cargo Cap"
-                      onChange={handleCargoT}
+                      name="cargoT"
+                      value={filters.cargoT}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -446,7 +750,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                       variant="outlined"
                       size="small"
                       placeholder="Dist"
-                      onChange={handleDist}
+                      name="dist"
+                      value={filters.dist}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -459,7 +765,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                       variant="outlined"
                       size="small"
                       placeholder="Pax"
-                      onChange={handlePax}
+                      value={filters.pax}
+                      name="pax"
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -472,7 +780,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                       variant="outlined"
                       size="small"
                       placeholder="Cargo T"
-                      onChange={handleCargoT}
+                      name="cargoT"
+                      value={filters.cargoT}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -485,7 +795,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                       variant="outlined"
                       size="small"
                       placeholder="ASK"
-                      onChange={handleAsk}
+                      name="ask"
+                      value={filters.ask}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -498,7 +810,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                       variant="outlined"
                       size="small"
                       placeholder="RSK"
-                      onChange={handleRsk}
+                      name="rsk"
+                      value={filters.rsk}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -510,8 +824,10 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                     <TextField
                       variant="outlined"
                       size="small"
+                      name="cargoAtk"
                       placeholder="Cargo ATK"
-                      onChange={handleCargoAtk}
+                      value={filters.cargoAtk}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -523,8 +839,10 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                     <TextField
                       variant="outlined"
                       size="small"
+                      name="cargoRtk"
                       placeholder="Cargo RTK"
-                      onChange={handleCargoRtk}
+                      value={filters.cargoRtk}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -536,8 +854,10 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                     <TextField
                       variant="outlined"
                       size="small"
+                      name="domIntl"
                       placeholder="Dom / INTL"
-                      onChange={handleDomIntl}
+                      value={filters.domIntl}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -549,8 +869,10 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                     <TextField
                       variant="outlined"
                       size="small"
+                      name="userTag1"
                       placeholder="User Tag 1"
-                      onChange={handleUserTag1}
+                      value={filters.userTag1}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -563,7 +885,9 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                       variant="outlined"
                       size="small"
                       placeholder="User Tag 2"
-                      onChange={handleUserTag2}
+                      name="userTag2"
+                      value={filters.userTag2}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -575,8 +899,10 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                     <TextField
                       variant="outlined"
                       size="small"
+                      name="remarks1"
                       placeholder="Remarks1"
-                      onChange={handleRemarks1}
+                      value={filters.remarks1}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -588,8 +914,10 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                     <TextField
                       variant="outlined"
                       size="small"
+                      name="remarks2"
                       placeholder="Remarks2"
-                      onChange={handleRemarks2}
+                      value={filters.remarks2}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -601,8 +929,10 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                     <TextField
                       variant="outlined"
                       size="small"
+                      name="rotations"
                       placeholder="Rotation #"
-                      onChange={handleRotations}
+                      value={filters.rotations}
+                      onChange={handleFilterTextFieldChange}
                       sx={{
                         minWidth: "10px",
                         fontSize: "10px",
@@ -1243,7 +1573,7 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {sortedData()
+            {/* {sortedData()
               ?.filter(
                 (row) =>
                   (row.flight || "")
@@ -1545,7 +1875,8 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
                     </>
                   )}
                 </TableRow>
-              ))}
+              ))} */}
+            {filteredData}
           </TableBody>
         </Table>
       </Stack>
@@ -1556,7 +1887,6 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
           onChange={handlePageChange} // Page change handler
           color="primary"
         />
-
       </Stack>
     </Stack>
   );
