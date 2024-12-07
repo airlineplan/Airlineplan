@@ -204,6 +204,8 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
     });
   };
 
+  console.log("filters data raw : ", filters);
+
   const fetchResults = debounce(async () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
@@ -221,8 +223,8 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
       //   return;
       // }
 
-      console.log("filtered data : ", filteredData);
-      
+      console.log("filtered data after key remove: ", filteredData);
+
       // Make the POST request
       const requestBody = {
         ...filteredData,    // spread the existing filteredData properties
