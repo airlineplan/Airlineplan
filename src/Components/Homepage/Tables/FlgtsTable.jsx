@@ -212,15 +212,17 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
       }
 
       // Filter out empty fields from the data
-      // const filteredData = Object.fromEntries(
-      //   Object.entries(filters).filter(([_, value]) => value)
-      // );
+      const filteredData = Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value)
+      );
 
       // Ensure the filtered data is not empty
       // if (Object.keys(filteredData).length === 0) {
       //   return;
       // }
 
+      console.log("filtered data : ", filteredData);
+      
       // Make the POST request
       const requestBody = {
         ...filteredData,    // spread the existing filteredData properties
