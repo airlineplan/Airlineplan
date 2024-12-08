@@ -15,6 +15,7 @@ import {
   Paper,
   IconButton,
   Pagination,
+  CircularProgress
 } from "@mui/material";
 // import { FlgtsTableData } from '../../../assets/MockData/FlgtsTableData'
 import moment from "moment";
@@ -22,6 +23,7 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import DownloadIcon from "@mui/icons-material/Download";
 import debounce from "lodash.debounce";
+
 import "./CustomScrollbar.css";
 import axios from "axios";
 // const RowsPerPage = 10;
@@ -534,7 +536,7 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
         <Stack direction="row" alignItems="center" justifyContent="end" mt="15px">
           <Button
             variant="outlined"
-            startIcon={<DownloadIcon />}
+            startIcon={downloading ? null : <DownloadIcon />}
             sx={{
               textTransform: "capitalize",
               color: "#4CAF50",
@@ -547,10 +549,14 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
               },
             }}
             onClick={handleDownload}
-            disabled={downloading}
+            disabled={downloading} // Disable the button when downloading
           >
-            Download
-          </Button>
+            {downloading ? (
+              <CircularProgress size={20} sx={{ color: "#4CAF50" }} /> // Show loader
+            ) : (
+              "Download"
+            )}
+          </Button>;
         </Stack>
       )}
       <Stack
