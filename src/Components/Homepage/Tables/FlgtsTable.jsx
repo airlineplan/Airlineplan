@@ -556,7 +556,7 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
             ) : (
               "Download"
             )}
-          </Button>;
+          </Button>
         </Stack>
       )}
       <Stack
