@@ -86,18 +86,6 @@ const MainPage = () => {
     );
   };
 
-  useEffect(() => {
-    // Run createConnections only when activeStep is 1, 2, or 4
-    // if (activeStep ===  5) {
-    //   createConnections();
-    // }
-
-    // Fetch flights data for all steps except step 3
-    if (activeStep === 4) {
-      // fetchFlightsData();
-    }
-  }, [activeStep]);
-
 
   return (
     <Stack gap="10px" sx={{ px: "4%", mt: "1%" }}>

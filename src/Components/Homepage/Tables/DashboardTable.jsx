@@ -308,50 +308,44 @@ const DashboardTable = () => {
     }
   };
 
-  useEffect(() => {
-    const createConnections = async () => {
-      // Show loader
-      setLoading(true);
+  const createConnections = async () => {
+    // Show loader
+    setLoading(true);
 
-      try {
-        // Send request to createConnections endpoint
-        const response = await axios.get(
-          'https://airlineplan.com/createConnections',
-          {
-            headers: {
-              'x-access-token': `${localStorage.getItem('accessToken')}`,
-            },
-          }
-        );
-
-        // Check response status
-        if (response.status === 200) {
-          setInitialConnectionCreated(true);
-        } else {
-          console.error('Error creating connections. Status:', response.status);
+    try {
+      // Send request to createConnections endpoint
+      const response = await axios.get(
+        'https://airlineplan.com/createConnections',
+        {
+          headers: {
+            'x-access-token': `${localStorage.getItem('accessToken')}`,
+          },
         }
-      } catch (error) {
-        // Handle error
-        console.error('Error creating connections:', error);
-      } finally {
-        // Hide loader
-        setLoading(false);
-      }
-    };
+      );
 
-    // Check if initial connections have been created
-    if (!initialConnectionCreated) {
-      // Execute createConnections only if it hasn't been executed before
-      createConnections();
+      // Check response status
+      if (response.status === 200) {
+        // setInitialConnectionCreated(true);
+        alert("Connection created")
+      } else {
+        console.error('Error creating connections. Status:', response.status);
+      }
+    } catch (error) {
+      // Handle error
+      console.error('Error creating connections:', error);
+    } finally {
+      // Hide loader
+      setLoading(false);
     }
-  }, [initialConnectionCreated]); // Only re-run if initialConnectionCreated changes
+  };
+
 
   useEffect(() => {
-    if (initialConnectionCreated) {
+    // if (initialConnectionCreated) {
       // fetchData when periodicity or label changes
       fetchData();
-    }
-  }, [periodicity, label, initialConnectionCreated]);
+    // }
+  }, [periodicity, label]);
 
   useEffect(() => {
 
@@ -381,33 +375,21 @@ const DashboardTable = () => {
         justifyContent="space-between"
         mt="10px"
       >
-        {/* <TextField
-          select
-          label="Label"
-          size="small"
-          value={label}
-          onChange={fetchData}
-          sx={{ mt: "5px", minWidth: "200px" }}
-        >
-          <MenuItem value="Dom">Dom</MenuItem>
-          <MenuItem value="Intl">INTL</MenuItem>
-          <MenuItem value="Both">Both</MenuItem>
-        </TextField> */}
         <SingleSelectDropdown
           placeholder="Label"
           options={singleSelectLabelOptions}
           onChange={(selected) => fetchData(selected, "label")}
           selected={singleSelectLabelOptions[2]}
         />
-        {/* <Stack>
+        <Stack>
           <Button
             variant="contained"
             sx={{ px: "30px", mt: "5px" }}
-            onClick={handleMultipleClicks}
+            onClick={createConnections}
           >
-            Run
+            Create Connections
           </Button>
-        </Stack> */}
+        </Stack>
       </Stack>
       <Grid container spacing={2}>
         {/* You can adjust the spacing and other props as needed */}
