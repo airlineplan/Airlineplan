@@ -29,7 +29,7 @@ import axios from "axios";
 // const RowsPerPage = 10;
 const label = { inputProps: { "aria-label": "Checkbox demo" } };
 
-const FlgtsTable = ({ flightsData, isMaster }) => {
+const FlgtsTable = ({ flightsData, isMaster = true }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [arrow, setArrow] = useState({ column: null, direction: "Up" });
   const [flgtsTableData, setFlgtsTableData] = useState([]);
@@ -312,9 +312,11 @@ const FlgtsTable = ({ flightsData, isMaster }) => {
         <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
           {row.arrStn}
         </TableCell>
-        <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
-          {row.sector}
-        </TableCell>
+        {isMaster && (
+          <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
+            {row.sector}
+          </TableCell>
+        )}
         <TableCell sx={{ paddingX: "0px", paddingY: "12px", fontSize: "12px", textAlign: "center" }}>
           {row.variant}
         </TableCell>
