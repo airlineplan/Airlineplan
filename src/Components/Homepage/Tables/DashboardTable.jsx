@@ -308,44 +308,52 @@ const DashboardTable = () => {
     }
   };
 
-  const createConnections = async () => {
-    // Show loader
-    setLoading(true);
-
-    try {
-      // Send request to createConnections endpoint
-      const response = await axios.get(
-        'https://airlineplan.com/createConnections',
-        {
-          headers: {
-            'x-access-token': `${localStorage.getItem('accessToken')}`,
-          },
-        }
-      );
-
-      // Check response status
-      if (response.status === 200) {
-        // setInitialConnectionCreated(true);
-        alert("Connection created")
-      } else {
-        console.error('Error creating connections. Status:', response.status);
-      }
-    } catch (error) {
-      // Handle error
-      console.error('Error creating connections:', error);
-    } finally {
-      // Hide loader
-      setLoading(false);
-    }
-  };
-
-
   useEffect(() => {
-    // if (initialConnectionCreated) {
-      // fetchData when periodicity or label changes
-      fetchData();
-    // }
-  }, [periodicity, label]);
+    const createConnectionsAndFetchData = async () => {
+      try {
+        // Show loader
+        setLoading(true);
+  
+        // Local flag to track connections creation status
+        let connectionsCreated = initialConnectionCreated;
+  
+        // Check if initial connections have already been created
+        if (!connectionsCreated) {
+          const response = await axios.get(
+            'https://airlineplan.com/createConnections',
+            {
+              headers: {
+                'x-access-token': `${localStorage.getItem('accessToken')}`,
+              },
+            }
+          );
+  
+          if (response.status === 200) {
+            connectionsCreated = true; // Update local flag
+            setInitialConnectionCreated(true); // Update state
+          } else {
+            toast.error(`Error creating connections. Status: ${response.status}`);
+            return; // Exit early if connections fail
+          }
+        }
+  
+        // Fetch data only after connections are successfully created
+        if (connectionsCreated) {
+          await fetchData();
+        }
+      } catch (error) {
+        // Handle errors for connection creation or fetching data
+        toast.error(`Error: ${error.message}`);
+      } finally {
+        // Hide loader
+        setLoading(false);
+      }
+    };
+  
+    // Trigger function if connections haven't been created or if periodicity/label changes
+    createConnectionsAndFetchData();
+  }, [periodicity, label, initialConnectionCreated]);
+  
 
   useEffect(() => {
 
@@ -381,15 +389,6 @@ const DashboardTable = () => {
           onChange={(selected) => fetchData(selected, "label")}
           selected={singleSelectLabelOptions[2]}
         />
-        <Stack>
-          <Button
-            variant="contained"
-            sx={{ px: "30px", mt: "5px" }}
-            onClick={createConnections}
-          >
-            Create Connections
-          </Button>
-        </Stack>
       </Stack>
       <Grid container spacing={2}>
         {/* You can adjust the spacing and other props as needed */}
@@ -3066,6 +3065,8 @@ const DashboardTable = () => {
           </Button>
         </Stack>
       </Stack>
+      <ToastContainer />
+
     </Stack>
   );
 };
