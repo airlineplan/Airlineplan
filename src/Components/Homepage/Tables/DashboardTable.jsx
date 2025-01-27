@@ -274,32 +274,32 @@ const DashboardTable = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
 
-      setSelectedValues((prevSelectedValues) => ({
-        ...prevSelectedValues,
-        [fieldName]: selected,
-      }));
+      setSelectedValues((prevSelectedValues) => {
+        const updatedValues = {
+          ...prevSelectedValues,
+          [fieldName]: selected,
+        };
 
-      // Create the request payload with the selectedValues
-      const requestData = {
-        ...selectedValues,
-        [fieldName]: selected, // Update the specific field in the payload
-      };
+        // Call the API with updatedValues directly
+        const fetchDashboardData = async () => {
+          const response = await axios.get(
+            'https://airlineplan.com/dashboard',
+            {
+              params: updatedValues,
+              headers: {
+                'x-access-token': accessToken,
+              },
+            }
+          );
 
-      // const selectedOptions = collectSelectedOptions();
+          setData(response.data);
+          console.log("data received in dashboard:", response.data);
+        };
 
+        fetchDashboardData(); // Call the async function to fetch data
 
-      const response = await axios.get(
-        'https://airlineplan.com/dashboard',
-        {
-          params: requestData,
-          headers: {
-            'x-access-token': accessToken,
-          },
-        }
-      );
-
-      setData(response.data);
-      console.log("data received in dashboard:", response.data);
+        return updatedValues; // Ensure state updates as expected
+      });
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -313,10 +313,10 @@ const DashboardTable = () => {
       try {
         // Show loader
         setLoading(true);
-  
+
         // Local flag to track connections creation status
         let connectionsCreated = initialConnectionCreated;
-  
+
         // Check if initial connections have already been created
         if (!connectionsCreated) {
           const response = await axios.get(
@@ -327,20 +327,17 @@ const DashboardTable = () => {
               },
             }
           );
-  
+
           if (response.status === 200) {
             connectionsCreated = true; // Update local flag
+            await fetchData();
             setInitialConnectionCreated(true); // Update state
           } else {
             toast.error(`Error creating connections. Status: ${response.status}`);
             return; // Exit early if connections fail
           }
         }
-  
-        // Fetch data only after connections are successfully created
-        if (connectionsCreated) {
-          await fetchData();
-        }
+
       } catch (error) {
         // Handle errors for connection creation or fetching data
         toast.error(`Error: ${error.message}`);
@@ -349,11 +346,11 @@ const DashboardTable = () => {
         setLoading(false);
       }
     };
-  
+
     // Trigger function if connections haven't been created or if periodicity/label changes
     createConnectionsAndFetchData();
   }, [periodicity, label, initialConnectionCreated]);
-  
+
 
   useEffect(() => {
 
