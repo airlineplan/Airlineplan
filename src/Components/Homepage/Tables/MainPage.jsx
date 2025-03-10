@@ -18,6 +18,7 @@ import NetworkTable from "./NetworkTable";
 import SectorsTable from "./SectorsTable";
 import FlgtsTable from "./FlgtsTable";
 import DashboardTable from "./DashboardTable";
+import ConnectionTable from "./ConnectionTable.jsx";
 import StationsTable from "./StationsTable.jsx";
 import Rotations from "./Rotations.jsx";
 import { useNavigate } from "react-router-dom";
@@ -25,7 +26,7 @@ import { ToastContainer, toast } from "react-toastify";
 import axios from "axios";
 import "react-toastify/dist/ReactToastify.css";
 
-const steps = ["Network", "Sectors", "Stations", "Rotations", "FLGTs", "Dashboard"];
+const steps = ["Network", "Sectors", "Stations", "Rotations", "FLGTs", "Dashboard", "Connections"];
 
 const MainPage = () => {
   const [network, setNetwork] = useState("network");
@@ -82,7 +83,8 @@ const MainPage = () => {
       NetworkTable.length > 0 ||
       SectorsTable.length > 0 ||
       FlgtsTable.length > 0 ||
-      DashboardTable.length > 0
+      DashboardTable.length > 0 ||
+      ConnectionTable.length > 0
     );
   };
 
@@ -141,6 +143,8 @@ const MainPage = () => {
         ) : activeStep === 5 ? (
           <DashboardTable />
 
+        ) : activeStep === 6 ? (
+          <ConnectionTable />
         ) : (
           <></>
         )}

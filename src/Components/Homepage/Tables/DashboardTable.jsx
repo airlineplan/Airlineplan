@@ -143,11 +143,6 @@ const DashboardTable = () => {
       waslgcd: 'Weighted average stage length per FLGT by GCD',
       waslbh: 'Weighted average stage length per FLGT by BH',
       adu: 'Average Daily Utilisation',
-      connectingFlights: 'Connecting Flights',
-      seatCapBeyondFlgts: 'Seat Capacity on Beyond Flights',
-      seatCapBehindFlgts: 'Seat Capacity on Behind Flights',
-      cargoCapBeyondFlgts: 'Cargo Capacity on Beyond Flights',
-      cargoCapBehindFlgts: 'Cargo Capacity on Behind Flights',
       asks: 'ASKs (Mn)',
       rsks: 'RSKs (Mn)',
       cargoAtk: 'Cargo ATKs (Thousands)',
@@ -270,86 +265,42 @@ const DashboardTable = () => {
   }, [label]);
 
 
-  const fetchData = async (selected, fieldName) => {
+  const fetchData = async (selected = null, fieldName = null) => {
     try {
+      setLoading(true); // Show loader
       const accessToken = localStorage.getItem("accessToken");
-
-      setSelectedValues((prevSelectedValues) => {
-        const updatedValues = {
-          ...prevSelectedValues,
-          [fieldName]: selected,
-        };
-
-        // Call the API with updatedValues directly
-        const fetchDashboardData = async () => {
-          const response = await axios.get(
-            'https://airlineplan.com/dashboard',
-            {
-              params: updatedValues,
-              headers: {
-                'x-access-token': accessToken,
-              },
-            }
-          );
-
-          setData(response.data);
-          console.log("data received in dashboard:", response.data);
-        };
-
-        fetchDashboardData(); // Call the async function to fetch data
-
-        return updatedValues; // Ensure state updates as expected
+  
+      // Update selected values if parameters are passed
+      let updatedValues = { ...selectedValues };
+      if (selected && fieldName) {
+        updatedValues = { ...selectedValues, [fieldName]: selected };
+        setSelectedValues(updatedValues); // Update state
+      }
+  
+      // Call the dashboard API
+      const response = await axios.get('https://airlineplan.com/dashboard', {
+        params: updatedValues,
+        headers: {
+          'x-access-token': accessToken,
+        },
       });
-
+  
+      // Set the received data
+      setData(response.data);
+      console.log("Data received in dashboard:", response.data);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
-      setLoading(false); // Set loading state to false after fetching data or encountering an error
+      setLoading(false); // Hide loader
     }
   };
-
+  
   useEffect(() => {
-    const createConnectionsAndFetchData = async () => {
-      try {
-        // Show loader
-        setLoading(true);
-
-        // Local flag to track connections creation status
-        let connectionsCreated = initialConnectionCreated;
-
-        // Check if initial connections have already been created
-        if (!connectionsCreated) {
-          const response = await axios.get(
-            'https://airlineplan.com/createConnections',
-            {
-              headers: {
-                'x-access-token': `${localStorage.getItem('accessToken')}`,
-              },
-            }
-          );
-
-          if (response.status === 200) {
-            connectionsCreated = true; // Update local flag
-            await fetchData();
-            setInitialConnectionCreated(true); // Update state
-          } else {
-            toast.error(`Error creating connections. Status: ${response.status}`);
-            return; // Exit early if connections fail
-          }
-        }
-
-      } catch (error) {
-        // Handle errors for connection creation or fetching data
-        toast.error(`Error: ${error.message}`);
-      } finally {
-        // Hide loader
-        setLoading(false);
-      }
-    };
-
-    // Trigger function if connections haven't been created or if periodicity/label changes
-    createConnectionsAndFetchData();
-  }, [periodicity, label, initialConnectionCreated]);
+     
+    // Trigger function if connections haven't been created or periodicity/label changes
+    fetchData();
+  }, [periodicity, label]);
+  
 
 
   useEffect(() => {
@@ -1821,7 +1772,7 @@ const DashboardTable = () => {
                           textAlign: "center",
                         }}
                       >
-                        {data && data[0]?.bh ? data[0].bh : " "}
+                        {data && data[0]?.bh ? Math.round(data[0].bh) : " "}
                       </TableCell>
                       <TableCell
                         sx={{
@@ -1831,7 +1782,7 @@ const DashboardTable = () => {
                           textAlign: "center",
                         }}
                       >
-                        {data && data[1]?.bh ? data[1].bh : " "}
+                        {data && data[1]?.bh ? Math.round(data[1].bh) : " "}
                       </TableCell>
                       <TableCell
                         sx={{
@@ -1841,7 +1792,7 @@ const DashboardTable = () => {
                           textAlign: "center",
                         }}
                       >
-                        {data && data[2]?.bh ? data[2].bh : " "}
+                        {data && data[2]?.bh ? Math.round(data[2].bh) : " "}
                       </TableCell>
                       <TableCell
                         sx={{
@@ -1851,7 +1802,7 @@ const DashboardTable = () => {
                           textAlign: "center",
                         }}
                       >
-                        {data && data[3]?.bh ? data[3].bh : " "}
+                        {data && data[3]?.bh ? Math.round(data[3].bh) : " "}
                       </TableCell>
                       <TableCell
                         sx={{
@@ -1861,7 +1812,7 @@ const DashboardTable = () => {
                           textAlign: "center",
                         }}
                       >
-                        {data && data[4]?.bh ? data[4].bh : " "}
+                        {data && data[4]?.bh ? Math.round(data[4].bh) : " "}
                       </TableCell>
                       <TableCell
                         sx={{
@@ -1871,7 +1822,7 @@ const DashboardTable = () => {
                           textAlign: "center",
                         }}
                       >
-                        {data && data[5]?.bh ? data[5].bh : " "}
+                        {data && data[5]?.bh ? Math.round(data[5].bh) : " "}
                       </TableCell>
                       {Array.from({ length: additionalTableCellsCount }).map(
                         (_, index) => {
@@ -1889,7 +1840,7 @@ const DashboardTable = () => {
                                 textAlign: "center",
                               }}
                             >
-                              {bh ? bh : " "}
+                              {bh ? Math.round(bh) : " "}
                             </TableCell>
                           );
                         }
@@ -2206,469 +2157,6 @@ const DashboardTable = () => {
                               }}
                             >
                               {adu ? adu : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell></TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Connecting Flights
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.connectingFlights ? data[0].connectingFlights : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.connectingFlights ? data[1].connectingFlights : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.connectingFlights ? data[2].connectingFlights : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.connectingFlights ? data[3].connectingFlights : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.connectingFlights ? data[4].connectingFlights : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.connectingFlights ? data[5].connectingFlights : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const connectingFlights = item?.connectingFlights || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {connectingFlights ? connectingFlights : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Seat Capacity on Beyond Flights
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.seatCapBeyondFlgts ? data[0].seatCapBeyondFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.seatCapBeyondFlgts ? data[1].seatCapBeyondFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.seatCapBeyondFlgts ? data[2].seatCapBeyondFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.seatCapBeyondFlgts ? data[3].seatCapBeyondFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.seatCapBeyondFlgts ? data[4].seatCapBeyondFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.seatCapBeyondFlgts ? data[5].seatCapBeyondFlgts : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const seatCapBeyondFlgts = item?.seatCapBeyondFlgts || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {seatCapBeyondFlgts ? seatCapBeyondFlgts : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Seat Capacity on Behind Flights
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.seatCapBehindFlgts ? data[0].seatCapBehindFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.seatCapBehindFlgts ? data[1].seatCapBehindFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.seatCapBehindFlgts ? data[2].seatCapBehindFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.seatCapBehindFlgts ? data[3].seatCapBehindFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.seatCapBehindFlgts ? data[4].seatCapBehindFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.seatCapBehindFlgts ? data[5].seatCapBehindFlgts : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const seatCapBehindFlgts = item?.seatCapBehindFlgts || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {seatCapBehindFlgts ? seatCapBehindFlgts : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Cargo Capacity on Beyond Flights
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.cargoCapBeyondFlgts ? data[0].cargoCapBeyondFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.cargoCapBeyondFlgts ? data[1].cargoCapBeyondFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.cargoCapBeyondFlgts ? data[2].cargoCapBeyondFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.cargoCapBeyondFlgts ? data[3].cargoCapBeyondFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.cargoCapBeyondFlgts ? data[4].cargoCapBeyondFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.cargoCapBeyondFlgts ? data[5].cargoCapBeyondFlgts : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const cargoCapBeyondFlgts = item?.cargoCapBeyondFlgts || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {cargoCapBeyondFlgts ? cargoCapBeyondFlgts : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Cargo Capacity on Behind Flights
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.cargoCapBehindFlgts ? data[0].cargoCapBehindFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.cargoCapBehindFlgts ? data[1].cargoCapBehindFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.cargoCapBehindFlgts ? data[2].cargoCapBehindFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.cargoCapBehindFlgts ? data[3].cargoCapBehindFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.cargoCapBehindFlgts ? data[4].cargoCapBehindFlgts : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.cargoCapBehindFlgts ? data[5].cargoCapBehindFlgts : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const cargoCapBehindFlgts = item?.cargoCapBehindFlgts || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {cargoCapBehindFlgts ? cargoCapBehindFlgts : " "}
                             </TableCell>
                           );
                         }
