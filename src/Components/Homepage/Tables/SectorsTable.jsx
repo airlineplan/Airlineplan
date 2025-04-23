@@ -218,9 +218,10 @@ const SectorsTable = () => {
     }
 
     try {
-      const response = await axios.delete(
-        `https://airlineplan.com/delete-sector/${checkedRows.join(",")}`
-      );
+      const response = await axios.delete("https://airlineplan.com/delete-sector", {
+        data: { ids: checkedRows },
+      });
+      
       if (
         response.data &&
         response.data.message === "Data deleted successfully"

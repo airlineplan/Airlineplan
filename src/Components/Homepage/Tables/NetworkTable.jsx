@@ -315,10 +315,10 @@ const NetworkTable = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.delete(
-        `https://airlineplan.com/delete/${checkedRows.join(",")}`,{
-          headers: {
-            "x-access-token": accessToken,
-          },
+        "https://airlineplan.com/delete",
+        {
+          data: { ids: checkedRows },       // ids in the body
+          headers: { "x-access-token": accessToken }
         }
       );
 
