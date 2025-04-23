@@ -218,10 +218,14 @@ const SectorsTable = () => {
     }
 
     try {
+      const accessToken = localStorage.getItem("accessToken");
       const response = await axios.delete("https://airlineplan.com/delete-sector", {
+        headers: {
+          "x-access-token": accessToken,
+        },
         data: { ids: checkedRows },
       });
-      
+
       if (
         response.data &&
         response.data.message === "Data deleted successfully"
