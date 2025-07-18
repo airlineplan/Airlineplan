@@ -251,7 +251,7 @@ const AddSector = (props) => {
     try {
       setLoading(true);
       const response = await axios.post(
-        "https://airlineplan.com/add-sector",
+        "http://localhost:3000/add-sector",
         {
           sector1,
           sector2,

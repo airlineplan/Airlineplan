@@ -223,7 +223,7 @@ const NetworkTable = () => {
   };
   const handleFileUpload = () => {
     const accessToken = localStorage.getItem("accessToken");
-    const url = "https://airlineplan.com/importUser";
+    const url = "http://localhost:3000/importUser";
 
     const formData = new FormData();
     formData.append("file", selectedFile);
@@ -288,7 +288,7 @@ const NetworkTable = () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
 
-        const response = await axios.get("https://airlineplan.com/get-data", {
+        const response = await axios.get("http://localhost:3000/get-data", {
           headers: {
             "x-access-token": accessToken,
           },

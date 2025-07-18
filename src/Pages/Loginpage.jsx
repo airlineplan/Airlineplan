@@ -50,7 +50,7 @@ export default function Loginpage() {
   const handleLogin = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://airlineplan.com/user-login', {
+      const response = await fetch('http://localhost:3000/user-login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

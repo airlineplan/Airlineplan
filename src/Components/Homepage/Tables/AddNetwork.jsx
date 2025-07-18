@@ -244,7 +244,7 @@ const AddNetwork = (props) => {
       setLoading(true);
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const response = await axios.post(
-        "https://airlineplan.com/add-Data",
+        "http://localhost:3000/add-Data",
         {
           flight,
           depStn,

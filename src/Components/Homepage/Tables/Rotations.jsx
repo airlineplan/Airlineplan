@@ -200,7 +200,7 @@ const Rotations = () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
         const response = await axios.get(
-          "https://airlineplan.com/getNextRotationNumber",
+          "http://localhost:3000/getNextRotationNumber",
           {
             headers: {
               "x-access-token": accessToken,
@@ -223,7 +223,7 @@ const Rotations = () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
         const response = await axios.get(
-          `https://airlineplan.com/rotationbyid/${event}`,
+          `http://localhost:3000/rotationbyid/${event}`,
           {
             headers: {
               "x-access-token": accessToken,
@@ -303,7 +303,7 @@ const Rotations = () => {
     };
 
     const responseFlgts = await axios.post(
-      "https://airlineplan.com/flightsWoRotations",
+      "http://localhost:3000/flightsWoRotations",
       requestData,
       {
         headers: {
@@ -420,7 +420,7 @@ const Rotations = () => {
 
       // Make a single request to update all fields
       await axios.post(
-        "https://airlineplan.com/updateRotationSummary",
+        "http://localhost:3000/updateRotationSummary",
         {
           rotationNumber: selectedRotation,
           rotationTag,
@@ -494,7 +494,7 @@ const Rotations = () => {
       }
 
       const response = await axios.post(
-        "https://airlineplan.com/addRotationDetailsFlgtChange",
+        "http://localhost:3000/addRotationDetailsFlgtChange",
         {
           rotationNumber: selectedRotation,
           depNumber: rotationDevelopmentTableData.length + 1,
@@ -583,7 +583,7 @@ const Rotations = () => {
       // Make an Axios DELETE request to delete the rotation
       setIsRotationDeleting(true);
       const response = await axios.post(
-        "https://airlineplan.com/deleteCompleteRotation",
+        "http://localhost:3000/deleteCompleteRotation",
         {
           rotationNumber: selectedRotation,
           selectedVariant: selectedVariant,
@@ -640,7 +640,7 @@ const Rotations = () => {
       // Make sure lastObject is defined before proceeding
       if (!lastObject) {
         response = await axios.post(
-          "https://airlineplan.com/deleteRotation",
+          "http://localhost:3000/deleteRotation",
           {
             rotationNumber: selectedRotation,
             selectedVariant: selectedVariant,
@@ -673,7 +673,7 @@ const Rotations = () => {
         setIsPrevLoading(true);
         const { _id } = lastObject;
         response = await axios.post(
-          "https://airlineplan.com/deletePrevInRotation",
+          "http://localhost:3000/deletePrevInRotation",
           {
             rotationNumber: selectedRotation,
             selectedVariant: selectedVariant,
@@ -741,7 +741,7 @@ const Rotations = () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
         const response = await axios.get(
-          "https://airlineplan.com/listVariants",
+          "http://localhost:3000/listVariants",
           {
             headers: {
               "x-access-token": accessToken,
@@ -750,7 +750,7 @@ const Rotations = () => {
         );
         setListOfVariant(response.data);
 
-        const res = await axios.get("https://airlineplan.com/listRotations", {
+        const res = await axios.get("http://localhost:3000/listRotations", {
           headers: {
             "x-access-token": accessToken,
           },

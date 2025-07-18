@@ -235,7 +235,7 @@ const FlgtsTable = ({ flightsData, isMaster = true }) => {
       };
 
       const response = await axios.post(
-        "https://airlineplan.com/searchflights",
+        "http://localhost:3000/searchflights",
         requestBody,
         {
           headers: {
@@ -263,7 +263,7 @@ const FlgtsTable = ({ flightsData, isMaster = true }) => {
   //   try {
   //     const accessToken = localStorage.getItem("accessToken");
   //     console.log("page : ", page + "limit : ", limit);
-  //     const response = await axios.get(`https://airlineplan.com/flight?page=${page}&limit=${limit}`, {
+  //     const response = await axios.get(`http://localhost:3000/flight?page=${page}&limit=${limit}`, {
   //       headers: {
   //         "x-access-token": accessToken,
   //       },
@@ -504,7 +504,7 @@ const FlgtsTable = ({ flightsData, isMaster = true }) => {
 
       const accessToken = localStorage.getItem("accessToken");
 
-      const response = await axios.get("https://airlineplan.com/downloadFLGTs", {
+      const response = await axios.get("http://localhost:3000/downloadFLGTs", {
         responseType: "blob", // Specify response type as blob
         headers: {
           "x-access-token": accessToken,

@@ -72,7 +72,7 @@ const CopySector = (props) => {
   const fetchData = async () => {
     try {
       const response = await axios.get(
-        `https://airlineplan.com/sectorsbyid/${DataId}`
+        `http://localhost:3000/sectorsbyid/${DataId}`
       );
       const item = response.data;
       const inputDate = item?.fromDt;
@@ -285,7 +285,7 @@ const CopySector = (props) => {
     try {
       setLoading(true);
       const response = await axios.post(
-        "https://airlineplan.com/add-sector",
+        "http://localhost:3000/add-sector",
         {
           sector1,
           sector2,

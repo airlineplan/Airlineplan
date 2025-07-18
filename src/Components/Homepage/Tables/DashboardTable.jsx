@@ -278,7 +278,7 @@ const DashboardTable = () => {
       }
   
       // Call the dashboard API
-      const response = await axios.get('https://airlineplan.com/dashboard', {
+      const response = await axios.get('http://localhost:3000/dashboard', {
         params: updatedValues,
         headers: {
           'x-access-token': accessToken,
@@ -308,7 +308,7 @@ const DashboardTable = () => {
     const getDropdownData = async () => {
 
       const response = await axios.get(
-        `https://airlineplan.com/dashboard/populateDropDowns`,
+        `http://localhost:3000/dashboard/populateDropDowns`,
         {
           headers: {
             "x-access-token": `${localStorage.getItem("accessToken")}`,
