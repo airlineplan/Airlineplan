@@ -6,6 +6,7 @@ import Signup from './Pages/Signup';
 import ForgatePassword from './Pages/ForgatePassword';
 import ResetPassword from './Pages/ResetPassword';
 import Contact from './Pages/Contact';
+import AircraftRoute from './Pages/AircraftRoute';
 
 const App = () => {
   return (
@@ -15,6 +16,7 @@ const App = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/" element={<Loginpage />} />
+      <Route path="/aircraft-route-economic" element={<AircraftRoute />} />
       <Route path="/homepage" element={<Homepage />} />
     </Routes>
   )

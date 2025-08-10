@@ -147,7 +147,7 @@ export default function Loginpage() {
                   name="email"
                   autoComplete="email"
                   onChange={(e) => setEmail(e.target.value)}
-                  autoFocus                  
+                  autoFocus
                 />
                 <TextField
                   margin="normal"
@@ -158,7 +158,7 @@ export default function Loginpage() {
                   type="password"
                   id="password"
                   autoComplete="current-password"
-                  onChange={(e) => setPassword(e.target.value)}                  
+                  onChange={(e) => setPassword(e.target.value)}
                 />
                 <FormControlLabel
                   control={<Checkbox value="remember" color="primary" />}
@@ -190,8 +190,9 @@ export default function Loginpage() {
             </Box>
           </Grid>
         </Grid>
-
         <Stack direction="column" justifyContent="center" alignItems="center" mb={4}>
+          <Link to="/aircraft-route-economic">Aircraft Route economics</Link>
+
           <TermsAndConditionsModal />
           <Button variant="outlined" color="primary" style={{ width: "150px" }}>
             <Link to="/contact" variant="body2" style={customStyles.link}>
