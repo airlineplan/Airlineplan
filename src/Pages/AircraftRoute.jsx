@@ -294,6 +294,10 @@ export default function AircraftRoute() {
     const crewPerRPM = paxPassengersTotal > 0 && dist > 0 ? (crewValue / (paxPassengersTotal * dist)) : 0;
     const crewPerFH = fhDec > 0 ? (crewValue / fhDec) : 0;
     const crewPerBH = bhDec > 0 ? (crewValue / bhDec) : 0;
+    
+    const navEnroute = Number(form.navEnroutePerFLGT || 0); // per FLGT
+    const navTerminal = Number(form.navTerminalPerArr || 0); // per arrival
+    const navValue = navEnroute + navTerminal;
 
     const navPerASM = seatsTotal > 0 && dist > 0 ? (navValue / (seatsTotal * dist)) : 0;
 
@@ -305,6 +309,8 @@ export default function AircraftRoute() {
 
     // (5) per BH
     const navPerBH = bhDec > 0 ? (navValue / bhDec) : 0;
+
+
 
     const landingPerArr = Number(form.airportLandingPerArr || 0);
     const parkingPerArr = Number(form.airportParkingPerArr || 0);
