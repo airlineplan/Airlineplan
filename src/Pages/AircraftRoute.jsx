@@ -122,6 +122,7 @@ export default function AircraftRoute() {
     docPerRPM: 0,
     docPerFH: 0,
     docPerBH: 0,
+    ownershipUnit: "per FLGT",
   });
 
   const [errors, setErrors] = React.useState({});
@@ -1486,9 +1487,21 @@ export default function AircraftRoute() {
                 type="number"
                 value={form.ownershipPerFLGT}
                 onChange={(e) => onChange("ownershipPerFLGT", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">per FLGT</InputAdornment> }}
                 fullWidth
               />
+            </Grid>
+
+            <Grid item xs={12} md={2}>
+              <TextField
+                select
+                label="Unit"
+                value={form.ownershipUnit}
+                onChange={(e) => onChange("ownershipUnit", e.target.value)}
+                fullWidth
+              >
+                <MenuItem value="per FLGT">per FLGT</MenuItem>
+                <MenuItem value="per BH">per BH</MenuItem>
+              </TextField>
             </Grid>
           </Grid>
         </Box>
