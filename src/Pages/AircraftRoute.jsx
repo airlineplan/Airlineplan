@@ -117,6 +117,11 @@ export default function AircraftRoute() {
     groundPerRPM: 0,
     groundPerFH: 0,
     groundPerBH: 0,
+    docValue: 0,
+    docPerASM: 0,
+    docPerRPM: 0,
+    docPerFH: 0,
+    docPerBH: 0,
   });
 
   const [errors, setErrors] = React.useState({});
@@ -324,6 +329,29 @@ export default function AircraftRoute() {
     // (5) per BH  (assuming your #5 was a typo; using BH here)
     const groundPerBH = bhDec > 0 ? (groundValue / bhDec) : 0;
 
+    // --- Direct Operating cost ---
+    // (1) Value = Fuel + Maintenance + Crew + Navigation + Airport + Ground Ops
+    const docValue =
+      (Number(fuelValue) || 0) +
+      (Number(maintValue) || 0) +
+      (Number(crewValue) || 0) +
+      (Number(navValue) || 0) +
+      (Number(airportValue) || 0) +
+      (Number(groundValue) || 0);
+
+
+    // (2) per ASM
+    const docPerASM = seatsTotal > 0 && dist > 0 ? (docValue / (seatsTotal * dist)) : 0;
+
+    // (3) per RPM
+    const docPerRPM = paxPassengersTotal > 0 && dist > 0 ? (docValue / (paxPassengersTotal * dist)) : 0;
+
+    // (4) per FH
+    const docPerFH = fhDec > 0 ? (docValue / fhDec) : 0;
+
+    // (5) per BH
+    const docPerBH = bhDec > 0 ? (docValue / bhDec) : 0;
+
     // Save everything
     setForm((f) => ({
       ...f,
@@ -372,6 +400,11 @@ export default function AircraftRoute() {
       groundPerRPM,
       groundPerFH,
       groundPerBH,
+      docValue,
+      docPerASM,
+      docPerRPM,
+      docPerFH,
+      docPerBH,
     }));
   };
 
@@ -1327,7 +1360,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="Value"
-                defaultValue="#VALUE!"
+                value={(form.docValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1338,7 +1371,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per ASM"
-                defaultValue="#VALUE!"
+                value={(form.docPerASM ?? 0).toFixed(6)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1349,7 +1382,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per RPM"
-                defaultValue="#VALUE!"
+                value={(form.docPerRPM ?? 0).toFixed(6)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1360,7 +1393,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per FH"
-                defaultValue="#VALUE!"
+                value={(form.docPerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1371,12 +1404,13 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per BH"
-                defaultValue="#VALUE!"
+                value={(form.docPerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
           </Grid>
         </Box>
+
 
 
         <Box sx={{ mt: 3 }}>
