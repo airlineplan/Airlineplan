@@ -107,6 +107,11 @@ export default function AircraftRoute() {
     navPerRPM: 0,
     navPerFH: 0,
     navPerBH: 0,
+    airportValue: 0,
+    airportPerASM: 0,
+    airportPerRPM: 0,
+    airportPerFH: 0,
+    airportPerBH: 0,
   });
 
   const [errors, setErrors] = React.useState({});
@@ -267,6 +272,29 @@ export default function AircraftRoute() {
     // (5) per BH
     const navPerBH = bhDec > 0 ? (navValue / bhDec) : 0;
 
+    const landingPerArr = Number(form.airportLandingPerArr || 0);
+    const parkingPerArr = Number(form.airportParkingPerArr || 0);
+
+    // (1) Value
+    const airportValue = landingPerArr + parkingPerArr;
+
+
+    // (2) per ASM
+    const airportPerASM = seatsTotal > 0 && dist > 0
+      ? airportValue / (seatsTotal * dist)
+      : 0;
+
+    // (3) per RPM
+    const airportPerRPM = paxPassengersTotal > 0 && dist > 0
+      ? airportValue / (paxPassengersTotal * dist)
+      : 0;
+
+    // (4) per FH
+    const airportPerFH = fhDec > 0 ? airportValue / fhDec : 0;
+
+    // (5) per BH
+    const airportPerBH = bhDec > 0 ? airportValue / bhDec : 0;
+
     // Save everything
     setForm((f) => ({
       ...f,
@@ -305,6 +333,11 @@ export default function AircraftRoute() {
       navPerRPM,
       navPerFH,
       navPerBH,
+      airportValue,
+      airportPerASM,
+      airportPerRPM,
+      airportPerFH,
+      airportPerBH,
     }));
   };
 
@@ -1076,7 +1109,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="Value"
-                defaultValue="24000"
+                value={(form.airportValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1087,7 +1120,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per ASM"
-                defaultValue="#VALUE!"
+                value={(form.airportPerASM ?? 0).toFixed(6)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1098,7 +1131,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per RPM"
-                defaultValue="#VALUE!"
+                value={(form.airportPerRPM ?? 0).toFixed(6)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1109,7 +1142,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per FH"
-                defaultValue="#VALUE!"
+                value={(form.airportPerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1120,7 +1153,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per BH"
-                defaultValue="#VALUE!"
+                value={(form.airportPerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1151,6 +1184,7 @@ export default function AircraftRoute() {
             </Grid>
           </Grid>
         </Box>
+
 
         <Box sx={{ mt: 3 }}>
           <Grid container spacing={2} alignItems="center">
