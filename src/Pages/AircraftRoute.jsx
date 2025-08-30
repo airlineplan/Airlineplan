@@ -140,6 +140,11 @@ export default function AircraftRoute() {
     operatingPerRPM: 0,
     operatingPerFH: 0,
     operatingPerBH: 0,
+    opValue: 0,
+    opPerASM: 0,
+    opPerRPM: 0,
+    opPerFH: 0,
+    opPerBH: 0,
 
   });
 
@@ -433,6 +438,20 @@ export default function AircraftRoute() {
     // (5) per BH
     const operatingPerBH = bhDec > 0 ? operatingValue / bhDec : 0;
 
+    const opValue = (Number(totalRevenue) || 0) - (Number(operatingValue) || 0);
+
+
+    // per ASM
+    const opPerASM = seatsTotal > 0 && dist > 0 ? (opValue / (seatsTotal * dist)) : 0;
+
+    // per RPM
+    const opPerRPM = paxPassengersTotal > 0 && dist > 0 ? (opValue / (paxPassengersTotal * dist)) : 0;
+
+    // per FH
+    const opPerFH = fhDec > 0 ? (opValue / fhDec) : 0;
+
+    // per BH
+    const opPerBH = bhDec > 0 ? (opValue / bhDec) : 0;
     // Save everything
     setForm((f) => ({
       ...f,
@@ -501,6 +520,11 @@ export default function AircraftRoute() {
       operatingPerRPM,
       operatingPerFH,
       operatingPerBH,
+      opValue,
+      opPerASM,
+      opPerRPM,
+      opPerFH,
+      opPerBH,
     }));
   };
 
@@ -1792,17 +1816,72 @@ export default function AircraftRoute() {
 
 
         <Box sx={{ mt: 3 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
-            Operating profit/loss
-          </Typography>
-          <Grid container spacing={2}>
-            {[0, 1, 2, 3, 4].map((i) => (
-              <Grid item xs={12} md={2} key={`opl-${i}`}>
-                <TextField size="small" fullWidth defaultValue="#VALUE!" InputProps={{ sx: inputSx }} />
-              </Grid>
-            ))}
+          <Grid container spacing={2} alignItems="center">
+            {/* Left-aligned label */}
+            <Grid item xs={12} md={2}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Operating profit/loss
+              </Typography>
+            </Grid>
+
+            {/* Value */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                size="small"
+                fullWidth
+                label="Value"
+                value={(form.opValue ?? 0).toFixed(2)}
+                InputProps={{ readOnly: true, sx: inputSx }}
+              />
+            </Grid>
+
+            {/* per ASM */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                size="small"
+                fullWidth
+                label="per ASM"
+                value={(form.opPerASM ?? 0).toFixed(6)}
+                InputProps={{ readOnly: true, sx: inputSx }}
+              />
+            </Grid>
+
+            {/* per RPM */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                size="small"
+                fullWidth
+                label="per RPM"
+                value={(form.opPerRPM ?? 0).toFixed(6)}
+                InputProps={{ readOnly: true, sx: inputSx }}
+              />
+            </Grid>
+
+            {/* per FH */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                size="small"
+                fullWidth
+                label="per FH"
+                value={(form.opPerFH ?? 0).toFixed(2)}
+                InputProps={{ readOnly: true, sx: inputSx }}
+              />
+            </Grid>
+
+            {/* per BH */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                size="small"
+                fullWidth
+                label="per BH"
+                value={(form.opPerBH ?? 0).toFixed(2)}
+                InputProps={{ readOnly: true, sx: inputSx }}
+              />
+            </Grid>
           </Grid>
         </Box>
+
+
 
         <Stack direction="row" justifyContent="flex-end" sx={{ mt: 3 }}>
           <Button variant="contained" size="large" onClick={handleCalculate}>
