@@ -123,6 +123,11 @@ export default function AircraftRoute() {
     docPerFH: 0,
     docPerBH: 0,
     ownershipUnit: "per FLGT",
+    ownershipValue: 0,
+    ownershipPerASM: 0,
+    ownershipPerRPM: 0,
+    ownershipPerFH: 0,
+    ownershipPerBH: 0,
   });
 
   const [errors, setErrors] = React.useState({});
@@ -353,6 +358,26 @@ export default function AircraftRoute() {
     // (5) per BH
     const docPerBH = bhDec > 0 ? (docValue / bhDec) : 0;
 
+    const ownershipRate = Number(form.ownershipPerFLGT || 0); // numeric rate the user typed
+    // (1) Value = IF(unit = "per FLGT", rate, rate * BlockHoursDecimal)
+    const ownershipValue = form.ownershipUnit === "per FLGT" ? ownershipRate : ownershipRate * bhDec;
+
+    // (2) per ASM
+    const ownershipPerASM = seatsTotal > 0 && dist > 0
+      ? ownershipValue / (seatsTotal * dist)
+      : 0;
+
+    // (3) per RPM
+    const ownershipPerRPM = paxPassengersTotal > 0 && dist > 0
+      ? ownershipValue / (paxPassengersTotal * dist)
+      : 0;
+
+    // (4) per FH
+    const ownershipPerFH = fhDec > 0 ? (ownershipValue / fhDec) : 0;
+
+    // (5) per BH
+    const ownershipPerBH = bhDec > 0 ? (ownershipValue / bhDec) : 0;
+
     // Save everything
     setForm((f) => ({
       ...f,
@@ -406,6 +431,11 @@ export default function AircraftRoute() {
       docPerRPM,
       docPerFH,
       docPerBH,
+      ownershipValue,
+      ownershipPerASM,
+      ownershipPerRPM,
+      ownershipPerFH,
+      ownershipPerBH,
     }));
   };
 
@@ -1429,7 +1459,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="Value"
-                defaultValue="9000"
+                value={(form.ownershipValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1440,7 +1470,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per ASM"
-                defaultValue="#VALUE!"
+                value={(form.ownershipPerASM ?? 0).toFixed(6)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1451,7 +1481,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per RPM"
-                defaultValue="#VALUE!"
+                value={(form.ownershipPerRPM ?? 0).toFixed(6)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1462,7 +1492,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per FH"
-                defaultValue="#VALUE!"
+                value={(form.ownershipPerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1473,12 +1503,12 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per BH"
-                defaultValue="#VALUE!"
+                value={(form.ownershipPerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
 
-            {/* Second row: Rate input */}
+            {/* Second row: Rate + Unit */}
             <Grid item xs={12} md={2} /> {/* spacer under label */}
 
             <Grid item xs={12} md={2}>
@@ -1505,6 +1535,7 @@ export default function AircraftRoute() {
             </Grid>
           </Grid>
         </Box>
+
 
 
         <Box sx={{ mt: 3 }}>
