@@ -55,8 +55,8 @@ export default function AircraftRoute() {
     bizPassengers: 0,
     cargoCarried: 0,
     econRevenue: 0,
-    pilotRatePerBH: 12000,   // 👈 new: rate for flight crew
-    cabinRatePerBH: 12000,
+    pilotRatePerBH: 0,   // 👈 new: rate for flight crew
+    cabinRatePerBH: 0,
     bizRevenue: 0,
     cargoRevenue: 0,
     taxiTime: "",
@@ -86,18 +86,22 @@ export default function AircraftRoute() {
     maintPerRPM: 0,
     maintPerBH: 0,
     bhDec: 0,
-    pilots: 2,
-    cabin: 4,
-    crewPerBH: 12000,
-    navEnroutePerFLGT: 12000,
-    navTerminalPerArr: 12000,
-    airportLandingPerArr: 12000,
-    airportParkingPerArr: 12000,
-    groundHandlingPerDep: 12000,
-    groundGSEPerDep: 12000,
-    ownershipPerFLGT: 9000,
-    hullPerBH: 1500,
-    liabilityPerFLGT: 200,
+    pilots: 0,
+    cabin: 0,
+    navEnroutePerFLGT: 0,
+    navTerminalPerArr: 0,
+    airportLandingPerArr: 0,
+    airportParkingPerArr: 0,
+    groundHandlingPerDep: 0,
+    groundGSEPerDep: 0,
+    ownershipPerFLGT: 0,
+    hullPerBH: 0,
+    liabilityPerFLGT: 0,
+    crewValue: 0,
+crewPerASM: 0,
+crewPerRPM: 0,
+crewPerFH: 0,
+crewPerBH: 0,
   });
 
   const [errors, setErrors] = React.useState({});
@@ -231,6 +235,22 @@ export default function AircraftRoute() {
     // (5) per BH
     const maintPerBH = bhDec > 0 ? (maintValue / bhDec) : 0;
 
+    // --- Crew cost ---
+// Value = (#Pilots * PilotRatePerBH * BlockHours) + (#Cabin * CabinRatePerBH * BlockHours)
+const pilotsCount = Number(form.pilots || 0);
+const cabinCount  = Number(form.cabin  || 0);
+const pilotRate   = Number(form.pilotRatePerBH || 0);
+const cabinRate   = Number(form.cabinRatePerBH || 0);
+
+const crewValue = (pilotsCount * pilotRate * bhDec) + (cabinCount * cabinRate * bhDec);
+
+
+// per ASM / RPM / FH / BH
+const crewPerASM = seatsTotal > 0 && dist > 0 ? (crewValue / (seatsTotal * dist)) : 0;
+const crewPerRPM = paxPassengersTotal > 0 && dist > 0 ? (crewValue / (paxPassengersTotal * dist)) : 0;
+const crewPerFH  = fhDec > 0 ? (crewValue / fhDec) : 0;
+const crewPerBH  = bhDec > 0 ? (crewValue / bhDec) : 0;
+
     // Save everything
     setForm((f) => ({
       ...f,
@@ -259,6 +279,11 @@ export default function AircraftRoute() {
       maintPerRPM,
       maintPerFH,
       maintPerBH,
+      crewValue,
+  crewPerASM,
+  crewPerRPM,
+  crewPerFH,
+  crewPerBH,
     }));
   };
 
@@ -807,121 +832,121 @@ export default function AircraftRoute() {
         </Box>
 
         <Box sx={{ mt: 3 }}>
-          <Grid container spacing={2} alignItems="center">
-            {/* Left-aligned label */}
-            <Grid item xs={12} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Crew cost
-              </Typography>
-            </Grid>
+  <Grid container spacing={2} alignItems="center">
+    {/* Left-aligned label */}
+    <Grid item xs={12} md={2}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+        Crew cost
+      </Typography>
+    </Grid>
 
-            {/* Value */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-                fullWidth
-                label="Value"
-                defaultValue="#VALUE!"
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
+    {/* Value */}
+    <Grid item xs={12} md={2}>
+      <TextField
+        size="small"
+        fullWidth
+        label="Value"
+        value={(form.crewValue ?? 0).toFixed(2)}
+        InputProps={{ readOnly: true, sx: inputSx }}
+      />
+    </Grid>
 
-            {/* per ASM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-                fullWidth
-                label="per ASM"
-                defaultValue="#VALUE!"
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
+    {/* per ASM */}
+    <Grid item xs={12} md={2}>
+      <TextField
+        size="small"
+        fullWidth
+        label="per ASM"
+        value={(form.crewPerASM ?? 0).toFixed(2)}
+        InputProps={{ readOnly: true, sx: inputSx }}
+      />
+    </Grid>
 
-            {/* per RPM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-                fullWidth
-                label="per RPM"
-                defaultValue="#VALUE!"
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
+    {/* per RPM */}
+    <Grid item xs={12} md={2}>
+      <TextField
+        size="small"
+        fullWidth
+        label="per RPM"
+        value={(form.crewPerRPM ?? 0).toFixed(2)}
+        InputProps={{ readOnly: true, sx: inputSx }}
+      />
+    </Grid>
 
-            {/* per FH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-                fullWidth
-                label="per FH"
-                defaultValue="#VALUE!"
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
+    {/* per FH */}
+    <Grid item xs={12} md={2}>
+      <TextField
+        size="small"
+        fullWidth
+        label="per FH"
+        value={(form.crewPerFH ?? 0).toFixed(2)}
+        InputProps={{ readOnly: true, sx: inputSx }}
+      />
+    </Grid>
 
-            {/* per BH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-                fullWidth
-                label="per BH"
-                defaultValue="#VALUE!"
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
+    {/* per BH */}
+    <Grid item xs={12} md={2}>
+      <TextField
+        size="small"
+        fullWidth
+        label="per BH"
+        value={(form.crewPerBH ?? 0).toFixed(2)}
+        InputProps={{ readOnly: true, sx: inputSx }}
+      />
+    </Grid>
 
-            {/* Second row: Flight Crew + Cabin Crew */}
-            <Grid item xs={12} md={2} /> {/* spacer under label */}
+    {/* Second row: Flight Crew + Cabin Crew */}
+    <Grid item xs={12} md={2} /> {/* spacer under label */}
 
-            {/* Flight Crew count */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Flight Crew"
-                type="number"
-                value={form.pilots}
-                onChange={(e) => onChange("pilots", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">#Pilot</InputAdornment> }}
-                fullWidth
-              />
-            </Grid>
+    {/* Flight Crew count */}
+    <Grid item xs={12} md={2}>
+      <TextField
+        label="Flight Crew"
+        type="number"
+        value={form.pilots}
+        onChange={(e) => onChange("pilots", Number(e.target.value))}
+        InputProps={{ endAdornment: <InputAdornment position="end">#Pilot</InputAdornment> }}
+        fullWidth
+      />
+    </Grid>
 
-            {/* Flight Crew rate */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Rate (Flight Crew)"
-                type="number"
-                value={form.pilotRatePerBH}
-                onChange={(e) => onChange("pilotRatePerBH", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">per BH</InputAdornment> }}
-                fullWidth
-              />
-            </Grid>
+    {/* Flight Crew rate */}
+    <Grid item xs={12} md={2}>
+      <TextField
+        label="Rate (Flight Crew)"
+        type="number"
+        value={form.pilotRatePerBH}
+        onChange={(e) => onChange("pilotRatePerBH", Number(e.target.value))}
+        InputProps={{ endAdornment: <InputAdornment position="end">per BH</InputAdornment> }}
+        fullWidth
+      />
+    </Grid>
 
-            {/* Cabin Crew count */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Cabin Crew"
-                type="number"
-                value={form.cabin}
-                onChange={(e) => onChange("cabin", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">#Cabin</InputAdornment> }}
-                fullWidth
-              />
-            </Grid>
+    {/* Cabin Crew count */}
+    <Grid item xs={12} md={2}>
+      <TextField
+        label="Cabin Crew"
+        type="number"
+        value={form.cabin}
+        onChange={(e) => onChange("cabin", Number(e.target.value))}
+        InputProps={{ endAdornment: <InputAdornment position="end">#Cabin</InputAdornment> }}
+        fullWidth
+      />
+    </Grid>
 
-            {/* Cabin Crew rate */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Rate (Cabin Crew)"
-                type="number"
-                value={form.cabinRatePerBH}
-                onChange={(e) => onChange("cabinRatePerBH", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">per BH</InputAdornment> }}
-                fullWidth
-              />
-            </Grid>
-          </Grid>
-        </Box>
+    {/* Cabin Crew rate */}
+    <Grid item xs={12} md={2}>
+      <TextField
+        label="Rate (Cabin Crew)"
+        type="number"
+        value={form.cabinRatePerBH}
+        onChange={(e) => onChange("cabinRatePerBH", Number(e.target.value))}
+        InputProps={{ endAdornment: <InputAdornment position="end">per BH</InputAdornment> }}
+        fullWidth
+      />
+    </Grid>
+  </Grid>
+</Box>
 
         <Box sx={{ mt: 3 }}>
           <Grid container spacing={2} alignItems="center">
