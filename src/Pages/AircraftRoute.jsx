@@ -1062,7 +1062,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per ASM"
-                value={(form.navPerASM ?? 0).toFixed(6)}
+                value={(form.navPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1073,7 +1073,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per RPM"
-                value={(form.navPerRPM ?? 0).toFixed(6)}
+                value={(form.navPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1154,7 +1154,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per ASM"
-                value={(form.airportPerASM ?? 0).toFixed(6)}
+                value={(form.airportPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1165,7 +1165,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per RPM"
-                value={(form.airportPerRPM ?? 0).toFixed(6)}
+                value={(form.airportPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1246,7 +1246,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per ASM"
-                value={(form.groundPerASM ?? 0).toFixed(6)}
+                value={(form.groundPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1257,7 +1257,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per RPM"
-                value={(form.groundPerRPM ?? 0).toFixed(6)}
+                value={(form.groundPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
