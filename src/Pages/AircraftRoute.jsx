@@ -1773,7 +1773,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per ASM"
-                value={(form.operatingPerASM ?? 0).toFixed(6)}
+                value={(form.operatingPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1784,7 +1784,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per RPM"
-                value={(form.operatingPerRPM ?? 0).toFixed(6)}
+                value={(form.operatingPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1841,7 +1841,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per ASM"
-                value={(form.opPerASM ?? 0).toFixed(6)}
+                value={(form.opPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1852,7 +1852,7 @@ export default function AircraftRoute() {
                 size="small"
                 fullWidth
                 label="per RPM"
-                value={(form.opPerRPM ?? 0).toFixed(6)}
+                value={(form.opPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
