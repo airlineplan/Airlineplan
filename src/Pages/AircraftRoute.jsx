@@ -131,10 +131,15 @@ export default function AircraftRoute() {
     liabilityUnit: "per FLGT",
     hullUnit: "per BH",
     insuranceValue: 0,
-insurancePerASM: 0,
-insurancePerRPM: 0,
-insurancePerFH: 0,
-insurancePerBH: 0,
+    insurancePerASM: 0,
+    insurancePerRPM: 0,
+    insurancePerFH: 0,
+    insurancePerBH: 0,
+    operatingValue: 0,
+    operatingPerASM: 0,
+    operatingPerRPM: 0,
+    operatingPerFH: 0,
+    operatingPerBH: 0,
 
   });
 
@@ -387,27 +392,46 @@ insurancePerBH: 0,
     const ownershipPerBH = bhDec > 0 ? (ownershipValue / bhDec) : 0;
 
     const hullRate = Number(form.hullPerBH || 0);               // numeric rate the user typed
-const liabilityRate = Number(form.liabilityPerFLGT || 0);
+    const liabilityRate = Number(form.liabilityPerFLGT || 0);
 
-// (1) Value = (Hull * IF(hullUnit="per BH", BH, 1)) + (Liability * IF(liabilityUnit="per FLGT", 1, BH))
-const hullValue = form.hullUnit === "per BH" ? hullRate * bhDec : hullRate;
-const liabilityValue = form.liabilityUnit === "per FLGT" ? liabilityRate : liabilityRate * bhDec;
+    // (1) Value = (Hull * IF(hullUnit="per BH", BH, 1)) + (Liability * IF(liabilityUnit="per FLGT", 1, BH))
+    const hullValue = form.hullUnit === "per BH" ? hullRate * bhDec : hullRate;
+    const liabilityValue = form.liabilityUnit === "per FLGT" ? liabilityRate : liabilityRate * bhDec;
 
-const insuranceValue = hullValue + liabilityValue;
+    const insuranceValue = hullValue + liabilityValue;
 
-// (2) per ASM
-const insurancePerASM =
-  seatsTotal > 0 && dist > 0 ? insuranceValue / (seatsTotal * dist) : 0;
+    // (2) per ASM
+    const insurancePerASM =
+      seatsTotal > 0 && dist > 0 ? insuranceValue / (seatsTotal * dist) : 0;
 
-// (3) per RPM
-const insurancePerRPM =
-  paxPassengersTotal > 0 && dist > 0 ? insuranceValue / (paxPassengersTotal * dist) : 0;
+    // (3) per RPM
+    const insurancePerRPM =
+      paxPassengersTotal > 0 && dist > 0 ? insuranceValue / (paxPassengersTotal * dist) : 0;
 
-// (4) per FH
-const insurancePerFH = fhDec > 0 ? insuranceValue / fhDec : 0;
+    // (4) per FH
+    const insurancePerFH = fhDec > 0 ? insuranceValue / fhDec : 0;
 
-// (5) per BH
-const insurancePerBH = bhDec > 0 ? insuranceValue / bhDec : 0;
+    // (5) per BH
+    const insurancePerBH = bhDec > 0 ? insuranceValue / bhDec : 0;
+
+    const operatingValue =
+      (Number(docValue) || 0) +
+      (Number(ownershipValue) || 0) +
+      (Number(insuranceValue) || 0);
+
+    // (2) per ASM
+    const operatingPerASM =
+      seatsTotal > 0 && dist > 0 ? operatingValue / (seatsTotal * dist) : 0;
+
+    // (3) per RPM
+    const operatingPerRPM =
+      paxPassengersTotal > 0 && dist > 0 ? operatingValue / (paxPassengersTotal * dist) : 0;
+
+    // (4) per FH
+    const operatingPerFH = fhDec > 0 ? operatingValue / fhDec : 0;
+
+    // (5) per BH
+    const operatingPerBH = bhDec > 0 ? operatingValue / bhDec : 0;
 
     // Save everything
     setForm((f) => ({
@@ -467,11 +491,16 @@ const insurancePerBH = bhDec > 0 ? insuranceValue / bhDec : 0;
       ownershipPerRPM,
       ownershipPerFH,
       ownershipPerBH,
-       insuranceValue,
-  insurancePerASM,
-  insurancePerRPM,
-  insurancePerFH,
-  insurancePerBH,
+      insuranceValue,
+      insurancePerASM,
+      insurancePerRPM,
+      insurancePerFH,
+      insurancePerBH,
+      operatingValue,
+      operatingPerASM,
+      operatingPerRPM,
+      operatingPerFH,
+      operatingPerBH,
     }));
   };
 
@@ -1575,123 +1604,123 @@ const insurancePerBH = bhDec > 0 ? insuranceValue / bhDec : 0;
 
 
         <Box sx={{ mt: 3 }}>
-  <Grid container spacing={2} alignItems="center">
-    {/* Left-aligned label */}
-    <Grid item xs={12} md={2}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-        Insurance
-      </Typography>
-    </Grid>
+          <Grid container spacing={2} alignItems="center">
+            {/* Left-aligned label */}
+            <Grid item xs={12} md={2}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                Insurance
+              </Typography>
+            </Grid>
 
-    {/* Value */}
-    <Grid item xs={12} md={2}>
-      <TextField
-        size="small"
-        fullWidth
-        label="Value"
-        value={(form.insuranceValue ?? 0).toFixed(2)}
-        InputProps={{ readOnly: true, sx: inputSx }}
-      />
-    </Grid>
+            {/* Value */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                size="small"
+                fullWidth
+                label="Value"
+                value={(form.insuranceValue ?? 0).toFixed(2)}
+                InputProps={{ readOnly: true, sx: inputSx }}
+              />
+            </Grid>
 
-    {/* per ASM */}
-    <Grid item xs={12} md={2}>
-      <TextField
-        size="small"
-        fullWidth
-        label="per ASM"
-        value={(form.insurancePerASM ?? 0).toFixed(2)}
-        InputProps={{ readOnly: true, sx: inputSx }}
-      />
-    </Grid>
+            {/* per ASM */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                size="small"
+                fullWidth
+                label="per ASM"
+                value={(form.insurancePerASM ?? 0).toFixed(2)}
+                InputProps={{ readOnly: true, sx: inputSx }}
+              />
+            </Grid>
 
-    {/* per RPM */}
-    <Grid item xs={12} md={2}>
-      <TextField
-        size="small"
-        fullWidth
-        label="per RPM"
-        value={(form.insurancePerRPM ?? 0).toFixed(2)}
-        InputProps={{ readOnly: true, sx: inputSx }}
-      />
-    </Grid>
+            {/* per RPM */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                size="small"
+                fullWidth
+                label="per RPM"
+                value={(form.insurancePerRPM ?? 0).toFixed(2)}
+                InputProps={{ readOnly: true, sx: inputSx }}
+              />
+            </Grid>
 
-    {/* per FH */}
-    <Grid item xs={12} md={2}>
-      <TextField
-        size="small"
-        fullWidth
-        label="per FH"
-        value={(form.insurancePerFH ?? 0).toFixed(2)}
-        InputProps={{ readOnly: true, sx: inputSx }}
-      />
-    </Grid>
+            {/* per FH */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                size="small"
+                fullWidth
+                label="per FH"
+                value={(form.insurancePerFH ?? 0).toFixed(2)}
+                InputProps={{ readOnly: true, sx: inputSx }}
+              />
+            </Grid>
 
-    {/* per BH */}
-    <Grid item xs={12} md={2}>
-      <TextField
-        size="small"
-        fullWidth
-        label="per BH"
-        value={(form.insurancePerBH ?? 0).toFixed(2)}
-        InputProps={{ readOnly: true, sx: inputSx }}
-      />
-    </Grid>
+            {/* per BH */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                size="small"
+                fullWidth
+                label="per BH"
+                value={(form.insurancePerBH ?? 0).toFixed(2)}
+                InputProps={{ readOnly: true, sx: inputSx }}
+              />
+            </Grid>
 
-    {/* Second row inputs (unchanged except you already added dropdowns) */}
-    <Grid item xs={12} md={2} /> {/* spacer under label */}
+            {/* Second row inputs (unchanged except you already added dropdowns) */}
+            <Grid item xs={12} md={2} /> {/* spacer under label */}
 
-    {/* Aircraft Hull insurance rate */}
-    <Grid item xs={12} md={2}>
-      <TextField
-        label="Aircraft Hull insurance"
-        type="number"
-        value={form.hullPerBH}
-        onChange={(e) => onChange("hullPerBH", Number(e.target.value))}
-        fullWidth
-      />
-    </Grid>
+            {/* Aircraft Hull insurance rate */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                label="Aircraft Hull insurance"
+                type="number"
+                value={form.hullPerBH}
+                onChange={(e) => onChange("hullPerBH", Number(e.target.value))}
+                fullWidth
+              />
+            </Grid>
 
-    {/* Unit dropdown for Hull */}
-    <Grid item xs={12} md={2}>
-      <TextField
-        select
-        label="Unit"
-        value={form.hullUnit}
-        onChange={(e) => onChange("hullUnit", e.target.value)}
-        fullWidth
-      >
-        <MenuItem value="per BH">per BH</MenuItem>
-        <MenuItem value="per FLGT">per FLGT</MenuItem>
-      </TextField>
-    </Grid>
+            {/* Unit dropdown for Hull */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                select
+                label="Unit"
+                value={form.hullUnit}
+                onChange={(e) => onChange("hullUnit", e.target.value)}
+                fullWidth
+              >
+                <MenuItem value="per BH">per BH</MenuItem>
+                <MenuItem value="per FLGT">per FLGT</MenuItem>
+              </TextField>
+            </Grid>
 
-    {/* Passenger + Third party rate */}
-    <Grid item xs={12} md={2}>
-      <TextField
-        label="Passenger + Third party"
-        type="number"
-        value={form.liabilityPerFLGT}
-        onChange={(e) => onChange("liabilityPerFLGT", Number(e.target.value))}
-        fullWidth
-      />
-    </Grid>
+            {/* Passenger + Third party rate */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                label="Passenger + Third party"
+                type="number"
+                value={form.liabilityPerFLGT}
+                onChange={(e) => onChange("liabilityPerFLGT", Number(e.target.value))}
+                fullWidth
+              />
+            </Grid>
 
-    {/* Unit dropdown for Liability */}
-    <Grid item xs={12} md={2}>
-      <TextField
-        select
-        label="Unit"
-        value={form.liabilityUnit}
-        onChange={(e) => onChange("liabilityUnit", e.target.value)}
-        fullWidth
-      >
-        <MenuItem value="per FLGT">per FLGT</MenuItem>
-        <MenuItem value="per BH">per BH</MenuItem>
-      </TextField>
-    </Grid>
-  </Grid>
-</Box>
+            {/* Unit dropdown for Liability */}
+            <Grid item xs={12} md={2}>
+              <TextField
+                select
+                label="Unit"
+                value={form.liabilityUnit}
+                onChange={(e) => onChange("liabilityUnit", e.target.value)}
+                fullWidth
+              >
+                <MenuItem value="per FLGT">per FLGT</MenuItem>
+                <MenuItem value="per BH">per BH</MenuItem>
+              </TextField>
+            </Grid>
+          </Grid>
+        </Box>
 
 
         <Box sx={{ mt: 3 }}>
@@ -1709,7 +1738,7 @@ const insurancePerBH = bhDec > 0 ? insuranceValue / bhDec : 0;
                 size="small"
                 fullWidth
                 label="Value"
-                defaultValue="#VALUE!"
+                value={(form.operatingValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1720,7 +1749,7 @@ const insurancePerBH = bhDec > 0 ? insuranceValue / bhDec : 0;
                 size="small"
                 fullWidth
                 label="per ASM"
-                defaultValue="#VALUE!"
+                value={(form.operatingPerASM ?? 0).toFixed(6)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1731,7 +1760,7 @@ const insurancePerBH = bhDec > 0 ? insuranceValue / bhDec : 0;
                 size="small"
                 fullWidth
                 label="per RPM"
-                defaultValue="#VALUE!"
+                value={(form.operatingPerRPM ?? 0).toFixed(6)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1742,7 +1771,7 @@ const insurancePerBH = bhDec > 0 ? insuranceValue / bhDec : 0;
                 size="small"
                 fullWidth
                 label="per FH"
-                defaultValue="#VALUE!"
+                value={(form.operatingPerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
@@ -1753,12 +1782,13 @@ const insurancePerBH = bhDec > 0 ? insuranceValue / bhDec : 0;
                 size="small"
                 fullWidth
                 label="per BH"
-                defaultValue="#VALUE!"
+                value={(form.operatingPerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
             </Grid>
           </Grid>
         </Box>
+
 
 
         <Box sx={{ mt: 3 }}>
