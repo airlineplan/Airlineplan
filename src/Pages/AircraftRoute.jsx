@@ -576,9 +576,7 @@ export default function AircraftRoute() {
             </Button>
           </Box>
         </div>
-        <Typography variant="h5" sx={{ fontWeight: 800, mb: 2 }}>
-          Route
-        </Typography>
+        <SectionTitle title="Route" />
 
         <Grid container spacing={2}>
           {/* Column 1 */}
@@ -657,6 +655,7 @@ export default function AircraftRoute() {
                 <TextField
                   label="Trip Air Distance"
                   type="number"
+                  sx={{mt:2}}
                   value={form.tripDistance}
                   onChange={(e) => onChange("tripDistance", e.target.value)}
                   error={!!errors.tripDistance}
@@ -667,6 +666,7 @@ export default function AircraftRoute() {
                 <TextField
                   select
                   label="Unit"
+                  sx={{mt:2}}
                   value={form.tripDistanceUnit}
                   onChange={(e) => onChange("tripDistanceUnit", e.target.value)}
                 >
@@ -1844,9 +1844,7 @@ export default function AircraftRoute() {
           <Grid container spacing={2} alignItems="center">
             {/* Left-aligned label */}
             <Grid item xs={12} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Operating profit/loss
-              </Typography>
+              <SectionTitle title="Operating profit/loss" />
             </Grid>
 
             {/* Value */}
