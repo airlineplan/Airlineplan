@@ -25,7 +25,7 @@ function SectionTitle({ title }) {
       <Typography variant="h6" sx={{ fontWeight: 700 }}>
         {title}
       </Typography>
-      <Divider sx={{ mt: 1, borderColor: "grey.800", mb:2, borderBottomWidth: 2  }} />
+      <Divider sx={{ mt: 1, borderColor: "grey.800", mb: 2, borderBottomWidth: 2 }} />
     </Box>
   );
 }
@@ -655,7 +655,7 @@ export default function AircraftRoute() {
                 <TextField
                   label="Trip Air Distance"
                   type="number"
-                  sx={{mt:2}}
+                  sx={{ mt: 2 }}
                   value={form.tripDistance}
                   onChange={(e) => onChange("tripDistance", e.target.value)}
                   error={!!errors.tripDistance}
@@ -666,7 +666,7 @@ export default function AircraftRoute() {
                 <TextField
                   select
                   label="Unit"
-                  sx={{mt:2}}
+                  sx={{ mt: 2 }}
                   value={form.tripDistanceUnit}
                   onChange={(e) => onChange("tripDistanceUnit", e.target.value)}
                 >
@@ -687,7 +687,7 @@ export default function AircraftRoute() {
             <TextField
               label="Economy class Seats"
               type="number"
-              sx={{mt: 3}}
+              sx={{ mt: 3 }}
               value={form.econSeats}
               onChange={(e) => onChange("econSeats", e.target.value)}
               error={!!errors.econSeats}
@@ -698,7 +698,7 @@ export default function AircraftRoute() {
             <TextField
               label="Load factor"
               type="number"
-              sx={{mt: 3}}
+              sx={{ mt: 3 }}
               value={form.lfEcon}
               onChange={(e) => onChange("lfEcon", e.target.value)}
               InputProps={{
@@ -711,7 +711,7 @@ export default function AircraftRoute() {
           <Grid item xs={12} md={2}>
             <TextField
               label="Economy class passengers"
-              
+
               value={Math.round(form.econPassengers)}
               InputProps={{ readOnly: true }}
             />
@@ -720,7 +720,7 @@ export default function AircraftRoute() {
             <TextField
               label="Fares & Rates: Economy"
               type="number"
-              sx={{mt: 3}}
+              sx={{ mt: 3 }}
               value={form.econFare}
               onChange={(e) => onChange("econFare", e.target.value)}
               error={!!errors.econFare}
@@ -741,7 +741,7 @@ export default function AircraftRoute() {
             <TextField
               label="Business class Seats"
               type="number"
-              sx={{mt: 3}}
+              sx={{ mt: 3 }}
 
               value={form.bizSeats}
               onChange={(e) => onChange("bizSeats", e.target.value)}
@@ -753,7 +753,7 @@ export default function AircraftRoute() {
             <TextField
               label="Load factor"
               type="number"
-              sx={{mt: 3}}
+              sx={{ mt: 3 }}
 
               value={form.lfBiz}
               onChange={(e) => onChange("lfBiz", e.target.value)}
@@ -776,7 +776,7 @@ export default function AircraftRoute() {
             <TextField
               label="Fares & Rates: Business"
               type="number"
-              sx={{mt: 3}}
+              sx={{ mt: 3 }}
 
               value={form.bizFare}
               onChange={(e) => onChange("bizFare", e.target.value)}
@@ -798,7 +798,7 @@ export default function AircraftRoute() {
             <TextField
               label="Cargo capacity (Kg)"
               type="number"
-              sx={{mt: 3}}
+              sx={{ mt: 3 }}
 
               value={form.cargoCap}
               onChange={(e) => onChange("cargoCap", e.target.value)}
@@ -810,7 +810,7 @@ export default function AircraftRoute() {
             <TextField
               label="Load factor"
               type="number"
-              sx={{mt: 3}}
+              sx={{ mt: 3 }}
 
               value={form.lfCargo}
               onChange={(e) => onChange("lfCargo", e.target.value)}
@@ -833,7 +833,7 @@ export default function AircraftRoute() {
             <TextField
               label="Cargo rate"
               type="number"
-              sx={{mt: 3}}
+              sx={{ mt: 3 }}
 
               value={form.cargoRate}
               onChange={(e) => onChange("cargoRate", e.target.value)}
@@ -1838,13 +1838,19 @@ export default function AircraftRoute() {
           </Grid>
         </Box>
 
+        <Divider sx={{ mt: 5, borderColor: "grey.800", mb: 2, borderBottomWidth: 2 }} />
 
 
         <Box sx={{ mt: 3 }}>
           <Grid container spacing={2} alignItems="center">
             {/* Left-aligned label */}
+
             <Grid item xs={12} md={2}>
-              <SectionTitle title="Operating profit/loss" />
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  Operating profit/loss
+                </Typography>
+              </Box>
             </Grid>
 
             {/* Value */}
