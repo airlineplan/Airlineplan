@@ -595,7 +595,7 @@ export default function AircraftRoute() {
               mb: 2,
               border: "1px solid",
               borderColor: "grey.600", // lighter inner box
-              borderRadius: 2,
+              borderRadius: 1,
             }}
           >
             <Grid container spacing={2} alignItems="center">
@@ -653,7 +653,7 @@ export default function AircraftRoute() {
               p: 2,
               border: "1px solid",
               borderColor: "grey.600", // lighter inner box
-              borderRadius: 2,
+              borderRadius: 1,
             }}
           >
             <Grid container spacing={2} alignItems="center">
@@ -1137,7 +1137,7 @@ export default function AircraftRoute() {
           <SectionTitle title="Costs" />
 
           {/* ---------------- Fuel ---------------- */}
-          <Box sx={{ mt: 3, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 2 }}>
+          <Box sx={{ mt: 3, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 1 }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={2}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -1189,7 +1189,7 @@ export default function AircraftRoute() {
           </Box>
 
           {/* ---------------- Maintenance ---------------- */}
-          <Box sx={{ mt: 2, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 2 }}>
+          <Box sx={{ mt: 2, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 1 }}>
             <Grid container spacing={2} alignItems="center">
               <Grid item xs={12} md={2}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
@@ -1899,7 +1899,7 @@ export default function AircraftRoute() {
             p: 2,                         // padding inside
             border: "2px solid",          // border thickness
             borderColor: "grey.800",      // border color
-            borderRadius: 2,              // rounded corners
+            borderRadius: 1,              // rounded corners
             bgcolor: "background.paper",  // matches theme background
           }}
         >
