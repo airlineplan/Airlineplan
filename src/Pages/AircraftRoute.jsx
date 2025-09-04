@@ -614,7 +614,7 @@ const subTimes = (t1, t2) => {
                   onChange={(e) => onChange("dep", e.target.value)}
                   error={!!errors.dep}
                   helperText={errors.dep || "3 or 4 alphanumeric"}
-                  fullWidth
+                  
                 />
               </Grid>
 
@@ -627,7 +627,7 @@ const subTimes = (t1, t2) => {
                   placeholder="hh:mm"
                   error={!!errors.blockHours}
                   helperText={errors.blockHours || "HH:mm"}
-                  fullWidth
+                  
                 />
               </Grid>
 
@@ -672,7 +672,7 @@ const subTimes = (t1, t2) => {
                   onChange={(e) => onChange("arr", e.target.value)}
                   error={!!errors.arr}
                   helperText={errors.arr || "3 or 4 alphanumeric"}
-                  fullWidth
+                  
                 />
               </Grid>
 
@@ -685,7 +685,7 @@ const subTimes = (t1, t2) => {
                   placeholder="hh:mm"
                   error={!!errors.taxiTime}
                   helperText={errors.taxiTime || "HH:mm"}
-                  fullWidth
+                  
                 />
               </Grid>
 
@@ -700,7 +700,7 @@ const subTimes = (t1, t2) => {
                       onChange={(e) => onChange("tripDistance", e.target.value)}
                       error={!!errors.tripDistance}
                       helperText={errors.tripDistance || "Int min 0 max 20000"}
-                      fullWidth
+                      
                     />
                   </Grid>
                   <Grid item xs={4}>
@@ -709,7 +709,7 @@ const subTimes = (t1, t2) => {
                       label="Unit"
                       value={form.tripDistanceUnit}
                       onChange={(e) => onChange("tripDistanceUnit", e.target.value)}
-                      fullWidth
+                      
                     >
                       <MenuItem value="NM">NM</MenuItem>
                       <MenuItem value="Miles">Miles</MenuItem>
@@ -758,7 +758,7 @@ const subTimes = (t1, t2) => {
                   onChange={(e) => onChange("econSeats", e.target.value)}
                   error={!!errors.econSeats}
                   helperText={errors.econSeats || "0–600"}
-                  fullWidth
+                  
                 />
               </Grid>
               <Grid item xs={12} md={1}>
@@ -774,7 +774,7 @@ const subTimes = (t1, t2) => {
                   }}
                   error={!!errors.lfEcon}
                   helperText={errors.lfEcon || "0–100"}
-                  fullWidth
+                  
                 />
               </Grid>
               <Grid item xs={12} md={2}>
@@ -783,7 +783,7 @@ const subTimes = (t1, t2) => {
                   label="Economy class passengers"
                   value={Math.round(form.econPassengers)}
                   InputProps={{ readOnly: true }}
-                  fullWidth
+                  
                 />
               </Grid>
               <Grid item xs={12} md={3}>
@@ -796,7 +796,7 @@ const subTimes = (t1, t2) => {
                   onChange={(e) => onChange("econFare", e.target.value)}
                   error={!!errors.econFare}
                   helperText={errors.econFare || "0–999000"}
-                  fullWidth
+                  
                 />
               </Grid>
               <Grid item xs={12} md={3}>
@@ -804,7 +804,7 @@ const subTimes = (t1, t2) => {
                   label="Economy class revenue"
                   value={Math.round(form.econRevenue)}
                   InputProps={{ readOnly: true }}
-                  fullWidth
+                  
                 />
               </Grid>
             </Grid>
@@ -832,7 +832,7 @@ const subTimes = (t1, t2) => {
                   onChange={(e) => onChange("bizSeats", e.target.value)}
                   error={!!errors.bizSeats}
                   helperText={errors.bizSeats || "0–600"}
-                  fullWidth
+                  
                 />
               </Grid>
               <Grid item xs={12} md={1}>
@@ -848,7 +848,7 @@ const subTimes = (t1, t2) => {
 
                   error={!!errors.lfBiz}
                   helperText={errors.lfBiz || "0–100"}
-                  fullWidth
+                  
                 />
               </Grid>
               <Grid item xs={12} md={2}>
@@ -856,7 +856,7 @@ const subTimes = (t1, t2) => {
                   label="Business class passengers"
                   value={Math.round(form.bizPassengers)}
                   InputProps={{ readOnly: true }}
-                  fullWidth
+                  
                 />
               </Grid>
               <Grid item xs={12} md={3}>
@@ -869,7 +869,7 @@ const subTimes = (t1, t2) => {
                   onChange={(e) => onChange("bizFare", e.target.value)}
                   error={!!errors.bizFare}
                   helperText={errors.bizFare || "0–999000"}
-                  fullWidth
+                  
                 />
               </Grid>
               <Grid item xs={12} md={3}>
@@ -877,7 +877,7 @@ const subTimes = (t1, t2) => {
                   label="Business class revenue"
                   value={Math.round(form.bizRevenue)}
                   InputProps={{ readOnly: true }}
-                  fullWidth
+                  
                 />
               </Grid>
             </Grid>
@@ -903,7 +903,7 @@ const subTimes = (t1, t2) => {
                   onChange={(e) => onChange("cargoCap", e.target.value)}
                   error={!!errors.cargoCap}
                   helperText={errors.cargoCap || "0–150000"}
-                  fullWidth
+                  
                 />
               </Grid>
               <Grid item xs={12} md={1}>
@@ -919,7 +919,7 @@ const subTimes = (t1, t2) => {
                   }}
                   error={!!errors.lfCargo}
                   helperText={errors.lfCargo || "0–100"}
-                  fullWidth
+                  
                 />
               </Grid>
               <Grid item xs={12} md={2}>
@@ -928,7 +928,7 @@ const subTimes = (t1, t2) => {
                   label="Cargo carried (Kg)"
                   value={Math.round(form.cargoCarried)}
                   InputProps={{ readOnly: true }}
-                  fullWidth
+                  
                 />
               </Grid>
               <Grid item xs={12} md={3}>
@@ -941,7 +941,7 @@ const subTimes = (t1, t2) => {
                   onChange={(e) => onChange("cargoRate", e.target.value)}
                   error={!!errors.cargoRate}
                   helperText={errors.cargoRate || "0–999000"}
-                  fullWidth
+                  
                 />
               </Grid>
               <Grid item xs={12} md={3}>
@@ -949,7 +949,7 @@ const subTimes = (t1, t2) => {
                   label="Cargo revenue"
                   value={Math.round(form.cargoRevenue)}
                   InputProps={{ readOnly: true }}
-                  fullWidth
+                  
                 />
               </Grid>
             </Grid>
