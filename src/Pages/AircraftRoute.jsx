@@ -150,18 +150,25 @@ export default function AircraftRoute() {
 
   const [errors, setErrors] = React.useState({});
 
-  // ✅ Time helper to add HH:mm
-  const addTimes = (t1, t2) => {
-    const [h1, m1] = t1.split(":").map(Number);
-    const [h2, m2] = t2.split(":").map(Number);
-    let totalMin = m1 + m2;
-    let totalHr = h1 + h2 + Math.floor(totalMin / 60);
-    totalMin = totalMin % 60;
-    return `${String(totalHr).padStart(2, "0")}:${String(totalMin).padStart(
-      2,
-      "0"
-    )}`;
-  };
+ const toMinutes = (t) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+
+const minutesToHHMM = (mins) => {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+// Keep if you still need addition elsewhere
+const addTimes = (t1, t2) => minutesToHHMM(toMinutes(t1) + toMinutes(t2));
+
+// New: subtract HH:mm (no negatives)
+const subTimes = (t1, t2) => {
+  const diff = toMinutes(t1) - toMinutes(t2);
+  return minutesToHHMM(Math.max(0, diff));
+};
 
   const validate = () => {
     const newErrors = {};
@@ -219,7 +226,7 @@ export default function AircraftRoute() {
     if (!validate()) return;
 
     // Flight Hours
-    const flightTime = addTimes(form.blockHours, form.taxiTime);
+    const flightTime = subTimes(form.blockHours, form.taxiTime);
     const fhDec = hhmmToDec(flightTime);
     const bhDec = hhmmToDec(form.blockHours || "0:00");
 
