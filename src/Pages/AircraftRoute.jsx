@@ -21,11 +21,11 @@ import {
 // Small helper to render a label+helper under section titles
 function SectionTitle({ title }) {
   return (
-    <Box sx={{ mb: 1, mt: 3 }}>
+    <Box sx={{ mb: 1, mt: 5 }}>
       <Typography variant="h6" sx={{ fontWeight: 700 }}>
         {title}
       </Typography>
-      <Divider sx={{ mt: 1 }} />
+      <Divider sx={{ mt: 1, borderColor: "grey.800", mb:2}} />
     </Box>
   );
 }
