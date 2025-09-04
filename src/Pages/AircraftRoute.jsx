@@ -747,67 +747,63 @@ export default function AircraftRoute() {
             }}
           >
 
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={3}>
+            <Grid container spacing={2} columns={{ xs: 12, md: 12, lg: 20 }}>
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
                   label="Economy class Seats"
                   type="number"
-                  sx={{ mt: 3 }}
-
+                  sx={{ width: '100%' }}
                   value={form.econSeats}
                   onChange={(e) => onChange("econSeats", e.target.value)}
                   error={!!errors.econSeats}
                   helperText={errors.econSeats || "0–600"}
-
                 />
               </Grid>
-              <Grid item xs={12} md={1}>
+
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
                   label="Load factor"
                   type="number"
-                  sx={{ mt: 3 }}
-
+                  sx={{ width: '100%' }}
                   value={form.lfEcon}
                   onChange={(e) => onChange("lfEcon", e.target.value)}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                  }}
+                  InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
                   error={!!errors.lfEcon}
                   helperText={errors.lfEcon || "0–100"}
-
                 />
               </Grid>
-              <Grid item xs={12} md={2}>
+
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
-                  sx={{ pt: 0 }}
                   label="Economy class passengers"
+                  sx={{ width: '100%' }}
                   value={Math.round(form.econPassengers)}
                   InputProps={{ readOnly: true }}
-
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
+
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
                   label="Fares & Rates: Economy"
                   type="number"
-                  sx={{ mt: 3 }}
-
+                  sx={{ width: '100%' }}
                   value={form.econFare}
                   onChange={(e) => onChange("econFare", e.target.value)}
                   error={!!errors.econFare}
                   helperText={errors.econFare || "0–999000"}
-
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
+
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
                   label="Economy class revenue"
+                  sx={{ width: '100%' }}
                   value={Math.round(form.econRevenue)}
                   InputProps={{ readOnly: true }}
-
                 />
               </Grid>
             </Grid>
+
           </Box>
 
           {/* ================= Business ================= */}
@@ -821,66 +817,63 @@ export default function AircraftRoute() {
             }}
           >
 
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={3}>
+            <Grid container spacing={2} columns={{ xs: 12, md: 12, lg: 20 }}>
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
                   label="Business class Seats"
                   type="number"
-                  sx={{ mt: 3 }}
-
+                  sx={{ width: '100%' }}
                   value={form.bizSeats}
                   onChange={(e) => onChange("bizSeats", e.target.value)}
                   error={!!errors.bizSeats}
                   helperText={errors.bizSeats || "0–600"}
-
                 />
               </Grid>
-              <Grid item xs={12} md={1}>
+
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
                   label="Load factor"
                   type="number"
+                  sx={{ width: '100%' }}
                   value={form.lfBiz}
                   onChange={(e) => onChange("lfBiz", e.target.value)}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                  }}
-                  sx={{ mt: 3 }}
-
+                  InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
                   error={!!errors.lfBiz}
                   helperText={errors.lfBiz || "0–100"}
-
                 />
               </Grid>
-              <Grid item xs={12} md={2}>
+
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
                   label="Business class passengers"
+                  sx={{ width: '100%' }}
                   value={Math.round(form.bizPassengers)}
                   InputProps={{ readOnly: true }}
-
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
+
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
                   label="Fares & Rates: Business"
                   type="number"
-                  sx={{ mt: 3 }}
-
+                  sx={{ width: '100%' }}
                   value={form.bizFare}
                   onChange={(e) => onChange("bizFare", e.target.value)}
                   error={!!errors.bizFare}
                   helperText={errors.bizFare || "0–999000"}
-
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
+
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
                   label="Business class revenue"
+                  sx={{ width: '100%' }}
                   value={Math.round(form.bizRevenue)}
                   InputProps={{ readOnly: true }}
-
                 />
               </Grid>
             </Grid>
+
           </Box>
 
           {/* ================= Cargo ================= */}
@@ -893,66 +886,63 @@ export default function AircraftRoute() {
             }}
           >
 
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={3}>
+            <Grid container spacing={2} columns={{ xs: 12, md: 12, lg: 20 }}>
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
                   label="Cargo capacity (Kg)"
                   type="number"
-                  sx={{ mt: 3 }}
+                  sx={{ width: '100%' }}
                   value={form.cargoCap}
                   onChange={(e) => onChange("cargoCap", e.target.value)}
                   error={!!errors.cargoCap}
                   helperText={errors.cargoCap || "0–150000"}
-
                 />
               </Grid>
-              <Grid item xs={12} md={1}>
+
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
                   label="Load factor"
                   type="number"
-                  sx={{ mt: 3 }}
-
+                  sx={{ width: '100%' }}
                   value={form.lfCargo}
                   onChange={(e) => onChange("lfCargo", e.target.value)}
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
-                  }}
+                  InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
                   error={!!errors.lfCargo}
                   helperText={errors.lfCargo || "0–100"}
-
                 />
               </Grid>
-              <Grid item xs={12} md={2}>
-                <TextField
 
+              <Grid item xs={12} md={6} lg={4}>
+                <TextField
                   label="Cargo carried (Kg)"
+                  sx={{ width: '100%' }}
                   value={Math.round(form.cargoCarried)}
                   InputProps={{ readOnly: true }}
-
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
+
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
                   label="Cargo rate"
-                  sx={{ mt: 3 }}
-
                   type="number"
+                  sx={{ width: '100%' }}
                   value={form.cargoRate}
                   onChange={(e) => onChange("cargoRate", e.target.value)}
                   error={!!errors.cargoRate}
                   helperText={errors.cargoRate || "0–999000"}
-
                 />
               </Grid>
-              <Grid item xs={12} md={3}>
+
+              <Grid item xs={12} md={6} lg={4}>
                 <TextField
                   label="Cargo revenue"
+                  sx={{ width: '100%' }}
                   value={Math.round(form.cargoRevenue)}
                   InputProps={{ readOnly: true }}
-
                 />
               </Grid>
             </Grid>
+
           </Box>
         </Box>
 
