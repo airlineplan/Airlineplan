@@ -25,7 +25,7 @@ function SectionTitle({ title }) {
       <Typography variant="h6" sx={{ fontWeight: 700 }}>
         {title}
       </Typography>
-      <Divider sx={{ mt: 1, borderColor: "grey.800", mb:2}} />
+      <Divider sx={{ mt: 1, borderColor: "grey.800", mb:2, borderBottomWidth: 2  }} />
     </Box>
   );
 }
