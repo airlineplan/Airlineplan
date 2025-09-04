@@ -567,105 +567,104 @@ export default function AircraftRoute() {
         </Typography>
 
         <Grid container spacing={2}>
-          {/* Departure */}
-          <Grid item xs={12} md={4}>
-            <TextField
-              label="Departure station/city"
-              fullWidth
-              value={form.dep}
-              onChange={(e) => onChange("dep", e.target.value)}
-              error={!!errors.dep}
-              helperText={errors.dep || "3 or 4 alphanumeric"}
-            />
-          </Grid>
+  {/* Column 1 */}
+  <Grid item xs={12} md={4}>
+    {/* Departure */}
+    <TextField
+      label="Departure station/city"
+      value={form.dep}
+      onChange={(e) => onChange("dep", e.target.value)}
+      error={!!errors.dep}
+      helperText={errors.dep || "3 or 4 alphanumeric"}
+    />
 
-          {/* Arrival */}
-          <Grid item xs={12} md={4}>
-            <TextField
-              label="Arrival station/city"
-              fullWidth
-              value={form.arr}
-              onChange={(e) => onChange("arr", e.target.value)}
-              error={!!errors.arr}
-              helperText={errors.arr || "3 or 4 alphanumeric"}
-            />
-          </Grid>
+    {/* Arrival */}
+    <Box mt={2}>
+      <TextField
+        label="Arrival station/city"
+        value={form.arr}
+        onChange={(e) => onChange("arr", e.target.value)}
+        error={!!errors.arr}
+        helperText={errors.arr || "3 or 4 alphanumeric"}
+      />
+    </Box>
+  </Grid>
 
-          {/* Block Hours */}
-          <Grid item xs={12} md={2}>
-            <TextField
-              label="Block hours (BH)"
-              fullWidth
-              value={form.blockHours}
-              onChange={(e) => onChange("blockHours", e.target.value)}
-              placeholder="hh:mm"
-              error={!!errors.blockHours}
-              helperText={errors.blockHours || "HH:mm"}
-            />
-          </Grid>
+  {/* Column 2 */}
+  <Grid item xs={12} md={4}>
+    {/* Block Hours */}
+    <TextField
+      label="Block hours (BH)"
+      value={form.blockHours}
+      onChange={(e) => onChange("blockHours", e.target.value)}
+      placeholder="hh:mm"
+      error={!!errors.blockHours}
+      helperText={errors.blockHours || "HH:mm"}
+    />
 
-          {/* Taxi Time */}
-          <Grid item xs={12} md={2}>
-            <TextField
-              label="Total taxi time"
-              fullWidth
-              value={form.taxiTime}
-              onChange={(e) => onChange("taxiTime", e.target.value)}
-              placeholder="hh:mm"
-              error={!!errors.taxiTime}
-              helperText={errors.taxiTime || "HH:mm"}
-            />
-          </Grid>
+    {/* Taxi Time */}
+    <Box mt={2}>
+      <TextField
+        label="Total taxi time"
+        value={form.taxiTime}
+        onChange={(e) => onChange("taxiTime", e.target.value)}
+        placeholder="hh:mm"
+        error={!!errors.taxiTime}
+        helperText={errors.taxiTime || "HH:mm"}
+      />
+    </Box>
+  </Grid>
 
-          {/* Flight Hours */}
-          <Grid item xs={12} md={3}>
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Flight hours (FH)
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{
-                  fontFamily: "monospace",
-                  bgcolor: (t) => (t.palette.mode === "light" ? "#fffdf6" : "#2b2b22"),
-                  px: 1,
-                  py: 0.5,
-                  borderRadius: 1,
-                }}
-              >
-                {form.flightHours || "--:--"}
-              </Typography>
-            </Box>
-          </Grid>
+  {/* Column 3 */}
+  <Grid item xs={12} md={4}>
+    {/* Flight Hours */}
+    <Box mb={2}>
+      <Typography variant="body2" color="text.secondary">
+        Flight hours (FH)
+      </Typography>
+      <Typography
+        variant="h6"
+        sx={{
+          fontFamily: "monospace",
+          bgcolor: (t) =>
+            t.palette.mode === "light" ? "#fffdf6" : "#2b2b22",
+          px: 1,
+          py: 0.5,
+          borderRadius: 1,
+        }}
+      >
+        {form.flightHours || "--:--"}
+      </Typography>
+    </Box>
 
-          {/* Trip Distance */}
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="Trip Distance"
-              type="number"
-              fullWidth
-              value={form.tripDistance}
-              onChange={(e) => onChange("tripDistance", e.target.value)}
-              error={!!errors.tripDistance}
-              helperText={errors.tripDistance || "Int min 0 max 20000"}
-            />
-          </Grid>
+    {/* Trip Distance + Unit */}
+    <Grid container spacing={2}>
+      <Grid item xs={8}>
+        <TextField
+          label="Trip Distance"
+          type="number"
+          value={form.tripDistance}
+          onChange={(e) => onChange("tripDistance", e.target.value)}
+          error={!!errors.tripDistance}
+          helperText={errors.tripDistance || "Int min 0 max 20000"}
+        />
+      </Grid>
+      <Grid item xs={4}>
+        <TextField
+          select
+          label="Unit"
+          value={form.tripDistanceUnit}
+          onChange={(e) => onChange("tripDistanceUnit", e.target.value)}
+        >
+          <MenuItem value="NM">NM</MenuItem>
+          <MenuItem value="Miles">Miles</MenuItem>
+          <MenuItem value="Km">Km</MenuItem>
+        </TextField>
+      </Grid>
+    </Grid>
+  </Grid>
+</Grid>
 
-          {/* Unit Select */}
-          <Grid item xs={12} md={2}>
-            <TextField
-              select
-              label="Unit"
-              value={form.tripDistanceUnit}
-              onChange={(e) => onChange("tripDistanceUnit", e.target.value)}
-              fullWidth
-            >
-              <MenuItem value="NM">NM</MenuItem>
-              <MenuItem value="Miles">Miles</MenuItem>
-              <MenuItem value="Km">Km</MenuItem>
-            </TextField>
-          </Grid>
-        </Grid>
 
         <SectionTitle title="Capacity" />
         <Grid container spacing={2} alignItems="center">
@@ -674,7 +673,7 @@ export default function AircraftRoute() {
             <TextField
               label="Economy class Seats"
               type="number"
-              fullWidth
+              
               value={form.econSeats}
               onChange={(e) => onChange("econSeats", e.target.value)}
               error={!!errors.econSeats}
@@ -685,7 +684,7 @@ export default function AircraftRoute() {
             <TextField
               label="Load factor"
               type="number"
-              fullWidth
+              
               value={form.lfEcon}
               onChange={(e) => onChange("lfEcon", e.target.value)}
               InputProps={{
@@ -698,7 +697,7 @@ export default function AircraftRoute() {
           <Grid item xs={12} md={2}>
             <TextField
               label="Economy class passengers"
-              fullWidth
+              
               value={Math.round(form.econPassengers)}
               InputProps={{ readOnly: true }}
             />
@@ -707,7 +706,7 @@ export default function AircraftRoute() {
             <TextField
               label="Fares & Rates: Economy"
               type="number"
-              fullWidth
+              
               value={form.econFare}
               onChange={(e) => onChange("econFare", e.target.value)}
               error={!!errors.econFare}
@@ -717,7 +716,7 @@ export default function AircraftRoute() {
           <Grid item xs={12} md={3}>
             <TextField
               label="Economy class revenue"
-              fullWidth
+              
               value={Math.round(form.econRevenue)}
               InputProps={{ readOnly: true }}
             />
@@ -728,7 +727,7 @@ export default function AircraftRoute() {
             <TextField
               label="Business class Seats"
               type="number"
-              fullWidth
+              
               value={form.bizSeats}
               onChange={(e) => onChange("bizSeats", e.target.value)}
               error={!!errors.bizSeats}
@@ -739,7 +738,7 @@ export default function AircraftRoute() {
             <TextField
               label="Load factor"
               type="number"
-              fullWidth
+              
               value={form.lfBiz}
               onChange={(e) => onChange("lfBiz", e.target.value)}
               InputProps={{
@@ -752,7 +751,7 @@ export default function AircraftRoute() {
           <Grid item xs={12} md={2}>
             <TextField
               label="Business class passengers"
-              fullWidth
+              
               value={Math.round(form.bizPassengers)}
               InputProps={{ readOnly: true }}
             />
@@ -761,7 +760,7 @@ export default function AircraftRoute() {
             <TextField
               label="Fares & Rates: Business"
               type="number"
-              fullWidth
+              
               value={form.bizFare}
               onChange={(e) => onChange("bizFare", e.target.value)}
               error={!!errors.bizFare}
@@ -771,7 +770,7 @@ export default function AircraftRoute() {
           <Grid item xs={12} md={3}>
             <TextField
               label="Business class revenue"
-              fullWidth
+              
               value={Math.round(form.bizRevenue)}
               InputProps={{ readOnly: true }}
             />
@@ -782,7 +781,7 @@ export default function AircraftRoute() {
             <TextField
               label="Cargo capacity (Kg)"
               type="number"
-              fullWidth
+              
               value={form.cargoCap}
               onChange={(e) => onChange("cargoCap", e.target.value)}
               error={!!errors.cargoCap}
@@ -793,7 +792,7 @@ export default function AircraftRoute() {
             <TextField
               label="Load factor"
               type="number"
-              fullWidth
+              
               value={form.lfCargo}
               onChange={(e) => onChange("lfCargo", e.target.value)}
               InputProps={{
@@ -806,7 +805,7 @@ export default function AircraftRoute() {
           <Grid item xs={12} md={2}>
             <TextField
               label="Cargo carried (Kg)"
-              fullWidth
+              
               value={Math.round(form.cargoCarried)}
               InputProps={{ readOnly: true }}
             />
@@ -815,7 +814,7 @@ export default function AircraftRoute() {
             <TextField
               label="Cargo rate"
               type="number"
-              fullWidth
+              
               value={form.cargoRate}
               onChange={(e) => onChange("cargoRate", e.target.value)}
               error={!!errors.cargoRate}
@@ -825,7 +824,7 @@ export default function AircraftRoute() {
           <Grid item xs={12} md={3}>
             <TextField
               label="Cargo revenue"
-              fullWidth
+              
               value={Math.round(form.cargoRevenue)}
               InputProps={{ readOnly: true }}
             />
@@ -854,16 +853,16 @@ export default function AircraftRoute() {
                 </Box>
               </TableCell>
               <TableCell align="right">
-                <TextField size="small" fullWidth value={fmt(div0((form.paxRevenue ?? 0).toFixed(2), form.paxASM))} InputProps={{ readOnly: true, sx: inputSx }} />
+                <TextField size="small"  value={fmt(div0((form.paxRevenue ?? 0).toFixed(2), form.paxASM))} InputProps={{ readOnly: true, sx: inputSx }} />
               </TableCell>
               <TableCell align="right">
-                <TextField size="small" fullWidth value={fmt(div0((form.paxRevenue ?? 0).toFixed(2), form.paxASM))} InputProps={{ readOnly: true, sx: inputSx }} />
+                <TextField size="small"  value={fmt(div0((form.paxRevenue ?? 0).toFixed(2), form.paxASM))} InputProps={{ readOnly: true, sx: inputSx }} />
               </TableCell>
               <TableCell align="right">
-                <TextField size="small" fullWidth value={fmt(div0((form.paxRevenue ?? 0).toFixed(2), form.paxASM))} InputProps={{ readOnly: true, sx: inputSx }} />
+                <TextField size="small"  value={fmt(div0((form.paxRevenue ?? 0).toFixed(2), form.paxASM))} InputProps={{ readOnly: true, sx: inputSx }} />
               </TableCell>
               <TableCell align="right">
-                <TextField size="small" fullWidth value={fmt(div0((form.paxRevenue ?? 0).toFixed(2), form.paxASM))} InputProps={{ readOnly: true, sx: inputSx }} />
+                <TextField size="small"  value={fmt(div0((form.paxRevenue ?? 0).toFixed(2), form.paxASM))} InputProps={{ readOnly: true, sx: inputSx }} />
               </TableCell>
             </TableRow>
 
@@ -876,16 +875,16 @@ export default function AircraftRoute() {
                 </Box>
               </TableCell>
               <TableCell align="right">
-                <TextField size="small" fullWidth value={fmt(div0(form.cargoRevenue, form.cargoASM))} InputProps={{ readOnly: true, sx: inputSx }} />
+                <TextField size="small"  value={fmt(div0(form.cargoRevenue, form.cargoASM))} InputProps={{ readOnly: true, sx: inputSx }} />
               </TableCell>
               <TableCell align="right">
-                <TextField size="small" fullWidth value={fmt(div0(form.cargoRevenue, form.cargoRPM))} InputProps={{ readOnly: true, sx: inputSx }} />
+                <TextField size="small"  value={fmt(div0(form.cargoRevenue, form.cargoRPM))} InputProps={{ readOnly: true, sx: inputSx }} />
               </TableCell>
               <TableCell align="right">
-                <TextField size="small" fullWidth value={fmt(div0(form.cargoRevenue, form.fhDec))} InputProps={{ readOnly: true, sx: inputSx }} />
+                <TextField size="small"  value={fmt(div0(form.cargoRevenue, form.fhDec))} InputProps={{ readOnly: true, sx: inputSx }} />
               </TableCell>
               <TableCell align="right">
-                <TextField size="small" fullWidth value={fmt(div0(form.cargoRevenue, form.bhDec))} InputProps={{ readOnly: true, sx: inputSx }} />
+                <TextField size="small"  value={fmt(div0(form.cargoRevenue, form.bhDec))} InputProps={{ readOnly: true, sx: inputSx }} />
               </TableCell>
             </TableRow>
 
@@ -898,16 +897,16 @@ export default function AircraftRoute() {
                 </Box>
               </TableCell>
               <TableCell align="right">
-                <TextField size="small" fullWidth value={fmt(div0(form.totalRevenue, form.totalASM))} InputProps={{ readOnly: true, sx: inputSx }} />
+                <TextField size="small"  value={fmt(div0(form.totalRevenue, form.totalASM))} InputProps={{ readOnly: true, sx: inputSx }} />
               </TableCell>
               <TableCell align="right">
-                <TextField size="small" fullWidth value={fmt(div0(form.totalRevenue, form.totalRPM))} InputProps={{ readOnly: true, sx: inputSx }} />
+                <TextField size="small"  value={fmt(div0(form.totalRevenue, form.totalRPM))} InputProps={{ readOnly: true, sx: inputSx }} />
               </TableCell>
               <TableCell align="right">
-                <TextField size="small" fullWidth value={fmt(div0(form.totalRevenue, form.fhDec))} InputProps={{ readOnly: true, sx: inputSx }} />
+                <TextField size="small"  value={fmt(div0(form.totalRevenue, form.fhDec))} InputProps={{ readOnly: true, sx: inputSx }} />
               </TableCell>
               <TableCell align="right">
-                <TextField size="small" fullWidth value={fmt(div0(form.totalRevenue, form.bhDec))} InputProps={{ readOnly: true, sx: inputSx }} />
+                <TextField size="small"  value={fmt(div0(form.totalRevenue, form.bhDec))} InputProps={{ readOnly: true, sx: inputSx }} />
               </TableCell>
             </TableRow>
           </TableBody>
@@ -926,7 +925,7 @@ export default function AircraftRoute() {
           <Grid item xs={12} md={2}>
             <TextField
               size="small"
-              fullWidth
+              
               label="Value"
               value={fmt(form.fuelValue)}
               InputProps={{ readOnly: true, sx: inputSx }}
@@ -937,7 +936,7 @@ export default function AircraftRoute() {
           <Grid item xs={12} md={2}>
             <TextField
               size="small"
-              fullWidth
+              
               label="per ASM"
               value={fmt(form.fuelPerASM)}
               InputProps={{ readOnly: true, sx: inputSx }}
@@ -948,7 +947,7 @@ export default function AircraftRoute() {
           <Grid item xs={12} md={2}>
             <TextField
               size="small"
-              fullWidth
+              
               label="per RPM"
               value={fmt(form.fuelPerRPM)}
               InputProps={{ readOnly: true, sx: inputSx }}
@@ -959,7 +958,7 @@ export default function AircraftRoute() {
           <Grid item xs={12} md={2}>
             <TextField
               size="small"
-              fullWidth
+              
               label="per FH"
               value={fmt(form.fuelPerFH)}
               InputProps={{ readOnly: true, sx: inputSx }}
@@ -970,7 +969,7 @@ export default function AircraftRoute() {
           <Grid item xs={12} md={2}>
             <TextField
               size="small"
-              fullWidth
+              
               label="per BH"
               value={fmt(form.fuelPerBH)}
               InputProps={{ readOnly: true, sx: inputSx }}
@@ -985,7 +984,7 @@ export default function AircraftRoute() {
               type="number"
               value={form.fuelConsKgPerFH}
               onChange={(e) => onChange("fuelConsKgPerFH", Number(e.target.value))}
-              fullWidth
+              
             />
           </Grid>
           <Grid item xs={12} md={2}>
@@ -994,7 +993,7 @@ export default function AircraftRoute() {
               label="Unit"
               value={form.fuelConsUnit || "per FH"}
               onChange={(e) => onChange("fuelConsUnit", e.target.value)}
-              fullWidth
+              
             >
               <MenuItem value="per FH">per FH</MenuItem>
               <MenuItem value="per FLGT">per FLGT</MenuItem>
@@ -1007,7 +1006,7 @@ export default function AircraftRoute() {
               value={form.fuelPricePerL}
               onChange={(e) => onChange("fuelPricePerL", Number(e.target.value))}
               InputProps={{ endAdornment: <InputAdornment position="end">per Litre</InputAdornment> }}
-              fullWidth
+              
             />
           </Grid>
         </Grid>
@@ -1024,31 +1023,31 @@ export default function AircraftRoute() {
 
             {/* Value */}
             <Grid item xs={12} md={2}>
-              <TextField size="small" fullWidth label="Value" value={(form.maintValue ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              <TextField size="small"  label="Value" value={(form.maintValue ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
 
             </Grid>
 
             {/* per ASM */}
             <Grid item xs={12} md={2}>
-              <TextField size="small" fullWidth label="per ASM" value={(form.maintPerASM ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              <TextField size="small"  label="per ASM" value={(form.maintPerASM ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
 
             </Grid>
 
             {/* per RPM */}
             <Grid item xs={12} md={2}>
-              <TextField size="small" fullWidth label="per RPM" value={(form.maintPerRPM ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              <TextField size="small"  label="per RPM" value={(form.maintPerRPM ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
 
             </Grid>
 
             {/* per FH */}
             <Grid item xs={12} md={2}>
-              <TextField size="small" fullWidth label="per FH" value={(Number(form.maintPerFH) ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              <TextField size="small"  label="per FH" value={(Number(form.maintPerFH) ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
 
             </Grid>
 
             {/* per BH */}
             <Grid item xs={12} md={2}>
-              <TextField size="small" fullWidth label="per BH" value={(form.maintPerBH ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              <TextField size="small"  label="per BH" value={(form.maintPerBH ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
 
             </Grid>
 
@@ -1061,7 +1060,7 @@ export default function AircraftRoute() {
                 value={form.maintPerFH}
                 onChange={(e) => onChange("maintPerFH", Number(e.target.value))}
                 InputProps={{ endAdornment: <InputAdornment position="end">per FH</InputAdornment> }}
-                fullWidth
+                
                 sx={{ maxWidth: 550 }}
               />
             </Grid>
@@ -1072,7 +1071,7 @@ export default function AircraftRoute() {
                 value={form.maintPerFLGT}
                 onChange={(e) => onChange("maintPerFLGT", Number(e.target.value))}
                 InputProps={{ endAdornment: <InputAdornment position="end">per FLGT</InputAdornment> }}
-                fullWidth
+                
               />
             </Grid>
           </Grid>
@@ -1091,7 +1090,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="Value"
                 value={(form.crewValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1102,7 +1101,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per ASM"
                 value={(form.crewPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1113,7 +1112,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per RPM"
                 value={(form.crewPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1124,7 +1123,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per FH"
                 value={(form.crewPerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1135,7 +1134,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per BH"
                 value={(form.crewPerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1153,7 +1152,7 @@ export default function AircraftRoute() {
                 value={form.pilots}
                 onChange={(e) => onChange("pilots", Number(e.target.value))}
                 InputProps={{ endAdornment: <InputAdornment position="end">#Pilot</InputAdornment> }}
-                fullWidth
+                
               />
             </Grid>
 
@@ -1165,7 +1164,7 @@ export default function AircraftRoute() {
                 value={form.pilotRatePerBH}
                 onChange={(e) => onChange("pilotRatePerBH", Number(e.target.value))}
                 InputProps={{ endAdornment: <InputAdornment position="end">per BH</InputAdornment> }}
-                fullWidth
+                
               />
             </Grid>
 
@@ -1177,7 +1176,7 @@ export default function AircraftRoute() {
                 value={form.cabin}
                 onChange={(e) => onChange("cabin", Number(e.target.value))}
                 InputProps={{ endAdornment: <InputAdornment position="end">#Cabin</InputAdornment> }}
-                fullWidth
+                
               />
             </Grid>
 
@@ -1189,7 +1188,7 @@ export default function AircraftRoute() {
                 value={form.cabinRatePerBH}
                 onChange={(e) => onChange("cabinRatePerBH", Number(e.target.value))}
                 InputProps={{ endAdornment: <InputAdornment position="end">per BH</InputAdornment> }}
-                fullWidth
+                
               />
             </Grid>
           </Grid>
@@ -1208,7 +1207,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="Value"
                 value={(form.navValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1219,7 +1218,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per ASM"
                 value={(form.navPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1230,7 +1229,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per RPM"
                 value={(form.navPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1241,7 +1240,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per FH"
                 value={(form.navPerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1252,7 +1251,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per BH"
                 value={(form.navPerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1269,7 +1268,7 @@ export default function AircraftRoute() {
                 value={form.navEnroutePerFLGT}
                 onChange={(e) => onChange("navEnroutePerFLGT", Number(e.target.value))}
                 InputProps={{ endAdornment: <InputAdornment position="end">per FLGT</InputAdornment> }}
-                fullWidth
+                
               />
             </Grid>
 
@@ -1280,7 +1279,7 @@ export default function AircraftRoute() {
                 value={form.navTerminalPerArr}
                 onChange={(e) => onChange("navTerminalPerArr", Number(e.target.value))}
                 InputProps={{ endAdornment: <InputAdornment position="end">per arrival</InputAdornment> }}
-                fullWidth
+                
               />
             </Grid>
           </Grid>
@@ -1300,7 +1299,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="Value"
                 value={(form.airportValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1311,7 +1310,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per ASM"
                 value={(form.airportPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1322,7 +1321,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per RPM"
                 value={(form.airportPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1333,7 +1332,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per FH"
                 value={(form.airportPerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1344,7 +1343,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per BH"
                 value={(form.airportPerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1361,7 +1360,7 @@ export default function AircraftRoute() {
                 value={form.airportLandingPerArr}
                 onChange={(e) => onChange("airportLandingPerArr", Number(e.target.value))}
                 InputProps={{ endAdornment: <InputAdornment position="end">per arrival</InputAdornment> }}
-                fullWidth
+                
               />
             </Grid>
 
@@ -1372,7 +1371,7 @@ export default function AircraftRoute() {
                 value={form.airportParkingPerArr}
                 onChange={(e) => onChange("airportParkingPerArr", Number(e.target.value))}
                 InputProps={{ endAdornment: <InputAdornment position="end">per arrival</InputAdornment> }}
-                fullWidth
+                
               />
             </Grid>
           </Grid>
@@ -1392,7 +1391,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="Value"
                 value={(form.groundValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1403,7 +1402,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per ASM"
                 value={(form.groundPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1414,7 +1413,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per RPM"
                 value={(form.groundPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1425,7 +1424,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per FH"
                 value={(form.groundPerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1436,7 +1435,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per BH"
                 value={(form.groundPerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1453,7 +1452,7 @@ export default function AircraftRoute() {
                 value={form.groundHandlingPerDep}
                 onChange={(e) => onChange("groundHandlingPerDep", Number(e.target.value))}
                 InputProps={{ endAdornment: <InputAdornment position="end">per departure</InputAdornment> }}
-                fullWidth
+                
               />
             </Grid>
 
@@ -1464,7 +1463,7 @@ export default function AircraftRoute() {
                 value={form.groundGSEPerDep}
                 onChange={(e) => onChange("groundGSEPerDep", Number(e.target.value))}
                 InputProps={{ endAdornment: <InputAdornment position="end">per departure</InputAdornment> }}
-                fullWidth
+                
               />
             </Grid>
           </Grid>
@@ -1484,7 +1483,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="Value"
                 value={(form.docValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1495,7 +1494,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per ASM"
                 value={(form.docPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1506,7 +1505,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per RPM"
                 value={(form.docPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1517,7 +1516,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per FH"
                 value={(form.docPerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1528,7 +1527,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per BH"
                 value={(form.docPerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1552,7 +1551,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="Value"
                 value={(form.ownershipValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1563,7 +1562,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per ASM"
                 value={(form.ownershipPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1574,7 +1573,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per RPM"
                 value={(form.ownershipPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1585,7 +1584,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per FH"
                 value={(form.ownershipPerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1596,7 +1595,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per BH"
                 value={(form.ownershipPerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1612,7 +1611,7 @@ export default function AircraftRoute() {
                 type="number"
                 value={form.ownershipPerFLGT}
                 onChange={(e) => onChange("ownershipPerFLGT", Number(e.target.value))}
-                fullWidth
+                
               />
             </Grid>
 
@@ -1622,7 +1621,7 @@ export default function AircraftRoute() {
                 label="Unit"
                 value={form.ownershipUnit}
                 onChange={(e) => onChange("ownershipUnit", e.target.value)}
-                fullWidth
+                
               >
                 <MenuItem value="per FLGT">per FLGT</MenuItem>
                 <MenuItem value="per BH">per BH</MenuItem>
@@ -1646,7 +1645,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="Value"
                 value={(form.insuranceValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1657,7 +1656,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per ASM"
                 value={(form.insurancePerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1668,7 +1667,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per RPM"
                 value={(form.insurancePerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1679,7 +1678,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per FH"
                 value={(form.insurancePerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1690,7 +1689,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per BH"
                 value={(form.insurancePerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1707,7 +1706,7 @@ export default function AircraftRoute() {
                 type="number"
                 value={form.hullPerBH}
                 onChange={(e) => onChange("hullPerBH", Number(e.target.value))}
-                fullWidth
+                
               />
             </Grid>
 
@@ -1718,7 +1717,7 @@ export default function AircraftRoute() {
                 label="Unit"
                 value={form.hullUnit}
                 onChange={(e) => onChange("hullUnit", e.target.value)}
-                fullWidth
+                
               >
                 <MenuItem value="per BH">per BH</MenuItem>
                 <MenuItem value="per FLGT">per FLGT</MenuItem>
@@ -1732,7 +1731,7 @@ export default function AircraftRoute() {
                 type="number"
                 value={form.liabilityPerFLGT}
                 onChange={(e) => onChange("liabilityPerFLGT", Number(e.target.value))}
-                fullWidth
+                
               />
             </Grid>
 
@@ -1743,7 +1742,7 @@ export default function AircraftRoute() {
                 label="Unit"
                 value={form.liabilityUnit}
                 onChange={(e) => onChange("liabilityUnit", e.target.value)}
-                fullWidth
+                
               >
                 <MenuItem value="per FLGT">per FLGT</MenuItem>
                 <MenuItem value="per BH">per BH</MenuItem>
@@ -1766,7 +1765,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="Value"
                 value={(form.operatingValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1777,7 +1776,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per ASM"
                 value={(form.operatingPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1788,7 +1787,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per RPM"
                 value={(form.operatingPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1799,7 +1798,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per FH"
                 value={(form.operatingPerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1810,7 +1809,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per BH"
                 value={(form.operatingPerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1834,7 +1833,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="Value"
                 value={(form.opValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1845,7 +1844,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per ASM"
                 value={(form.opPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1856,7 +1855,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per RPM"
                 value={(form.opPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1867,7 +1866,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per FH"
                 value={(form.opPerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1878,7 +1877,7 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                fullWidth
+                
                 label="per BH"
                 value={(form.opPerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}

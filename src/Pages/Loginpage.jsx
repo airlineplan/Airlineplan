@@ -191,7 +191,7 @@ export default function Loginpage() {
           </Grid>
         </Grid>
         <Stack direction="column" justifyContent="center" alignItems="center" mb={4}>
-          <Link to="/aircraft-route-economic">Aircraft Route economics</Link>
+          <Link to="/aircraft-route-economic" style={{ color: "black", fontWeight: "bold" }}>Aircraft Route economics</Link>
 
           <TermsAndConditionsModal />
           <Button variant="outlined" color="primary" style={{ width: "150px" }}>
