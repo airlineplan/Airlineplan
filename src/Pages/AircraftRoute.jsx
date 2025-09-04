@@ -25,7 +25,6 @@ function SectionTitle({ title }) {
       <Typography variant="h6" sx={{ fontWeight: 700 }}>
         {title}
       </Typography>
-      <Divider sx={{ mt: 1, borderColor: "grey.800", mb: 2, borderBottomWidth: 2 }} />
     </Box>
   );
 }
@@ -576,1275 +575,1336 @@ export default function AircraftRoute() {
             </Button>
           </Box>
         </div>
-        <SectionTitle title="Route" />
+        <Box
+          sx={{
+            mt: 3,
+            p: 2,
+            pt:0,
+            border: "2px solid",
+            borderColor: "grey.800", // dark outer box
+            borderRadius: 1,
+            bgcolor: "background.paper",
+          }}
+        >
+          <SectionTitle title="Route" />
 
-        <Grid container spacing={2}>
-          {/* Column 1 */}
-          <Grid item xs={12} md={4}>
-            {/* Departure */}
-            <TextField
-              label="Departure station/city"
-              value={form.dep}
-              onChange={(e) => onChange("dep", e.target.value)}
-              error={!!errors.dep}
-              helperText={errors.dep || "3 or 4 alphanumeric"}
-            />
-
-            {/* Arrival */}
-            <Box mt={2}>
-              <TextField
-                label="Arrival station/city"
-                value={form.arr}
-                onChange={(e) => onChange("arr", e.target.value)}
-                error={!!errors.arr}
-                helperText={errors.arr || "3 or 4 alphanumeric"}
-              />
-            </Box>
-          </Grid>
-
-          {/* Column 2 */}
-          <Grid item xs={12} md={4}>
-            {/* Block Hours */}
-            <TextField
-              label="Block hours (BH)"
-              value={form.blockHours}
-              onChange={(e) => onChange("blockHours", e.target.value)}
-              placeholder="hh:mm"
-              error={!!errors.blockHours}
-              helperText={errors.blockHours || "HH:mm"}
-            />
-
-            {/* Taxi Time */}
-            <Box mt={2}>
-              <TextField
-                label="Total taxi time"
-                value={form.taxiTime}
-                onChange={(e) => onChange("taxiTime", e.target.value)}
-                placeholder="hh:mm"
-                error={!!errors.taxiTime}
-                helperText={errors.taxiTime || "HH:mm"}
-              />
-            </Box>
-          </Grid>
-
-          {/* Column 3 */}
-          <Grid item xs={12} md={4}>
-            {/* Flight Hours */}
-            <Box mb={2}>
-              <Typography variant="body2" color="text.secondary">
-                Flight hours (FH)
-              </Typography>
-              <Typography
-                variant="h6"
-                sx={{
-                  fontFamily: "monospace",
-                  bgcolor: (t) =>
-                    t.palette.mode === "light" ? "#fffdf6" : "#2b2b22",
-                  px: 1,
-                  py: 0.5,
-                  borderRadius: 1,
-                }}
-              >
-                {form.flightHours || "--:--"}
-              </Typography>
-            </Box>
-
-            {/* Trip Distance + Unit */}
-            <Grid container spacing={2}>
-              <Grid item xs={8}>
+          {/* ===== Row 1 (light inner box): Departure / Block Hours / Flight Hours ===== */}
+          <Box
+            sx={{
+              p: 2,
+              mb: 2,
+              border: "1px solid",
+              borderColor: "grey.600", // lighter inner box
+              borderRadius: 2,
+            }}
+          >
+            <Grid container spacing={2} alignItems="center">
+              {/* Column 1: Departure */}
+              <Grid item xs={12} md={4}>
                 <TextField
-                  label="Trip Air Distance"
-                  type="number"
-                  sx={{ mt: 2 }}
-                  value={form.tripDistance}
-                  onChange={(e) => onChange("tripDistance", e.target.value)}
-                  error={!!errors.tripDistance}
-                  helperText={errors.tripDistance || "Int min 0 max 20000"}
+                  label="Departure station/city"
+                  value={form.dep}
+                  onChange={(e) => onChange("dep", e.target.value)}
+                  error={!!errors.dep}
+                  helperText={errors.dep || "3 or 4 alphanumeric"}
+                  fullWidth
                 />
               </Grid>
-              <Grid item xs={4}>
+
+              {/* Column 2: Block Hours */}
+              <Grid item xs={12} md={4}>
+                <TextField
+                  label="Block hours (BH)"
+                  value={form.blockHours}
+                  onChange={(e) => onChange("blockHours", e.target.value)}
+                  placeholder="hh:mm"
+                  error={!!errors.blockHours}
+                  helperText={errors.blockHours || "HH:mm"}
+                  fullWidth
+                />
+              </Grid>
+
+              {/* Column 3: Flight Hours display */}
+              <Grid item xs={12} md={4}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Flight hours (FH)
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontFamily: "monospace",
+                      bgcolor: (t) => (t.palette.mode === "light" ? "#fffdf6" : "#2b2b22"),
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 1,
+                    }}
+                  >
+                    {form.flightHours || "--:--"}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Box>
+
+          {/* ===== Row 2 (light inner box): Arrival / Taxi Time / Trip Distance + Unit ===== */}
+          <Box
+            sx={{
+              p: 2,
+              border: "1px solid",
+              borderColor: "grey.600", // lighter inner box
+              borderRadius: 2,
+            }}
+          >
+            <Grid container spacing={2} alignItems="center">
+              {/* Column 1: Arrival */}
+              <Grid item xs={12} md={4}>
+                <TextField
+                  label="Arrival station/city"
+                  value={form.arr}
+                  onChange={(e) => onChange("arr", e.target.value)}
+                  error={!!errors.arr}
+                  helperText={errors.arr || "3 or 4 alphanumeric"}
+                  fullWidth
+                />
+              </Grid>
+
+              {/* Column 2: Taxi Time */}
+              <Grid item xs={12} md={4}>
+                <TextField
+                  label="Total taxi time"
+                  value={form.taxiTime}
+                  onChange={(e) => onChange("taxiTime", e.target.value)}
+                  placeholder="hh:mm"
+                  error={!!errors.taxiTime}
+                  helperText={errors.taxiTime || "HH:mm"}
+                  fullWidth
+                />
+              </Grid>
+
+              {/* Column 3: Trip Distance + Unit */}
+              <Grid item xs={12} md={4}>
+                <Grid container spacing={2}>
+                  <Grid item xs={8}>
+                    <TextField
+                      label="Trip Air Distance"
+                      type="number"
+                      value={form.tripDistance}
+                      onChange={(e) => onChange("tripDistance", e.target.value)}
+                      error={!!errors.tripDistance}
+                      helperText={errors.tripDistance || "Int min 0 max 20000"}
+                      fullWidth
+                    />
+                  </Grid>
+                  <Grid item xs={4}>
+                    <TextField
+                      select
+                      label="Unit"
+                      value={form.tripDistanceUnit}
+                      onChange={(e) => onChange("tripDistanceUnit", e.target.value)}
+                      fullWidth
+                    >
+                      <MenuItem value="NM">NM</MenuItem>
+                      <MenuItem value="Miles">Miles</MenuItem>
+                      <MenuItem value="Km">Km</MenuItem>
+                    </TextField>
+                  </Grid>
+                </Grid>
+              </Grid>
+            </Grid>
+          </Box>
+        </Box>
+
+
+        <Box
+          sx={{
+            mt: 3,
+            p: 2,
+            pt:0,
+            border: "2px solid",
+            borderColor: "grey.800",   // dark outer box
+            borderRadius: 1,
+            bgcolor: "background.paper",
+          }}
+        >
+          <SectionTitle title="Capacity" />
+
+          {/* ================= Economy ================= */}
+          <Box
+            sx={{
+              p: 2,
+              mb: 2,
+              border: "1px solid",
+              borderColor: "grey.600", // lighter inner box
+              borderRadius: 1,
+            }}
+          >
+
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="Economy class Seats"
+                  type="number"
+                  sx={{ mt: 3 }}
+
+                  value={form.econSeats}
+                  onChange={(e) => onChange("econSeats", e.target.value)}
+                  error={!!errors.econSeats}
+                  helperText={errors.econSeats || "0–600"}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={1}>
+                <TextField
+                  label="Load factor"
+                  type="number"
+                  sx={{ mt: 3 }}
+
+                  value={form.lfEcon}
+                  onChange={(e) => onChange("lfEcon", e.target.value)}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  }}
+                  error={!!errors.lfEcon}
+                  helperText={errors.lfEcon || "0–100"}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField
+                  sx={{ pt: 0 }}
+                  label="Economy class passengers"
+                  value={Math.round(form.econPassengers)}
+                  InputProps={{ readOnly: true }}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="Fares & Rates: Economy"
+                  type="number"
+                  sx={{ mt: 3 }}
+
+                  value={form.econFare}
+                  onChange={(e) => onChange("econFare", e.target.value)}
+                  error={!!errors.econFare}
+                  helperText={errors.econFare || "0–999000"}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="Economy class revenue"
+                  value={Math.round(form.econRevenue)}
+                  InputProps={{ readOnly: true }}
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+          </Box>
+
+          {/* ================= Business ================= */}
+          <Box
+            sx={{
+              p: 2,
+              mb: 2,
+              border: "1px solid",
+              borderColor: "grey.600",
+              borderRadius: 1,
+            }}
+          >
+
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="Business class Seats"
+                  type="number"
+                  sx={{ mt: 3 }}
+
+                  value={form.bizSeats}
+                  onChange={(e) => onChange("bizSeats", e.target.value)}
+                  error={!!errors.bizSeats}
+                  helperText={errors.bizSeats || "0–600"}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={1}>
+                <TextField
+                  label="Load factor"
+                  type="number"
+                  value={form.lfBiz}
+                  onChange={(e) => onChange("lfBiz", e.target.value)}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  }}
+                  sx={{ mt: 3 }}
+
+                  error={!!errors.lfBiz}
+                  helperText={errors.lfBiz || "0–100"}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField
+                  label="Business class passengers"
+                  value={Math.round(form.bizPassengers)}
+                  InputProps={{ readOnly: true }}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="Fares & Rates: Business"
+                  type="number"
+                  sx={{ mt: 3 }}
+
+                  value={form.bizFare}
+                  onChange={(e) => onChange("bizFare", e.target.value)}
+                  error={!!errors.bizFare}
+                  helperText={errors.bizFare || "0–999000"}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="Business class revenue"
+                  value={Math.round(form.bizRevenue)}
+                  InputProps={{ readOnly: true }}
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+          </Box>
+
+          {/* ================= Cargo ================= */}
+          <Box
+            sx={{
+              p: 2,
+              border: "1px solid",
+              borderColor: "grey.600",
+              borderRadius: 1,
+            }}
+          >
+
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="Cargo capacity (Kg)"
+                  type="number"
+                  sx={{ mt: 3 }}
+                  value={form.cargoCap}
+                  onChange={(e) => onChange("cargoCap", e.target.value)}
+                  error={!!errors.cargoCap}
+                  helperText={errors.cargoCap || "0–150000"}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={1}>
+                <TextField
+                  label="Load factor"
+                  type="number"
+                  sx={{ mt: 3 }}
+
+                  value={form.lfCargo}
+                  onChange={(e) => onChange("lfCargo", e.target.value)}
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">%</InputAdornment>,
+                  }}
+                  error={!!errors.lfCargo}
+                  helperText={errors.lfCargo || "0–100"}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField
+
+                  label="Cargo carried (Kg)"
+                  value={Math.round(form.cargoCarried)}
+                  InputProps={{ readOnly: true }}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="Cargo rate"
+                  sx={{ mt: 3 }}
+
+                  type="number"
+                  value={form.cargoRate}
+                  onChange={(e) => onChange("cargoRate", e.target.value)}
+                  error={!!errors.cargoRate}
+                  helperText={errors.cargoRate || "0–999000"}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <TextField
+                  label="Cargo revenue"
+                  value={Math.round(form.cargoRevenue)}
+                  InputProps={{ readOnly: true }}
+                  fullWidth
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </Box>
+
+
+
+        <Box
+          sx={{
+            mt: 3,
+            p: 2,
+            pt: 0,
+            border: "2px solid",
+            borderColor: "grey.800",
+            borderRadius: 1,
+            bgcolor: "background.paper",
+          }}
+        >
+          <SectionTitle title="Revenue" />
+
+          <Table size="small" sx={{ mb: 2 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell />
+                <TableCell align="right">Value</TableCell>
+                <TableCell align="right">per ASM</TableCell>
+                <TableCell align="right">per RPM</TableCell>
+                <TableCell align="right">per FH</TableCell>
+                <TableCell align="right">per BH</TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {/* Pax revenue */}
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600 }}>Pax revenue</TableCell>
+                <TableCell align="right">
+                  <Box
+                    sx={{
+                      fontFamily: "monospace",
+                      bgcolor: (t) => (t.palette.mode === "light" ? "#fffdf6" : "#2b2b22"),
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 1,
+                      textAlign: "right",
+                    }}
+                  >
+                    {Math.round(Number((form.paxRevenue ?? 0).toFixed(2)))}
+                  </Box>
+                </TableCell>
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxASM))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxASM))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxASM))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxASM))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
+              </TableRow>
+
+              {/* Cargo revenue */}
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600 }}>Cargo revenue</TableCell>
+                <TableCell align="right">
+                  <Box
+                    sx={{
+                      fontFamily: "monospace",
+                      bgcolor: (t) => (t.palette.mode === "light" ? "#fffdf6" : "#2b2b22"),
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 1,
+                      textAlign: "right",
+                    }}
+                  >
+                    {Math.round(form.cargoRevenue)}
+                  </Box>
+                </TableCell>
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(form.cargoRevenue, form.cargoASM))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(form.cargoRevenue, form.cargoRPM))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(form.cargoRevenue, form.fhDec))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(form.cargoRevenue, form.bhDec))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
+              </TableRow>
+
+              {/* Total revenue */}
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600 }}>Total revenue</TableCell>
+                <TableCell align="right">
+                  <Box
+                    sx={{
+                      fontFamily: "monospace",
+                      bgcolor: (t) => (t.palette.mode === "light" ? "#fffdf6" : "#2b2b22"),
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: 1,
+                      textAlign: "right",
+                    }}
+                  >
+                    {Math.round(form.totalRevenue) ? Math.round(form.totalRevenue) : "0"}
+                  </Box>
+                </TableCell>
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(form.totalRevenue, form.totalASM))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(form.totalRevenue, form.totalRPM))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(form.totalRevenue, form.fhDec))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(form.totalRevenue, form.bhDec))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </Box>
+
+
+        {/* ================= Costs Section ================= */}
+        <Box
+          sx={{
+            mt: 3,
+            p: 2,
+            pt: 0,
+            border: "2px solid",
+            borderColor: "grey.800",
+            borderRadius: 1,
+            bgcolor: "background.paper",
+          }}
+        >
+          <SectionTitle title="Costs" />
+
+          {/* ---------------- Fuel ---------------- */}
+          <Box sx={{ mt: 3, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 2 }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={2}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Fuel
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="Value" value={fmt(form.fuelValue)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="per ASM" value={fmt(form.fuelPerASM)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="per RPM" value={fmt(form.fuelPerRPM)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="per FH" value={fmt(form.fuelPerFH)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="per BH" value={fmt(form.fuelPerBH)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+
+              {/* second row */}
+              <Grid item xs={12} md={2} />
+              <Grid item xs={12} md={2}>
+                <TextField label="Consumption (Kg)" type="number" value={form.fuelConsKgPerFH} onChange={(e) => onChange("fuelConsKgPerFH", Number(e.target.value))} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField select label="Unit" value={form.fuelConsUnit || "per FH"} onChange={(e) => onChange("fuelConsUnit", e.target.value)}>
+                  <MenuItem value="per FH">per FH</MenuItem>
+                  <MenuItem value="per FLGT">per FLGT</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField
+                  label="Fuel price"
+                  type="number"
+                  value={form.fuelPricePerL}
+                  onChange={(e) => onChange("fuelPricePerL", Number(e.target.value))}
+                  InputProps={{ endAdornment: <InputAdornment position="end">per Litre</InputAdornment> }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+
+          {/* ---------------- Maintenance ---------------- */}
+          <Box sx={{ mt: 2, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 2 }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={2}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Maintenance cost
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="Value" value={(form.maintValue ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="per ASM" value={(form.maintPerASM ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="per RPM" value={(form.maintPerRPM ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="per FH" value={(Number(form.maintPerFH) ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="per BH" value={(form.maintPerBH ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+
+              {/* inputs */}
+              <Grid item xs={12} md={2} />
+              <Grid item xs={12} md={2}>
+                <TextField label="Maintenance reserve" type="number" value={form.maintPerFH} onChange={(e) => onChange("maintPerFH", Number(e.target.value))} InputProps={{ endAdornment: <InputAdornment position="end">per FH</InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField label="Other" type="number" value={form.maintPerFLGT} onChange={(e) => onChange("maintPerFLGT", Number(e.target.value))} InputProps={{ endAdornment: <InputAdornment position="end">per FLGT</InputAdornment> }} />
+              </Grid>
+            </Grid>
+          </Box>
+
+          {/* ---------------- Crew ---------------- */}
+          <Box sx={{ mt: 2, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 1 }}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={2}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Crew cost
+                </Typography>
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="Value" value={(form.crewValue ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="per ASM" value={(form.crewPerASM ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="per RPM" value={(form.crewPerRPM ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="per FH" value={(form.crewPerFH ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField size="small" label="per BH" value={(form.crewPerBH ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
+              </Grid>
+
+              {/* second row */}
+              <Grid item xs={12} md={2} />
+              <Grid item xs={12} md={2}>
+                <TextField label="Flight Crew" type="number" value={form.pilots} onChange={(e) => onChange("pilots", Number(e.target.value))} InputProps={{ endAdornment: <InputAdornment position="end">#Pilot</InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField label="Rate (Flight Crew)" type="number" value={form.pilotRatePerBH} onChange={(e) => onChange("pilotRatePerBH", Number(e.target.value))} InputProps={{ endAdornment: <InputAdornment position="end">per BH</InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField label="Cabin Crew" type="number" value={form.cabin} onChange={(e) => onChange("cabin", Number(e.target.value))} InputProps={{ endAdornment: <InputAdornment position="end">#Cabin</InputAdornment> }} />
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <TextField label="Rate (Cabin Crew)" type="number" value={form.cabinRatePerBH} onChange={(e) => onChange("cabinRatePerBH", Number(e.target.value))} InputProps={{ endAdornment: <InputAdornment position="end">per BH</InputAdornment> }} />
+              </Grid>
+            </Grid>
+          </Box>
+
+          <Box sx={{ mt: 2, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 1 }}>
+            <Grid container spacing={2} alignItems="center">
+              {/* Left-aligned label */}
+              <Grid item xs={12} md={2}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Navigation
+                </Typography>
+              </Grid>
+
+              {/* Value */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="Value"
+                  value={(form.navValue ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per ASM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per ASM"
+                  value={(form.navPerASM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per RPM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per RPM"
+                  value={(form.navPerRPM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per FH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per FH"
+                  value={(form.navPerFH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per BH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per BH"
+                  value={(form.navPerBH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* Second row inputs */}
+              <Grid item xs={12} md={2} /> {/* spacer under label */}
+
+              <Grid item xs={12} md={2}>
+                <TextField
+                  label="Enroute"
+                  type="number"
+                  value={form.navEnroutePerFLGT}
+                  onChange={(e) => onChange("navEnroutePerFLGT", Number(e.target.value))}
+                  InputProps={{ endAdornment: <InputAdornment position="end">per FLGT</InputAdornment> }}
+
+                />
+              </Grid>
+
+              <Grid item xs={12} md={2}>
+                <TextField
+                  label="Terminal"
+                  type="number"
+                  value={form.navTerminalPerArr}
+                  onChange={(e) => onChange("navTerminalPerArr", Number(e.target.value))}
+                  InputProps={{ endAdornment: <InputAdornment position="end">per arrival</InputAdornment> }}
+
+                />
+              </Grid>
+            </Grid>
+          </Box>
+
+
+          <Box sx={{ mt: 2, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 1 }}>
+            <Grid container spacing={2} alignItems="center">
+              {/* Left-aligned label */}
+              <Grid item xs={12} md={2}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Airport
+                </Typography>
+              </Grid>
+
+              {/* Value */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="Value"
+                  value={(form.airportValue ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per ASM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per ASM"
+                  value={(form.airportPerASM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per RPM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per RPM"
+                  value={(form.airportPerRPM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per FH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per FH"
+                  value={(form.airportPerFH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per BH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per BH"
+                  value={(form.airportPerBH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* Second row inputs */}
+              <Grid item xs={12} md={2} /> {/* spacer under label */}
+
+              <Grid item xs={12} md={2}>
+                <TextField
+                  label="Landing"
+                  type="number"
+                  value={form.airportLandingPerArr}
+                  onChange={(e) => onChange("airportLandingPerArr", Number(e.target.value))}
+                  InputProps={{ endAdornment: <InputAdornment position="end">per arrival</InputAdornment> }}
+
+                />
+              </Grid>
+
+              <Grid item xs={12} md={2}>
+                <TextField
+                  label="Parking"
+                  type="number"
+                  value={form.airportParkingPerArr}
+                  onChange={(e) => onChange("airportParkingPerArr", Number(e.target.value))}
+                  InputProps={{ endAdornment: <InputAdornment position="end">per arrival</InputAdornment> }}
+
+                />
+              </Grid>
+            </Grid>
+          </Box>
+
+
+          <Box sx={{ mt: 2, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 1 }}>
+            <Grid container spacing={2} alignItems="center">
+              {/* Left-aligned label */}
+              <Grid item xs={12} md={2}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Ground operations
+                </Typography>
+              </Grid>
+
+              {/* Value */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="Value"
+                  value={(form.groundValue ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per ASM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per ASM"
+                  value={(form.groundPerASM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per RPM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per RPM"
+                  value={(form.groundPerRPM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per FH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per FH"
+                  value={(form.groundPerFH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per BH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per BH"
+                  value={(form.groundPerBH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* Second row inputs */}
+              <Grid item xs={12} md={2} /> {/* spacer under label */}
+
+              <Grid item xs={12} md={2}>
+                <TextField
+                  label="Handling"
+                  type="number"
+                  value={form.groundHandlingPerDep}
+                  onChange={(e) => onChange("groundHandlingPerDep", Number(e.target.value))}
+                  InputProps={{ endAdornment: <InputAdornment position="end">per departure</InputAdornment> }}
+
+                />
+              </Grid>
+
+              <Grid item xs={12} md={2}>
+                <TextField
+                  label="GSE (BME/GPU+ACU+ASU)"
+                  type="number"
+                  value={form.groundGSEPerDep}
+                  onChange={(e) => onChange("groundGSEPerDep", Number(e.target.value))}
+                  InputProps={{ endAdornment: <InputAdornment position="end">per departure</InputAdornment> }}
+
+                />
+              </Grid>
+            </Grid>
+          </Box>
+
+
+          <Box sx={{ mt: 2, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 1 }}>
+            <Grid container spacing={2} alignItems="center">
+              {/* Left-aligned label */}
+              <Grid item xs={12} md={2}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Direct Operating cost
+                </Typography>
+              </Grid>
+
+              {/* Value */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="Value"
+                  value={(form.docValue ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per ASM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per ASM"
+                  value={(form.docPerASM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per RPM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per RPM"
+                  value={(form.docPerRPM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per FH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per FH"
+                  value={(form.docPerFH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per BH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per BH"
+                  value={(form.docPerBH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+            </Grid>
+          </Box>
+
+
+
+          <Box sx={{ mt: 2, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 1 }}>
+            <Grid container spacing={2} alignItems="center">
+              {/* Left-aligned label */}
+              <Grid item xs={12} md={2}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Aircraft Ownership cost allocation
+                </Typography>
+              </Grid>
+
+              {/* Value */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="Value"
+                  value={(form.ownershipValue ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per ASM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per ASM"
+                  value={(form.ownershipPerASM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per RPM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per RPM"
+                  value={(form.ownershipPerRPM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per FH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per FH"
+                  value={(form.ownershipPerFH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per BH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per BH"
+                  value={(form.ownershipPerBH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* Second row: Rate + Unit */}
+              <Grid item xs={12} md={2} /> {/* spacer under label */}
+
+              <Grid item xs={12} md={2}>
+                <TextField
+                  label="Rate"
+                  type="number"
+                  value={form.ownershipPerFLGT}
+                  onChange={(e) => onChange("ownershipPerFLGT", Number(e.target.value))}
+
+                />
+              </Grid>
+
+              <Grid item xs={12} md={2}>
                 <TextField
                   select
                   label="Unit"
-                  sx={{ mt: 2 }}
-                  value={form.tripDistanceUnit}
-                  onChange={(e) => onChange("tripDistanceUnit", e.target.value)}
+                  value={form.ownershipUnit}
+                  onChange={(e) => onChange("ownershipUnit", e.target.value)}
+
                 >
-                  <MenuItem value="NM">NM</MenuItem>
-                  <MenuItem value="Miles">Miles</MenuItem>
-                  <MenuItem value="Km">Km</MenuItem>
+                  <MenuItem value="per FLGT">per FLGT</MenuItem>
+                  <MenuItem value="per BH">per BH</MenuItem>
                 </TextField>
               </Grid>
             </Grid>
-          </Grid>
-        </Grid>
+          </Box>
 
 
-        <SectionTitle title="Capacity" />
-        <Grid container spacing={2} alignItems="center">
-          {/* Economy */}
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="Economy class Seats"
-              type="number"
-              sx={{ mt: 3 }}
-              value={form.econSeats}
-              onChange={(e) => onChange("econSeats", e.target.value)}
-              error={!!errors.econSeats}
-              helperText={errors.econSeats || "0–600"}
-            />
-          </Grid>
-          <Grid item xs={12} md={1}>
-            <TextField
-              label="Load factor"
-              type="number"
-              sx={{ mt: 3 }}
-              value={form.lfEcon}
-              onChange={(e) => onChange("lfEcon", e.target.value)}
-              InputProps={{
-                endAdornment: <InputAdornment position="end">%</InputAdornment>,
-              }}
-              error={!!errors.lfEcon}
-              helperText={errors.lfEcon || "0–100"}
-            />
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <TextField
-              label="Economy class passengers"
 
-              value={Math.round(form.econPassengers)}
-              InputProps={{ readOnly: true }}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="Fares & Rates: Economy"
-              type="number"
-              sx={{ mt: 3 }}
-              value={form.econFare}
-              onChange={(e) => onChange("econFare", e.target.value)}
-              error={!!errors.econFare}
-              helperText={errors.econFare || "0–999000"}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="Economy class revenue"
+          <Box sx={{ mt: 2, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 1 }}>
+            <Grid container spacing={2} alignItems="center">
+              {/* Left-aligned label */}
+              <Grid item xs={12} md={2}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Insurance
+                </Typography>
+              </Grid>
 
-              value={Math.round(form.econRevenue)}
-              InputProps={{ readOnly: true }}
-            />
-          </Grid>
+              {/* Value */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
 
-          {/* Business */}
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="Business class Seats"
-              type="number"
-              sx={{ mt: 3 }}
+                  label="Value"
+                  value={(form.insuranceValue ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
 
-              value={form.bizSeats}
-              onChange={(e) => onChange("bizSeats", e.target.value)}
-              error={!!errors.bizSeats}
-              helperText={errors.bizSeats || "0–600"}
-            />
-          </Grid>
-          <Grid item xs={12} md={1}>
-            <TextField
-              label="Load factor"
-              type="number"
-              sx={{ mt: 3 }}
+              {/* per ASM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
 
-              value={form.lfBiz}
-              onChange={(e) => onChange("lfBiz", e.target.value)}
-              InputProps={{
-                endAdornment: <InputAdornment position="end">%</InputAdornment>,
-              }}
-              error={!!errors.lfBiz}
-              helperText={errors.lfBiz || "0–100"}
-            />
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <TextField
-              label="Business class passengers"
+                  label="per ASM"
+                  value={(form.insurancePerASM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
 
-              value={Math.round(form.bizPassengers)}
-              InputProps={{ readOnly: true }}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="Fares & Rates: Business"
-              type="number"
-              sx={{ mt: 3 }}
+              {/* per RPM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
 
-              value={form.bizFare}
-              onChange={(e) => onChange("bizFare", e.target.value)}
-              error={!!errors.bizFare}
-              helperText={errors.bizFare || "0–999000"}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="Business class revenue"
+                  label="per RPM"
+                  value={(form.insurancePerRPM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
 
-              value={Math.round(form.bizRevenue)}
-              InputProps={{ readOnly: true }}
-            />
-          </Grid>
+              {/* per FH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
 
-          {/* Cargo */}
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="Cargo capacity (Kg)"
-              type="number"
-              sx={{ mt: 3 }}
+                  label="per FH"
+                  value={(form.insurancePerFH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
 
-              value={form.cargoCap}
-              onChange={(e) => onChange("cargoCap", e.target.value)}
-              error={!!errors.cargoCap}
-              helperText={errors.cargoCap || "0–150000"}
-            />
-          </Grid>
-          <Grid item xs={12} md={1}>
-            <TextField
-              label="Load factor"
-              type="number"
-              sx={{ mt: 3 }}
+              {/* per BH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
 
-              value={form.lfCargo}
-              onChange={(e) => onChange("lfCargo", e.target.value)}
-              InputProps={{
-                endAdornment: <InputAdornment position="end">%</InputAdornment>,
-              }}
-              error={!!errors.lfCargo}
-              helperText={errors.lfCargo || "0–100"}
-            />
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <TextField
-              label="Cargo carried (Kg)"
+                  label="per BH"
+                  value={(form.insurancePerBH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
 
-              value={Math.round(form.cargoCarried)}
-              InputProps={{ readOnly: true }}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="Cargo rate"
-              type="number"
-              sx={{ mt: 3 }}
+              {/* Second row inputs (unchanged except you already added dropdowns) */}
+              <Grid item xs={12} md={2} /> {/* spacer under label */}
 
-              value={form.cargoRate}
-              onChange={(e) => onChange("cargoRate", e.target.value)}
-              error={!!errors.cargoRate}
-              helperText={errors.cargoRate || "0–999000"}
-            />
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <TextField
-              label="Cargo revenue"
+              {/* Aircraft Hull insurance rate */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  label="Aircraft Hull insurance"
+                  type="number"
+                  value={form.hullPerBH}
+                  onChange={(e) => onChange("hullPerBH", Number(e.target.value))}
 
-              value={Math.round(form.cargoRevenue)}
-              InputProps={{ readOnly: true }}
-            />
-          </Grid>
-        </Grid>
+                />
+              </Grid>
 
-        <SectionTitle title="Revenue" />
-        <Table size="small" sx={{ mb: 2 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell />
-              <TableCell align="right">Value</TableCell>
-              <TableCell align="right">per ASM</TableCell>
-              <TableCell align="right">per RPM</TableCell>
-              <TableCell align="right">per FH</TableCell>
-              <TableCell align="right">per BH</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {/* Pax revenue */}
-            <TableRow>
-              <TableCell sx={{ fontWeight: 600 }}>Pax revenue</TableCell>
-              <TableCell align="right">
-                <Box sx={{ fontFamily: "monospace", bgcolor: (t) => (t.palette.mode === "light" ? "#fffdf6" : "#2b2b22"), px: 1, py: 0.5, borderRadius: 1, textAlign: "right" }}>
-                  {Math.round((form.paxRevenue ?? 0).toFixed(2))}
-                </Box>
-              </TableCell>
-              <TableCell align="right">
-                <TextField size="small" value={fmt(div0((form.paxRevenue ?? 0).toFixed(2), form.paxASM))} InputProps={{ readOnly: true, sx: inputSx }} />
-              </TableCell>
-              <TableCell align="right">
-                <TextField size="small" value={fmt(div0((form.paxRevenue ?? 0).toFixed(2), form.paxASM))} InputProps={{ readOnly: true, sx: inputSx }} />
-              </TableCell>
-              <TableCell align="right">
-                <TextField size="small" value={fmt(div0((form.paxRevenue ?? 0).toFixed(2), form.paxASM))} InputProps={{ readOnly: true, sx: inputSx }} />
-              </TableCell>
-              <TableCell align="right">
-                <TextField size="small" value={fmt(div0((form.paxRevenue ?? 0).toFixed(2), form.paxASM))} InputProps={{ readOnly: true, sx: inputSx }} />
-              </TableCell>
-            </TableRow>
+              {/* Unit dropdown for Hull */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  select
+                  label="Unit"
+                  value={form.hullUnit}
+                  onChange={(e) => onChange("hullUnit", e.target.value)}
 
-            {/* Cargo revenue */}
-            <TableRow>
-              <TableCell sx={{ fontWeight: 600 }}>Cargo revenue</TableCell>
-              <TableCell align="right">
-                <Box sx={{ fontFamily: "monospace", bgcolor: (t) => (t.palette.mode === "light" ? "#fffdf6" : "#2b2b22"), px: 1, py: 0.5, borderRadius: 1, textAlign: "right" }}>
-                  {Math.round(form.cargoRevenue)}
-                </Box>
-              </TableCell>
-              <TableCell align="right">
-                <TextField size="small" value={fmt(div0(form.cargoRevenue, form.cargoASM))} InputProps={{ readOnly: true, sx: inputSx }} />
-              </TableCell>
-              <TableCell align="right">
-                <TextField size="small" value={fmt(div0(form.cargoRevenue, form.cargoRPM))} InputProps={{ readOnly: true, sx: inputSx }} />
-              </TableCell>
-              <TableCell align="right">
-                <TextField size="small" value={fmt(div0(form.cargoRevenue, form.fhDec))} InputProps={{ readOnly: true, sx: inputSx }} />
-              </TableCell>
-              <TableCell align="right">
-                <TextField size="small" value={fmt(div0(form.cargoRevenue, form.bhDec))} InputProps={{ readOnly: true, sx: inputSx }} />
-              </TableCell>
-            </TableRow>
+                >
+                  <MenuItem value="per BH">per BH</MenuItem>
+                  <MenuItem value="per FLGT">per FLGT</MenuItem>
+                </TextField>
+              </Grid>
 
-            {/* Total revenue */}
-            <TableRow>
-              <TableCell sx={{ fontWeight: 600 }}>Total revenue</TableCell>
-              <TableCell align="right">
-                <Box sx={{ fontFamily: "monospace", bgcolor: (t) => (t.palette.mode === "light" ? "#fffdf6" : "#2b2b22"), px: 1, py: 0.5, borderRadius: 1, textAlign: "right" }}>
-                  {Math.round(form.totalRevenue)}
-                </Box>
-              </TableCell>
-              <TableCell align="right">
-                <TextField size="small" value={fmt(div0(form.totalRevenue, form.totalASM))} InputProps={{ readOnly: true, sx: inputSx }} />
-              </TableCell>
-              <TableCell align="right">
-                <TextField size="small" value={fmt(div0(form.totalRevenue, form.totalRPM))} InputProps={{ readOnly: true, sx: inputSx }} />
-              </TableCell>
-              <TableCell align="right">
-                <TextField size="small" value={fmt(div0(form.totalRevenue, form.fhDec))} InputProps={{ readOnly: true, sx: inputSx }} />
-              </TableCell>
-              <TableCell align="right">
-                <TextField size="small" value={fmt(div0(form.totalRevenue, form.bhDec))} InputProps={{ readOnly: true, sx: inputSx }} />
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+              {/* Passenger + Third party rate */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  label="Passenger + Third party"
+                  type="number"
+                  value={form.liabilityPerFLGT}
+                  onChange={(e) => onChange("liabilityPerFLGT", Number(e.target.value))}
 
-        <SectionTitle title="Costs" />
-        <Grid container spacing={2} alignItems="center">
-          {/* Left-aligned label */}
-          <Grid item xs={12} md={2}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-              Fuel
-            </Typography>
-          </Grid>
+                />
+              </Grid>
 
-          {/* Value */}
-          <Grid item xs={12} md={2}>
-            <TextField
-              size="small"
+              {/* Unit dropdown for Liability */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  select
+                  label="Unit"
+                  value={form.liabilityUnit}
+                  onChange={(e) => onChange("liabilityUnit", e.target.value)}
 
-              label="Value"
-              value={fmt(form.fuelValue)}
-              InputProps={{ readOnly: true, sx: inputSx }}
-            />
-          </Grid>
-
-          {/* per ASM */}
-          <Grid item xs={12} md={2}>
-            <TextField
-              size="small"
-
-              label="per ASM"
-              value={fmt(form.fuelPerASM)}
-              InputProps={{ readOnly: true, sx: inputSx }}
-            />
-          </Grid>
-
-          {/* per RPM */}
-          <Grid item xs={12} md={2}>
-            <TextField
-              size="small"
-
-              label="per RPM"
-              value={fmt(form.fuelPerRPM)}
-              InputProps={{ readOnly: true, sx: inputSx }}
-            />
-          </Grid>
-
-          {/* per FH */}
-          <Grid item xs={12} md={2}>
-            <TextField
-              size="small"
-
-              label="per FH"
-              value={fmt(form.fuelPerFH)}
-              InputProps={{ readOnly: true, sx: inputSx }}
-            />
-          </Grid>
-
-          {/* per BH */}
-          <Grid item xs={12} md={2}>
-            <TextField
-              size="small"
-
-              label="per BH"
-              value={fmt(form.fuelPerBH)}
-              InputProps={{ readOnly: true, sx: inputSx }}
-            />
-          </Grid>
-
-          {/* second row inputs unchanged */}
-          <Grid item xs={12} md={2} />
-          <Grid item xs={12} md={2}>
-            <TextField
-              label="Consumption (Kg)"
-              type="number"
-              value={form.fuelConsKgPerFH}
-              onChange={(e) => onChange("fuelConsKgPerFH", Number(e.target.value))}
-
-            />
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <TextField
-              select
-              label="Unit"
-              value={form.fuelConsUnit || "per FH"}
-              onChange={(e) => onChange("fuelConsUnit", e.target.value)}
-
-            >
-              <MenuItem value="per FH">per FH</MenuItem>
-              <MenuItem value="per FLGT">per FLGT</MenuItem>
-            </TextField>
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <TextField
-              label="Fuel price"
-              type="number"
-              value={form.fuelPricePerL}
-              onChange={(e) => onChange("fuelPricePerL", Number(e.target.value))}
-              InputProps={{ endAdornment: <InputAdornment position="end">per Litre</InputAdornment> }}
-
-            />
-          </Grid>
-        </Grid>
-
-
-        <Box sx={{ mt: 3 }}>
-          <Grid container spacing={2} alignItems="center">
-            {/* Left-aligned label */}
-            <Grid item xs={12} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Maintenance cost
-              </Typography>
+                >
+                  <MenuItem value="per FLGT">per FLGT</MenuItem>
+                  <MenuItem value="per BH">per BH</MenuItem>
+                </TextField>
+              </Grid>
             </Grid>
+          </Box>
 
-            {/* Value */}
-            <Grid item xs={12} md={2}>
-              <TextField size="small" label="Value" value={(form.maintValue ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
 
+          <Box sx={{ mt: 2, p: 2, border: "1px solid", borderColor: "grey.600", borderRadius: 1 }}>
+            <Grid container spacing={2} alignItems="center">
+              {/* Left-aligned label */}
+              <Grid item xs={12} md={2}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                  Operating cost
+                </Typography>
+              </Grid>
+
+              {/* Value */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="Value"
+                  value={(form.operatingValue ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per ASM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per ASM"
+                  value={(form.operatingPerASM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per RPM */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per RPM"
+                  value={(form.operatingPerRPM ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per FH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per FH"
+                  value={(form.operatingPerFH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
+
+              {/* per BH */}
+              <Grid item xs={12} md={2}>
+                <TextField
+                  size="small"
+
+                  label="per BH"
+                  value={(form.operatingPerBH ?? 0).toFixed(2)}
+                  InputProps={{ readOnly: true, sx: inputSx }}
+                />
+              </Grid>
             </Grid>
-
-            {/* per ASM */}
-            <Grid item xs={12} md={2}>
-              <TextField size="small" label="per ASM" value={(form.maintPerASM ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
-
-            </Grid>
-
-            {/* per RPM */}
-            <Grid item xs={12} md={2}>
-              <TextField size="small" label="per RPM" value={(form.maintPerRPM ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
-
-            </Grid>
-
-            {/* per FH */}
-            <Grid item xs={12} md={2}>
-              <TextField size="small" label="per FH" value={(Number(form.maintPerFH) ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
-
-            </Grid>
-
-            {/* per BH */}
-            <Grid item xs={12} md={2}>
-              <TextField size="small" label="per BH" value={(form.maintPerBH ?? 0).toFixed(2)} InputProps={{ readOnly: true, sx: inputSx }} />
-
-            </Grid>
-
-            {/* Second row: inputs stacked vertically under right side */}
-            <Grid item xs={12} md={2} /> {/* spacer under label */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Maintenance reserve"
-                type="number"
-                value={form.maintPerFH}
-                onChange={(e) => onChange("maintPerFH", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">per FH</InputAdornment> }}
-
-                sx={{ maxWidth: 550 }}
-              />
-            </Grid>
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Other"
-                type="number"
-                value={form.maintPerFLGT}
-                onChange={(e) => onChange("maintPerFLGT", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">per FLGT</InputAdornment> }}
-
-              />
-            </Grid>
-          </Grid>
-        </Box>
-
-        <Box sx={{ mt: 3 }}>
-          <Grid container spacing={2} alignItems="center">
-            {/* Left-aligned label */}
-            <Grid item xs={12} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Crew cost
-              </Typography>
-            </Grid>
-
-            {/* Value */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="Value"
-                value={(form.crewValue ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per ASM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per ASM"
-                value={(form.crewPerASM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per RPM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per RPM"
-                value={(form.crewPerRPM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per FH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per FH"
-                value={(form.crewPerFH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per BH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per BH"
-                value={(form.crewPerBH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* Second row: Flight Crew + Cabin Crew */}
-            <Grid item xs={12} md={2} /> {/* spacer under label */}
-
-            {/* Flight Crew count */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Flight Crew"
-                type="number"
-                value={form.pilots}
-                onChange={(e) => onChange("pilots", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">#Pilot</InputAdornment> }}
-
-              />
-            </Grid>
-
-            {/* Flight Crew rate */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Rate (Flight Crew)"
-                type="number"
-                value={form.pilotRatePerBH}
-                onChange={(e) => onChange("pilotRatePerBH", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">per BH</InputAdornment> }}
-
-              />
-            </Grid>
-
-            {/* Cabin Crew count */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Cabin Crew"
-                type="number"
-                value={form.cabin}
-                onChange={(e) => onChange("cabin", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">#Cabin</InputAdornment> }}
-
-              />
-            </Grid>
-
-            {/* Cabin Crew rate */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Rate (Cabin Crew)"
-                type="number"
-                value={form.cabinRatePerBH}
-                onChange={(e) => onChange("cabinRatePerBH", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">per BH</InputAdornment> }}
-
-              />
-            </Grid>
-          </Grid>
-        </Box>
-
-        <Box sx={{ mt: 3 }}>
-          <Grid container spacing={2} alignItems="center">
-            {/* Left-aligned label */}
-            <Grid item xs={12} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Navigation
-              </Typography>
-            </Grid>
-
-            {/* Value */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="Value"
-                value={(form.navValue ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per ASM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per ASM"
-                value={(form.navPerASM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per RPM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per RPM"
-                value={(form.navPerRPM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per FH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per FH"
-                value={(form.navPerFH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per BH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per BH"
-                value={(form.navPerBH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* Second row inputs */}
-            <Grid item xs={12} md={2} /> {/* spacer under label */}
-
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Enroute"
-                type="number"
-                value={form.navEnroutePerFLGT}
-                onChange={(e) => onChange("navEnroutePerFLGT", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">per FLGT</InputAdornment> }}
-
-              />
-            </Grid>
-
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Terminal"
-                type="number"
-                value={form.navTerminalPerArr}
-                onChange={(e) => onChange("navTerminalPerArr", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">per arrival</InputAdornment> }}
-
-              />
-            </Grid>
-          </Grid>
-        </Box>
-
-
-        <Box sx={{ mt: 3 }}>
-          <Grid container spacing={2} alignItems="center">
-            {/* Left-aligned label */}
-            <Grid item xs={12} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Airport
-              </Typography>
-            </Grid>
-
-            {/* Value */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="Value"
-                value={(form.airportValue ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per ASM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per ASM"
-                value={(form.airportPerASM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per RPM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per RPM"
-                value={(form.airportPerRPM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per FH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per FH"
-                value={(form.airportPerFH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per BH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per BH"
-                value={(form.airportPerBH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* Second row inputs */}
-            <Grid item xs={12} md={2} /> {/* spacer under label */}
-
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Landing"
-                type="number"
-                value={form.airportLandingPerArr}
-                onChange={(e) => onChange("airportLandingPerArr", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">per arrival</InputAdornment> }}
-
-              />
-            </Grid>
-
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Parking"
-                type="number"
-                value={form.airportParkingPerArr}
-                onChange={(e) => onChange("airportParkingPerArr", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">per arrival</InputAdornment> }}
-
-              />
-            </Grid>
-          </Grid>
-        </Box>
-
-
-        <Box sx={{ mt: 3 }}>
-          <Grid container spacing={2} alignItems="center">
-            {/* Left-aligned label */}
-            <Grid item xs={12} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Ground operations
-              </Typography>
-            </Grid>
-
-            {/* Value */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="Value"
-                value={(form.groundValue ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per ASM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per ASM"
-                value={(form.groundPerASM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per RPM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per RPM"
-                value={(form.groundPerRPM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per FH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per FH"
-                value={(form.groundPerFH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per BH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per BH"
-                value={(form.groundPerBH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* Second row inputs */}
-            <Grid item xs={12} md={2} /> {/* spacer under label */}
-
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Handling"
-                type="number"
-                value={form.groundHandlingPerDep}
-                onChange={(e) => onChange("groundHandlingPerDep", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">per departure</InputAdornment> }}
-
-              />
-            </Grid>
-
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="GSE (BME/GPU+ACU+ASU)"
-                type="number"
-                value={form.groundGSEPerDep}
-                onChange={(e) => onChange("groundGSEPerDep", Number(e.target.value))}
-                InputProps={{ endAdornment: <InputAdornment position="end">per departure</InputAdornment> }}
-
-              />
-            </Grid>
-          </Grid>
-        </Box>
-
-
-        <Box sx={{ mt: 3 }}>
-          <Grid container spacing={2} alignItems="center">
-            {/* Left-aligned label */}
-            <Grid item xs={12} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Direct Operating cost
-              </Typography>
-            </Grid>
-
-            {/* Value */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="Value"
-                value={(form.docValue ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per ASM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per ASM"
-                value={(form.docPerASM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per RPM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per RPM"
-                value={(form.docPerRPM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per FH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per FH"
-                value={(form.docPerFH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per BH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per BH"
-                value={(form.docPerBH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-          </Grid>
+          </Box>
         </Box>
 
 
 
-        <Box sx={{ mt: 3 }}>
+
+        <Box
+          sx={{
+            mt: 3,
+            p: 2,                         // padding inside
+            border: "2px solid",          // border thickness
+            borderColor: "grey.800",      // border color
+            borderRadius: 2,              // rounded corners
+            bgcolor: "background.paper",  // matches theme background
+          }}
+        >
           <Grid container spacing={2} alignItems="center">
             {/* Left-aligned label */}
-            <Grid item xs={12} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Aircraft Ownership cost allocation
-              </Typography>
-            </Grid>
-
-            {/* Value */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="Value"
-                value={(form.ownershipValue ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per ASM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per ASM"
-                value={(form.ownershipPerASM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per RPM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per RPM"
-                value={(form.ownershipPerRPM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per FH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per FH"
-                value={(form.ownershipPerFH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per BH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per BH"
-                value={(form.ownershipPerBH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* Second row: Rate + Unit */}
-            <Grid item xs={12} md={2} /> {/* spacer under label */}
-
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Rate"
-                type="number"
-                value={form.ownershipPerFLGT}
-                onChange={(e) => onChange("ownershipPerFLGT", Number(e.target.value))}
-
-              />
-            </Grid>
-
-            <Grid item xs={12} md={2}>
-              <TextField
-                select
-                label="Unit"
-                value={form.ownershipUnit}
-                onChange={(e) => onChange("ownershipUnit", e.target.value)}
-
-              >
-                <MenuItem value="per FLGT">per FLGT</MenuItem>
-                <MenuItem value="per BH">per BH</MenuItem>
-              </TextField>
-            </Grid>
-          </Grid>
-        </Box>
-
-
-
-        <Box sx={{ mt: 3 }}>
-          <Grid container spacing={2} alignItems="center">
-            {/* Left-aligned label */}
-            <Grid item xs={12} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Insurance
-              </Typography>
-            </Grid>
-
-            {/* Value */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="Value"
-                value={(form.insuranceValue ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per ASM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per ASM"
-                value={(form.insurancePerASM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per RPM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per RPM"
-                value={(form.insurancePerRPM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per FH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per FH"
-                value={(form.insurancePerFH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per BH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per BH"
-                value={(form.insurancePerBH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* Second row inputs (unchanged except you already added dropdowns) */}
-            <Grid item xs={12} md={2} /> {/* spacer under label */}
-
-            {/* Aircraft Hull insurance rate */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Aircraft Hull insurance"
-                type="number"
-                value={form.hullPerBH}
-                onChange={(e) => onChange("hullPerBH", Number(e.target.value))}
-
-              />
-            </Grid>
-
-            {/* Unit dropdown for Hull */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                select
-                label="Unit"
-                value={form.hullUnit}
-                onChange={(e) => onChange("hullUnit", e.target.value)}
-
-              >
-                <MenuItem value="per BH">per BH</MenuItem>
-                <MenuItem value="per FLGT">per FLGT</MenuItem>
-              </TextField>
-            </Grid>
-
-            {/* Passenger + Third party rate */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                label="Passenger + Third party"
-                type="number"
-                value={form.liabilityPerFLGT}
-                onChange={(e) => onChange("liabilityPerFLGT", Number(e.target.value))}
-
-              />
-            </Grid>
-
-            {/* Unit dropdown for Liability */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                select
-                label="Unit"
-                value={form.liabilityUnit}
-                onChange={(e) => onChange("liabilityUnit", e.target.value)}
-
-              >
-                <MenuItem value="per FLGT">per FLGT</MenuItem>
-                <MenuItem value="per BH">per BH</MenuItem>
-              </TextField>
-            </Grid>
-          </Grid>
-        </Box>
-
-
-        <Box sx={{ mt: 3 }}>
-          <Grid container spacing={2} alignItems="center">
-            {/* Left-aligned label */}
-            <Grid item xs={12} md={2}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-                Operating cost
-              </Typography>
-            </Grid>
-
-            {/* Value */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="Value"
-                value={(form.operatingValue ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per ASM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per ASM"
-                value={(form.operatingPerASM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per RPM */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per RPM"
-                value={(form.operatingPerRPM ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per FH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per FH"
-                value={(form.operatingPerFH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-
-            {/* per BH */}
-            <Grid item xs={12} md={2}>
-              <TextField
-                size="small"
-
-                label="per BH"
-                value={(form.operatingPerBH ?? 0).toFixed(2)}
-                InputProps={{ readOnly: true, sx: inputSx }}
-              />
-            </Grid>
-          </Grid>
-        </Box>
-
-        <Divider sx={{ mt: 5, borderColor: "grey.800", mb: 2, borderBottomWidth: 2 }} />
-
-
-        <Box sx={{ mt: 3 }}>
-          <Grid container spacing={2} alignItems="center">
-            {/* Left-aligned label */}
-
             <Grid item xs={12} md={2}>
               <Box sx={{ mb: 1 }}>
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
@@ -1857,7 +1917,6 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-
                 label="Value"
                 value={(form.opValue ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1868,7 +1927,6 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-
                 label="per ASM"
                 value={(form.opPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1879,7 +1937,6 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-
                 label="per RPM"
                 value={(form.opPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1890,7 +1947,6 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-
                 label="per FH"
                 value={(form.opPerFH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1901,7 +1957,6 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-
                 label="per BH"
                 value={(form.opPerBH ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
@@ -1909,6 +1964,7 @@ export default function AircraftRoute() {
             </Grid>
           </Grid>
         </Box>
+
 
 
 
