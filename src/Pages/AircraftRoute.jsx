@@ -231,13 +231,18 @@ export default function AircraftRoute() {
     const bhDec = hhmmToDec(form.blockHours || "0:00");
 
     // Passengers & cargo
-    const econPassengers = Number(form.econSeats) * (Number(form.lfEcon) / 100);
-    const bizPassengers = Number(form.bizSeats) * (Number(form.lfBiz) / 100);
-    const cargoCarried = Number(form.cargoCap) * (Number(form.lfCargo) / 100);
+    const econPassengersRaw = Number(form.econSeats) * (Number(form.lfEcon) / 100);
+const bizPassengersRaw  = Number(form.bizSeats)  * (Number(form.lfBiz)  / 100);
+const cargoCarriedRaw   = Number(form.cargoCap)  * (Number(form.lfCargo)/ 100);
+
+// ✅ Round to what the user sees
+const econPassengers = Math.round(econPassengersRaw);
+const bizPassengers  = Math.round(bizPassengersRaw);
+const cargoCarried   = Math.round(cargoCarriedRaw);
 
     // Revenues
     const econRevenue = econPassengers * Number(form.econFare || 0);
-    const bizRevenue = bizPassengers * Number(form.bizFare || 0);
+const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
     const paxRevenue = econRevenue + bizRevenue;
     const cargoRevenue = cargoCarried * Number(form.cargoRate || 0);
     const totalRevenue = paxRevenue + cargoRevenue;
@@ -988,51 +993,51 @@ export default function AircraftRoute() {
 
             <TableBody>
               {/* Pax revenue */}
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Pax revenue</TableCell>
-                <TableCell align="right">
-                  <Box
-                    sx={{
-                      fontFamily: "monospace",
-                      bgcolor: (t) => (t.palette.mode === "light" ? "#fffdf6" : "#2b2b22"),
-                      px: 1,
-                      py: 0.5,
-                      borderRadius: 1,
-                      textAlign: "right",
-                    }}
-                  >
-                    {Math.round(Number((form.paxRevenue ?? 0).toFixed(2)))}
-                  </Box>
-                </TableCell>
-                <TableCell align="right">
-                  <TextField
-                    size="small"
-                    value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxASM))}
-                    InputProps={{ readOnly: true, sx: inputSx }}
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  <TextField
-                    size="small"
-                    value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxASM))}
-                    InputProps={{ readOnly: true, sx: inputSx }}
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  <TextField
-                    size="small"
-                    value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxASM))}
-                    InputProps={{ readOnly: true, sx: inputSx }}
-                  />
-                </TableCell>
-                <TableCell align="right">
-                  <TextField
-                    size="small"
-                    value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxASM))}
-                    InputProps={{ readOnly: true, sx: inputSx }}
-                  />
-                </TableCell>
-              </TableRow>
+<TableRow>
+  <TableCell sx={{ fontWeight: 600 }}>Pax revenue</TableCell>
+  <TableCell align="right">
+    <Box sx={{ fontFamily: "monospace", bgcolor: (t) => (t.palette.mode === "light" ? "#fffdf6" : "#2b2b22"), px: 1, py: 0.5, borderRadius: 1, textAlign: "right" }}>
+      {Math.round(Number((form.paxRevenue ?? 0).toFixed(2)))}
+    </Box>
+  </TableCell>
+
+  {/* per ASM/ASK/ASNm */}
+  <TableCell align="right">
+    <TextField
+      size="small"
+      value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxASM))}
+      InputProps={{ readOnly: true, sx: inputSx }}
+    />
+  </TableCell>
+
+  {/* per RPM/RPK/RPNm */}
+  <TableCell align="right">
+    <TextField
+      size="small"
+      value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxRPM))}
+      InputProps={{ readOnly: true, sx: inputSx }}
+    />
+  </TableCell>
+
+  {/* per FH */}
+  <TableCell align="right">
+    <TextField
+      size="small"
+      value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.fhDec))}
+      InputProps={{ readOnly: true, sx: inputSx }}
+    />
+  </TableCell>
+
+  {/* per BH */}
+  <TableCell align="right">
+    <TextField
+      size="small"
+      value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.bhDec))}
+      InputProps={{ readOnly: true, sx: inputSx }}
+    />
+  </TableCell>
+</TableRow>
+
 
               {/* Cargo revenue */}
               <TableRow>
