@@ -967,10 +967,19 @@ export default function AircraftRoute() {
                 <TableCell />
                 <TableCell align="right">Value</TableCell>
                 <TableCell align="right">
-                  {form.tripDistanceUnit === "Miles" ? "per ASM" : "per ASK"}
+                  {form.tripDistanceUnit === "Miles"
+                    ? "per ASM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per ASNm"
+                      : "per ASK"}
                 </TableCell>
+
                 <TableCell align="right">
-                  {form.tripDistanceUnit === "Miles" ? "per RPM" : "per RSK"}
+                  {form.tripDistanceUnit === "Miles"
+                    ? "per RPM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per RPNm"
+                      : "per RPK"}
                 </TableCell>
                 <TableCell align="right">per FH</TableCell>
                 <TableCell align="right">per BH</TableCell>
@@ -1152,10 +1161,18 @@ export default function AircraftRoute() {
                 <TextField size="small" label="Value" value={fmt(form.fuelValue)} InputProps={{ readOnly: true, sx: inputSx }} sx={{ width: '100%' }} />
               </Grid>
               <Grid item xs={12} md={2}>
-                <TextField size="small" label={form.tripDistanceUnit === "Miles" ? "per ASM" : "per ASK"} value={fmt(form.fuelPerASM)} InputProps={{ readOnly: true, sx: inputSx }} sx={{ width: '100%' }} />
+                <TextField size="small" label={form.tripDistanceUnit === "Miles"
+                  ? "per ASM"
+                  : form.tripDistanceUnit === "NM"
+                    ? "per ASNm"
+                    : "per ASK"} value={fmt(form.fuelPerASM)} InputProps={{ readOnly: true, sx: inputSx }} sx={{ width: '100%' }} />
               </Grid>
               <Grid item xs={12} md={2}>
-                <TextField size="small" label={form.tripDistanceUnit === "Miles" ? "per RPM" : "per RSK"} value={fmt(form.fuelPerRPM)} InputProps={{ readOnly: true, sx: inputSx }} sx={{ width: '100%' }} />
+                <TextField size="small" label={form.tripDistanceUnit === "Miles"
+                  ? "per RPM"
+                  : form.tripDistanceUnit === "NM"
+                    ? "per RPNm"
+                    : "per RPK"} value={fmt(form.fuelPerRPM)} InputProps={{ readOnly: true, sx: inputSx }} sx={{ width: '100%' }} />
               </Grid>
               <Grid item xs={12} md={2}>
                 <TextField size="small" label="per FH" value={fmt(form.fuelPerFH)} InputProps={{ readOnly: true, sx: inputSx }} sx={{ width: '100%' }} />
@@ -1233,7 +1250,11 @@ export default function AircraftRoute() {
               <Grid item xs={12} md={2}>
                 <TextField
                   size="small"
-                  label={form.tripDistanceUnit === "Miles" ? "per ASM" : "per ASK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per ASM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per ASNm"
+                      : "per ASK"}
                   value={(form.maintPerASM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                   sx={{ width: "100%" }}
@@ -1244,7 +1265,11 @@ export default function AircraftRoute() {
               <Grid item xs={12} md={2}>
                 <TextField
                   size="small"
-                  label={form.tripDistanceUnit === "Miles" ? "per RPM" : "per RSK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per RPM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per RPNm"
+                      : "per RPK"}
                   value={(form.maintPerRPM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                   sx={{ width: "100%" }}
@@ -1331,7 +1356,11 @@ export default function AircraftRoute() {
               <Grid item xs={12} md={4}>
                 <TextField
                   size="small"
-                  label={form.tripDistanceUnit === "Miles" ? "per ASM" : "per ASK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per ASM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per ASNm"
+                      : "per ASK"}
                   value={(form.crewPerASM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                   sx={{ width: "100%" }}
@@ -1342,7 +1371,11 @@ export default function AircraftRoute() {
               <Grid item xs={12} md={4}>
                 <TextField
                   size="small"
-                  label={form.tripDistanceUnit === "Miles" ? "per RPM" : "per RSK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per RPM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per RPNm"
+                      : "per RPK"}
                   value={(form.crewPerRPM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                   sx={{ width: "100%" }}
@@ -1449,7 +1482,11 @@ export default function AircraftRoute() {
               <Grid item xs={12} md={2}>
                 <TextField
                   size="small"
-                  label={form.tripDistanceUnit === "Miles" ? "per ASM" : "per ASK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per ASM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per ASNm"
+                      : "per ASK"}
                   value={(form.navPerASM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                   sx={{ width: '100%' }}
@@ -1460,7 +1497,11 @@ export default function AircraftRoute() {
               <Grid item xs={12} md={2}>
                 <TextField
                   size="small"
-                  label={form.tripDistanceUnit === "Miles" ? "per RPM" : "per RSK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per RPM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per RPNm"
+                      : "per RPK"}
                   value={(form.navPerRPM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                   sx={{ width: '100%' }}
@@ -1550,7 +1591,11 @@ export default function AircraftRoute() {
               <Grid item xs={12} md={2}>
                 <TextField
                   size="small"
-                  label={form.tripDistanceUnit === "Miles" ? "per ASM" : "per ASK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per ASM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per ASNm"
+                      : "per ASK"}
                   value={(form.airportPerASM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                   sx={{ width: '100%' }}
@@ -1561,7 +1606,11 @@ export default function AircraftRoute() {
               <Grid item xs={12} md={2}>
                 <TextField
                   size="small"
-                  label={form.tripDistanceUnit === "Miles" ? "per RPM" : "per RSK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per RPM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per RPNm"
+                      : "per RPK"}
                   value={(form.airportPerRPM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                   sx={{ width: '100%' }}
@@ -1650,7 +1699,11 @@ export default function AircraftRoute() {
               <Grid item xs={12} md={2}>
                 <TextField
                   size="small"
-                  label={form.tripDistanceUnit === "Miles" ? "per ASM" : "per ASK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per ASM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per ASNm"
+                      : "per ASK"}
                   value={(form.groundPerASM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                   sx={{ width: '100%' }}
@@ -1661,7 +1714,11 @@ export default function AircraftRoute() {
               <Grid item xs={12} md={2}>
                 <TextField
                   size="small"
-                  label={form.tripDistanceUnit === "Miles" ? "per RPM" : "per RSK"}
+                  label={form.tripDi
+                    ? "per RPM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per RPNm"
+                      : "per RPK"}
                   value={(form.groundPerRPM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                   sx={{ width: '100%' }}
@@ -1748,7 +1805,11 @@ export default function AircraftRoute() {
               <Grid item xs={12} md={2}>
                 <TextField
                   size="small"
-                  label={form.tripDistanceUnit === "Miles" ? "per ASM" : "per ASK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per ASM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per ASNm"
+                      : "per ASK"}
                   value={(form.docPerASM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                   sx={{ width: '100%' }}
@@ -1759,7 +1820,11 @@ export default function AircraftRoute() {
               <Grid item xs={12} md={2}>
                 <TextField
                   size="small"
-                  label={form.tripDistanceUnit === "Miles" ? "per RPM" : "per RSK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per RPM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per RPNm"
+                      : "per RPK"}
                   value={(form.docPerRPM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                   sx={{ width: '100%' }}
@@ -1818,7 +1883,11 @@ export default function AircraftRoute() {
                 <TextField
                   size="small"
 
-                  label={form.tripDistanceUnit === "Miles" ? "per ASM" : "per ASK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per ASM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per ASNm"
+                      : "per ASK"}
                   value={(form.ownershipPerASM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                 />
@@ -1829,7 +1898,11 @@ export default function AircraftRoute() {
                 <TextField
                   size="small"
 
-                  label={form.tripDistanceUnit === "Miles" ? "per RPM" : "per RSK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per RPM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per RPNm"
+                      : "per RPK"}
                   value={(form.ownershipPerRPM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                 />
@@ -1912,7 +1985,11 @@ export default function AircraftRoute() {
                 <TextField
                   size="small"
 
-                  label={form.tripDistanceUnit === "Miles" ? "per ASM" : "per ASK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per ASM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per ASNm"
+                      : "per ASK"}
                   value={(form.insurancePerASM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                 />
@@ -1923,7 +2000,11 @@ export default function AircraftRoute() {
                 <TextField
                   size="small"
 
-                  label={form.tripDistanceUnit === "Miles" ? "per RPM" : "per RSK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per RPM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per RPNm"
+                      : "per RPK"}
                   value={(form.insurancePerRPM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                 />
@@ -2032,7 +2113,11 @@ export default function AircraftRoute() {
                 <TextField
                   size="small"
 
-                  label={form.tripDistanceUnit === "Miles" ? "per ASM" : "per ASK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per ASM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per ASNm"
+                      : "per ASK"}
                   value={(form.operatingPerASM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                 />
@@ -2043,7 +2128,11 @@ export default function AircraftRoute() {
                 <TextField
                   size="small"
 
-                  label={form.tripDistanceUnit === "Miles" ? "per RP<" : "per RSK"}
+                  label={form.tripDistanceUnit === "Miles"
+                    ? "per RPM"
+                    : form.tripDistanceUnit === "NM"
+                      ? "per RPNm"
+                      : "per RPK"}
                   value={(form.operatingPerRPM ?? 0).toFixed(2)}
                   InputProps={{ readOnly: true, sx: inputSx }}
                 />
@@ -2111,7 +2200,11 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                label={form.tripDistanceUnit === "Miles" ? "per ASM" : "per ASK"}
+                label={form.tripDistanceUnit === "Miles"
+                  ? "per ASM"
+                  : form.tripDistanceUnit === "NM"
+                    ? "per ASNm"
+                    : "per ASK"}
                 value={(form.opPerASM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
@@ -2121,7 +2214,11 @@ export default function AircraftRoute() {
             <Grid item xs={12} md={2}>
               <TextField
                 size="small"
-                label={form.tripDistanceUnit === "Miles" ? "per RPM" : "per RSK"}
+                label={form.tripDistanceUnit === "Miles"
+                  ? "per RPM"
+                  : form.tripDistanceUnit === "NM"
+                    ? "per RPNm"
+                    : "per RPK"}
                 value={(form.opPerRPM ?? 0).toFixed(2)}
                 InputProps={{ readOnly: true, sx: inputSx }}
               />
