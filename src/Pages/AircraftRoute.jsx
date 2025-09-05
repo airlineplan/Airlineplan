@@ -783,7 +783,7 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
                   label="Economy class passengers"
                   sx={{ width: '100%' }}
                   value={Math.round(form.econPassengers)}
-                  InputProps={{ readOnly: true }}
+                  InputProps={{ readOnly: true, sx: inputSx }}
                 />
               </Grid>
 
@@ -804,7 +804,7 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
                   label="Economy class revenue"
                   sx={{ width: '100%' }}
                   value={Math.round(form.econRevenue)}
-                  InputProps={{ readOnly: true }}
+                  InputProps={{ readOnly: true, sx: inputSx }}
                 />
               </Grid>
             </Grid>
@@ -853,7 +853,7 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
                   label="Business class passengers"
                   sx={{ width: '100%' }}
                   value={Math.round(form.bizPassengers)}
-                  InputProps={{ readOnly: true }}
+                  InputProps={{ readOnly: true, sx: inputSx }}
                 />
               </Grid>
 
@@ -874,7 +874,7 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
                   label="Business class revenue"
                   sx={{ width: '100%' }}
                   value={Math.round(form.bizRevenue)}
-                  InputProps={{ readOnly: true }}
+                  InputProps={{ readOnly: true, sx: inputSx }}
                 />
               </Grid>
             </Grid>
@@ -922,7 +922,7 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
                   label="Cargo carried (Kg)"
                   sx={{ width: '100%' }}
                   value={Math.round(form.cargoCarried)}
-                  InputProps={{ readOnly: true }}
+                  InputProps={{ readOnly: true, sx: inputSx }}
                 />
               </Grid>
 
@@ -943,7 +943,7 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
                   label="Cargo revenue"
                   sx={{ width: '100%' }}
                   value={Math.round(form.cargoRevenue)}
-                  InputProps={{ readOnly: true }}
+                  InputProps={{ readOnly: true, sx: inputSx }}
                 />
               </Grid>
             </Grid>
@@ -1059,14 +1059,14 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
                 <TableCell align="right">
                   <TextField
                     size="small"
-                    value={fmt(div0(form.cargoRevenue, form.cargoASM))}
+                    value={fmt(div0(form.cargoRevenue, form.paxASM))}
                     InputProps={{ readOnly: true, sx: inputSx }}
                   />
                 </TableCell>
                 <TableCell align="right">
                   <TextField
                     size="small"
-                    value={fmt(div0(form.cargoRevenue, form.cargoRPM))}
+                    value={fmt(div0(form.cargoRevenue, form.paxRPM))}
                     InputProps={{ readOnly: true, sx: inputSx }}
                   />
                 </TableCell>
