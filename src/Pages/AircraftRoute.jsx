@@ -1714,7 +1714,7 @@ export default function AircraftRoute() {
               <Grid item xs={12} md={2}>
                 <TextField
                   size="small"
-                  label={form.tripDi
+                  label={form.tripDistanceUnit
                     ? "per RPM"
                     : form.tripDistanceUnit === "NM"
                       ? "per RPNm"
