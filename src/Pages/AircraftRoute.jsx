@@ -66,6 +66,8 @@ const defaultFormState = {
   fuelPricePerL: "",
   maintPerFH: 0,
   maintPerFLGT: 0,
+  maintReservePerFHInput: 0,   // user INPUT: "Maintenance reserve (per FH)"
+  maintOtherPerFLGTInput: 0,
   fuelValue: 0,
   fuelPerASM: 0,
   fuelPerRPM: 0,
@@ -232,17 +234,17 @@ export default function AircraftRoute() {
 
     // Passengers & cargo
     const econPassengersRaw = Number(form.econSeats) * (Number(form.lfEcon) / 100);
-const bizPassengersRaw  = Number(form.bizSeats)  * (Number(form.lfBiz)  / 100);
-const cargoCarriedRaw   = Number(form.cargoCap)  * (Number(form.lfCargo)/ 100);
+    const bizPassengersRaw = Number(form.bizSeats) * (Number(form.lfBiz) / 100);
+    const cargoCarriedRaw = Number(form.cargoCap) * (Number(form.lfCargo) / 100);
 
-// ✅ Round to what the user sees
-const econPassengers = Math.round(econPassengersRaw);
-const bizPassengers  = Math.round(bizPassengersRaw);
-const cargoCarried   = Math.round(cargoCarriedRaw);
+    // ✅ Round to what the user sees
+    const econPassengers = Math.round(econPassengersRaw);
+    const bizPassengers = Math.round(bizPassengersRaw);
+    const cargoCarried = Math.round(cargoCarriedRaw);
 
     // Revenues
     const econRevenue = econPassengers * Number(form.econFare || 0);
-const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
+    const bizRevenue = bizPassengers * Number(form.bizFare || 0);
     const paxRevenue = econRevenue + bizRevenue;
     const cargoRevenue = cargoCarried * Number(form.cargoRate || 0);
     const totalRevenue = paxRevenue + cargoRevenue;
@@ -272,8 +274,8 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
     const fuelPerFH = div0(fuelValue, fhDec);
     const fuelPerBH = div0(fuelValue, bhDec);
 
-    const maintReservePerFH = Number(form.maintPerFH || 0);      // per FH
-    const maintOtherPerFLGT = Number(form.maintPerFLGT || 0);    // per FLGT
+    const maintReservePerFH = Number(form.maintReservePerFHInput || 0);  // per FH
+    const maintOtherPerFLGT = Number(form.maintOtherPerFLGTInput || 0);  // per FLGT
 
     // (1) Value = (reserve per FH * Flight Hours) + Other per FLGT
     const maintValue = maintReservePerFH * fhDec + maintOtherPerFLGT;
@@ -995,50 +997,50 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
 
             <TableBody>
               {/* Pax revenue */}
-<TableRow>
-  <TableCell sx={{ fontWeight: 600 }}>Pax revenue</TableCell>
-  <TableCell align="right">
-    <Box sx={{ fontFamily: "monospace", bgcolor: (t) => (t.palette.mode === "light" ? "#fffdf6" : "#2b2b22"), px: 1, py: 0.5, borderRadius: 1, textAlign: "right" }}>
-      {Math.round(Number((form.paxRevenue ?? 0).toFixed(2)))}
-    </Box>
-  </TableCell>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600 }}>Pax revenue</TableCell>
+                <TableCell align="right">
+                  <Box sx={{ fontFamily: "monospace", bgcolor: (t) => (t.palette.mode === "light" ? "#fffdf6" : "#2b2b22"), px: 1, py: 0.5, borderRadius: 1, textAlign: "right" }}>
+                    {Math.round(Number((form.paxRevenue ?? 0).toFixed(2)))}
+                  </Box>
+                </TableCell>
 
-  {/* per ASM/ASK/ASNm */}
-  <TableCell align="right">
-    <TextField
-      size="small"
-      value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxASM))}
-      InputProps={{ readOnly: true, sx: inputSx }}
-    />
-  </TableCell>
+                {/* per ASM/ASK/ASNm */}
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxASM))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
 
-  {/* per RPM/RPK/RPNm */}
-  <TableCell align="right">
-    <TextField
-      size="small"
-      value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxRPM))}
-      InputProps={{ readOnly: true, sx: inputSx }}
-    />
-  </TableCell>
+                {/* per RPM/RPK/RPNm */}
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.paxRPM))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
 
-  {/* per FH */}
-  <TableCell align="right">
-    <TextField
-      size="small"
-      value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.fhDec))}
-      InputProps={{ readOnly: true, sx: inputSx }}
-    />
-  </TableCell>
+                {/* per FH */}
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.fhDec))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
 
-  {/* per BH */}
-  <TableCell align="right">
-    <TextField
-      size="small"
-      value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.bhDec))}
-      InputProps={{ readOnly: true, sx: inputSx }}
-    />
-  </TableCell>
-</TableRow>
+                {/* per BH */}
+                <TableCell align="right">
+                  <TextField
+                    size="small"
+                    value={fmt(div0(Number((form.paxRevenue ?? 0).toFixed(2)), form.bhDec))}
+                    InputProps={{ readOnly: true, sx: inputSx }}
+                  />
+                </TableCell>
+              </TableRow>
 
 
               {/* Cargo revenue */}
@@ -1313,8 +1315,8 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
                   size="small"
                   label="Maintenance Reserve + Other"
                   type="number"
-                  value={form.maintPerFH}
-                  onChange={(e) => onChange("maintPerFH", Number(e.target.value))}
+                  value={form.maintReservePerFHInput}
+                  onChange={(e) => onChange("maintReservePerFHInput", Number(e.target.value))}
                   InputProps={{ endAdornment: <InputAdornment position="end">per FH</InputAdornment> }}
                   sx={{ width: "100%" }}
                 />
@@ -1325,8 +1327,8 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
                   size="small"
                   label="Maintenance Reserve + Other"
                   type="number"
-                  value={form.maintPerFLGT}
-                  onChange={(e) => onChange("maintPerFLGT", Number(e.target.value))}
+                  value={form.maintOtherPerFLGTInput}
+                  onChange={(e) => onChange("maintOtherPerFLGTInput", Number(e.target.value))}
                   InputProps={{ endAdornment: <InputAdornment position="end">per FLGT</InputAdornment> }}
                   sx={{ width: "100%" }}
                 />
