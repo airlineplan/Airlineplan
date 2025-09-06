@@ -474,6 +474,8 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
     setForm((f) => ({
       ...f,
       flightHours: flightTime,
+      fhDec,
+      bhDec,
       econPassengers,
       bizPassengers,
       cargoCarried,
