@@ -1311,7 +1311,7 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
               <Grid item xs={12} md={4}>
                 <TextField
                   size="small"
-                  label="Maintenance reserve"
+                  label="Maintenance Reserve + Other"
                   type="number"
                   value={form.maintPerFH}
                   onChange={(e) => onChange("maintPerFH", Number(e.target.value))}
@@ -1323,7 +1323,7 @@ const bizRevenue  = bizPassengers  * Number(form.bizFare  || 0);
               <Grid item xs={12} md={4}>
                 <TextField
                   size="small"
-                  label="Other"
+                  label="Maintenance Reserve + Other"
                   type="number"
                   value={form.maintPerFLGT}
                   onChange={(e) => onChange("maintPerFLGT", Number(e.target.value))}
