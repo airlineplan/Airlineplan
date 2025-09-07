@@ -17,6 +17,7 @@ import {
   Stack,
   MenuItem
 } from "@mui/material";
+import { Link } from "react-router-dom";
 
 // Small helper to render a label+helper under section titles
 function SectionTitle({ title }) {
@@ -975,7 +976,7 @@ export default function AircraftRoute() {
               <TableRow>
                 <TableCell />
                 <TableCell align="right">Value</TableCell>
-                <TableCell align="right">
+                <TableCell align="left">
                   {form.tripDistanceUnit === "Miles"
                     ? "per ASM"
                     : form.tripDistanceUnit === "NM"
@@ -983,15 +984,15 @@ export default function AircraftRoute() {
                       : "per ASK"}
                 </TableCell>
 
-                <TableCell align="right">
+                <TableCell align="left">
                   {form.tripDistanceUnit === "Miles"
                     ? "per RPM"
                     : form.tripDistanceUnit === "NM"
                       ? "per RPNm"
                       : "per RPK"}
                 </TableCell>
-                <TableCell align="right">per FH</TableCell>
-                <TableCell align="right">per BH</TableCell>
+                <TableCell align="left">per FH</TableCell>
+                <TableCell align="left">per BH</TableCell>
               </TableRow>
             </TableHead>
 
@@ -2258,10 +2259,31 @@ export default function AircraftRoute() {
 
 
 
-        <Stack direction="row" justifyContent="flex-end" sx={{ mt: 3 }}>
+        <Stack direction="row" justifyContent="space-between" sx={{ mt: 3 }}>
+          <Button
+            component={Link}
+            to="/"
+            variant="contained"
+            size="large"
+            sx={{
+              textTransform: "none",     // disable uppercase
+              "&:hover": {
+                backgroundColor: "inherit" // keep same bg on hover
+              }
+            }}
+          >
+            Airlineplan Dashboard
+          </Button>
+         
           <Button variant="contained" size="large" onClick={handleCalculate}>
             Calculate
           </Button>
+        </Stack>
+        <Stack direction="row"  align="center" alignItems="center" sx={{ mt: 3, pl:"10%", width: "90%" }}>
+          <Typography variant="body1"  align="right" textAlign="center" color="textSecondary">
+            Email <a href="mailto:admin@airlineplan.com">admin@airlineplan.com</a> for questions on the revenue and cost of aircraft types on routes.
+            You can include aircraft type(s) and route(s) in your email and receive our estimate(s).
+          </Typography>
         </Stack>
       </Paper>
     </Container>
