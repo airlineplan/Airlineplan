@@ -192,7 +192,7 @@ const SectorsTable = () => {
     const fetchData = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("http://localhost:3000/sectors", {
+        const response = await axios.get("https://airlineplan.com/sectors", {
           headers: {
             "x-access-token": accessToken,
           },

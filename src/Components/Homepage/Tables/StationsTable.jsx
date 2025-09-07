@@ -101,7 +101,7 @@ const StationsTable = () => {
         homeTimeZone: selectedHomeTimeZone, // Selected home timezone
       };
 
-      const response = await axios.post('http://localhost:3000/saveStation', requestData, {
+      const response = await axios.post('https://airlineplan.com/saveStation', requestData, {
         headers: {
           "x-access-token": accessToken,
           "Content-Type": "application/json",
@@ -134,7 +134,7 @@ const StationsTable = () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
 
-        const response = await axios.get("http://localhost:3000/get-stationData", {
+        const response = await axios.get("https://airlineplan.com/get-stationData", {
           headers: {
             "x-access-token": accessToken,
           },

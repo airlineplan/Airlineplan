@@ -267,7 +267,7 @@ const UpdateSectore = (props) => {
 
     try {
       const response = await axios.get(
-        `http://localhost:3000/sectorsbyid/${DataId}`
+        `https://airlineplan.com/sectorsbyid/${DataId}`
       );
       const item = response.data;
 
@@ -416,7 +416,7 @@ const UpdateSectore = (props) => {
       }
 
       const response = await axios.put(
-        `http://localhost:3000/update-sectore/${productId}`,
+        `https://airlineplan.com/update-sectore/${productId}`,
         productData,
         {
           headers: {

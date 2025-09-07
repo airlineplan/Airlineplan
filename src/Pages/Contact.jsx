@@ -43,7 +43,7 @@ export default function Contact() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:3000/send-contactEmail', formData);
+      await axios.post('https://airlineplan.com/send-contactEmail', formData);
       alert('Message sent successfully!');
       setFormData({
         name: '',

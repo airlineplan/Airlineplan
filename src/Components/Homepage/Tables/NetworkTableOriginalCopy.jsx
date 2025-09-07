@@ -207,7 +207,7 @@ const NetworkTable = () => {
     formData.append("file", selectedFile);
 
     axios
-      .post("http://localhost:3000/importUser", formData, {
+      .post("https://airlineplan.com/importUser", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -228,7 +228,7 @@ const NetworkTable = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("http://localhost:3000/get-data");
+        const response = await axios.get("https://airlineplan.com/get-data");
         setNetworkTableData(response.data);
       } catch (error) {
         console.error("Error fetching data:", error);

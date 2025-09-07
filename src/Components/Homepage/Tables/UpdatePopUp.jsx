@@ -205,7 +205,7 @@ const UpdatePopUp = (props) => {
     }
     try {
       const response = await axios.get(
-        `http://localhost:3000/products/${DataId}`
+        `https://airlineplan.com/products/${DataId}`
       );
       const item = response.data;
 
@@ -316,7 +316,7 @@ const UpdatePopUp = (props) => {
     if (productId) {
       setLoading(true);
       axios
-        .put(`http://localhost:3000/update-data/${productId}`, productData, {
+        .put(`https://airlineplan.com/update-data/${productId}`, productData, {
           headers: 
           { 'x-access-token': `${localStorage.getItem('accessToken')}`, 'Content-Type': 'application/json' },
         })
