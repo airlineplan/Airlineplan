@@ -1,99 +1,187 @@
-import React, { useState, useEffect, useRef } from "react";
-import {
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Stack,
-  MenuItem,
-  TextField,
-  Grid,
-  Box,
-  TableContainer,
-  Paper,
-  Typography,
-  Button,
-} from "@mui/material";
-import { DemoContainer } from "@mui/x-date-pickers/internals/demo";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { DateField } from "@mui/x-date-pickers/DateField";
-import { DashboardTableData } from "../../../assets/MockData/DashboardTableData";
-import { ToastContainer, toast } from "react-toastify";
-import PropTypes from 'prop-types';
-import "react-toastify/dist/ReactToastify.css";
-import './dashboard.css';
-import dayjs from "dayjs";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import * as XLSX from 'xlsx';
-import Select from 'react-select';
-import { RotatingLines } from 'react-loader-spinner'
+import { motion, AnimatePresence } from "framer-motion";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { 
+  Download, Filter, ChevronDown, Check, 
+  Search, Calendar, BarChart3, X 
+} from "lucide-react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
+// --- UTILITIES ---
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
 
-const MultiSelectDropdown = ({ placeholder, options, onChange }) => {
-  const [selectedOptions, setSelectedOptions] = useState([]);
+// --- CONFIGURATION ---
+const METRICS = [
+  { id: 'destinations', label: 'Destinations', type: 'number' },
+  { id: 'departures', label: 'Departures', type: 'number' },
+  { id: 'seats', label: 'Seats', type: 'number' },
+  { id: 'pax', label: 'Pax', type: 'number' },
+  { id: 'paxSF', label: 'Pax SF', type: 'percent' },
+  { id: 'paxLF', label: 'Pax LF', type: 'percent' },
+  { id: 'cargoCapT', label: 'Cargo Ton Capacity', type: 'number' },
+  { id: 'cargoT', label: 'Cargo Tons', type: 'number' },
+  { id: 'ct2ctc', label: 'Cargo Tons / Capacity', type: 'percent' },
+  { id: 'cftk2atk', label: 'Cargo FTK / ATK', type: 'percent' },
+  { id: 'bh', label: 'BH', type: 'round' },
+  { 
+    id: 'waslgcd', 
+    label: 'Weighted Avg Stage Length (GCD)', 
+    calc: (d) => d.departures ? d.sumOfGcd / d.departures : 0,
+    type: 'number'
+  },
+  { 
+    id: 'waslbh', 
+    label: 'Weighted Avg Stage Length (BH)', 
+    calc: (d) => d.departures ? d.bh / d.departures : 0,
+    type: 'decimal' 
+  },
+  { id: 'adu', label: 'Avg Daily Utilisation', type: 'text' },
+  { 
+    id: 'asks', 
+    label: 'ASKs (Mn)', 
+    calc: (d) => d.sumOfask / 1000000, 
+    type: 'decimal' 
+  },
+  { 
+    id: 'rsks', 
+    label: 'RSKs (Mn)', 
+    calc: (d) => d.sumOfrsk / 1000000, 
+    type: 'decimal' 
+  },
+  { 
+    id: 'cargoAtk', 
+    label: 'Cargo ATKs (000s)', 
+    calc: (d) => d.sumOfcargoAtk / 1000, 
+    type: 'decimal' 
+  },
+  { 
+    id: 'cargoRtk', 
+    label: 'Cargo FTKs (000s)', 
+    calc: (d) => d.sumOfcargoRtk / 1000, 
+    type: 'decimal' 
+  },
+];
 
-  const handleDropdownChange = (selected) => {
-    setSelectedOptions(selected);
-    if (onChange) {
-      onChange(selected);
-    }
+// --- CUSTOM COMPONENTS ---
+
+const MultiSelect = ({ label, options, selected, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleOption = (value) => {
+    const newSelected = selected.some(item => item.value === value)
+      ? selected.filter(item => item.value !== value)
+      : [...selected, options.find(opt => opt.value === value)];
+    onChange(newSelected);
   };
 
-
   return (
-    <div>
-      <Select
-        placeholder={placeholder}
-        options={options}
-        isMulti
-        value={selectedOptions}
-        onChange={handleDropdownChange}
-      />
+    <div className="relative w-full" ref={containerRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg border transition-all duration-200 bg-white dark:bg-slate-800",
+          isOpen ? "border-indigo-500 ring-1 ring-indigo-500" : "border-slate-300 dark:border-slate-700 hover:border-slate-400"
+        )}
+      >
+        <div className="flex flex-col items-start truncate">
+          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">{label}</span>
+          <span className="text-slate-800 dark:text-slate-200 font-medium truncate w-full text-left">
+            {selected.length > 0 ? `${selected.length} selected` : "All"}
+          </span>
+        </div>
+        <ChevronDown size={14} className={cn("text-slate-400 transition-transform", isOpen && "rotate-180")} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 5 }}
+            className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
+          >
+            {options.map((opt) => {
+              const isSelected = selected.some(s => s.value === opt.value);
+              return (
+                <div
+                  key={opt.value}
+                  onClick={() => toggleOption(opt.value)}
+                  className="flex items-center px-3 py-2 text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                >
+                  <div className={cn(
+                    "w-4 h-4 rounded border mr-3 flex items-center justify-center transition-colors",
+                    isSelected ? "bg-indigo-500 border-indigo-500" : "border-slate-300 dark:border-slate-600"
+                  )}>
+                    {isSelected && <Check size={10} className="text-white" />}
+                  </div>
+                  <span className="text-slate-700 dark:text-slate-300 truncate">{opt.label}</span>
+                </div>
+              );
+            })}
+            {options.length === 0 && <div className="p-3 text-xs text-slate-400 text-center">No options</div>}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
+const SingleSelect = ({ label, options, value, onChange }) => (
+  <div className="relative group">
+    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mr-2">{label}:</span>
+    </div>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="appearance-none pl-16 pr-8 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 dark:text-slate-200 font-medium cursor-pointer hover:border-slate-400 transition-colors shadow-sm"
+    >
+      {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+    </select>
+    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+  </div>
+);
 
-const SingleSelectDropdown = ({ placeholder, options, onChange, selected }) => {
-  const [selectedOption, setSelectedOption] = useState(selected);
-
-  const handleDropdownChange = (selected) => {
-    setSelectedOption(selected);
-    if (onChange) {
-      onChange(selected);
-    }
-  };
-
-  const customStyles = {
-    control: (provided) => ({
-      ...provided,
-      width: "250px",
-    }),
-  };
-
-
-  return (
-    <Select
-      options={options}
-      value={selectedOption}
-      onChange={handleDropdownChange}
-      styles={customStyles}
-      placeholder={placeholder}
-    />
-  );
-};
+// --- MAIN COMPONENT ---
 
 const DashboardTable = () => {
+  // --- STATE ---
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  // Filters
+  const [label, setLabel] = useState("both");
+  const [periodicity, setPeriodicity] = useState("weekly");
+  const [dropdownOptions, setDropdownOptions] = useState({
+    from: [], to: [], sector: [], variant: [], userTag1: [], userTag2: []
+  });
+  const [filters, setFilters] = useState({
+    from: [], to: [], sector: [], variant: [], userTag1: [], userTag2: []
+  });
 
-  const singleSelectLabelOptions = [
+  // --- OPTIONS ---
+  const LABEL_OPTIONS = [
     { label: "Dom", value: "dom" },
     { label: "INTL", value: "intl" },
     { label: "Both", value: "both" },
   ];
 
-  const singleSelectPeriodicityOptions = [
+  const PERIODICITY_OPTIONS = [
     { label: "Annually", value: "annually" },
     { label: "Quarterly", value: "quarterly" },
     { label: "Monthly", value: "monthly" },
@@ -101,2463 +189,212 @@ const DashboardTable = () => {
     { label: "Daily", value: "daily" },
   ];
 
+  // --- API CALLS ---
 
-  const [from, setFrom] = useState([]);
-  const [to, setTo] = useState([]);
-  const [periodicity, setPeriodicity] = useState("");
-  const [label, setLabel] = useState("");
-  const [data, setData] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [initialConnectionCreated, setInitialConnectionCreated] = useState(false);
-  const [selectedValues, setSelectedValues] = useState({ 'label': singleSelectLabelOptions[2], 'periodicity': singleSelectPeriodicityOptions[3] });
-  const [singleSelectValues, setSingleSelectValues] = useState({
-    label: null,
-    periodicity: null,
-  });
-  const [multiSelectValues, setMultiSelectValues] = useState({
-    from: [],
-    to: [],
-    sector: [],
-    variant: [],
-    userTag1: [],
-    userTag2: [],
-  });
-
-
-  const transformData = () => {
-
-    const propertyMappings = {
-      destinations: 'Destinations',
-      departures: 'Departures',
-      seats: 'Seats',
-      pax: 'Pax',
-      paxSF: 'Pax SF',
-      paxLF: 'Pax LF',
-      cargoCapT: 'Cargo Ton Capacity',
-      cargoT: 'Cargo Tons',
-      ct2ctc: 'Cargo Tons/Cargo Ton Capacity',
-      cftk2atk: 'Cargo FTK/Cargo ATK',
-      bh: 'BH',
-      waslgcd: 'Weighted average stage length per FLGT by GCD',
-      waslbh: 'Weighted average stage length per FLGT by BH',
-      adu: 'Average Daily Utilisation',
-      asks: 'ASKs (Mn)',
-      rsks: 'RSKs (Mn)',
-      cargoAtk: 'Cargo ATKs (Thousands)',
-      cargoRtk: 'Cargo FTKs (Thousands)',
+  useEffect(() => {
+    const fetchDropdowns = async () => {
+      try {
+        const res = await axios.get(`https://airlineplan.com/dashboard/populateDropDowns`, {
+          headers: { "x-access-token": localStorage.getItem("accessToken") }
+        });
+        setDropdownOptions(res.data);
+      } catch (e) {
+        console.error("Dropdown fetch error", e);
+      }
     };
-
-    const properties = Object.keys(propertyMappings);
-    const uniqueDates = Array.from(new Set(data.map(item => item.endDate)));
-
-    var newData = [['']];
-
-    // Function to format the date to "dd mmm yy" format
-    function formatDate(inputDate) {
-      var date = new Date(inputDate);
-      var options = { year: '2-digit', month: 'short', day: 'numeric' };
-      return date.toLocaleDateString('en-GB', options).replace(/ /g, '-');
-    }
-
-    // Iterate through uniqueDates and format them before pushing into newData array
-    for (var i = 0; i < uniqueDates.length; i++) {
-      var formattedDate = formatDate(uniqueDates[i]);
-      newData[0].push(formattedDate);
-    }
-
-    // Pushing the dates as the first column in newData
-    // newData.push(['', ...uniqueDates]);
-
-    // Extracting properties from oldData and pushing them into newData
-    properties.forEach(property => {
-      newData.push([propertyMappings[property], ...uniqueDates.map(date => {
-        const matchingData = data.find(item => item.endDate === date);
-
-        switch (property) {
-          case 'waslgcd':
-            return (matchingData && matchingData.departures) ? (matchingData.sumOfGcd / matchingData.departures).toFixed(2) : '';
-          case 'waslbh':
-            return (matchingData && matchingData.departures) ? (matchingData.bh / matchingData.departures).toFixed(2) : '';
-          case 'asks':
-            return (matchingData) ? (matchingData.sumOfask / 1000000).toFixed(2) : '';
-          case 'rsks':
-            return (matchingData) ? (matchingData.sumOfrsk / 1000000).toFixed(2) : '';
-          case 'cargoAtk':
-            return (matchingData) ? (matchingData.sumOfcargoAtk / 1000).toFixed(2) : '';
-          case 'cargoRtk':
-            return (matchingData) ? (matchingData.sumOfcargoRtk / 1000).toFixed(2) : '';
-          default:
-            return matchingData ? matchingData[property] : '';
-        }
-      })]);
-    });
-
-    return newData;
-
-  }
-
-  const downloadDashboardTable = async () => {
-
-    const newData = transformData();
-
-    const transformedData = newData.map((row, rowIndex) => {
-      // If it's the first row (index 0), leave the date values as strings
-      if (rowIndex === 0) {
-        return row;
-      }
-      // For other rows, convert numeric strings to numbers, leave other strings as they are
-      return row.map((value, colIndex) => {
-        // Skip the first column (index 0) which contains strings (dates)
-        if (colIndex === 0) {
-          return value;
-        }
-        const numValue = parseFloat((typeof value === 'string') ? parseFloat(value.replace(/,/g, '')) : value);
-        return isNaN(numValue) ? value : numValue;
-      });
-    });
-
-    const ws = XLSX.utils.aoa_to_sheet(transformedData);
-
-    // Set cell styles to center align the content
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    for (let R = range.s.r; R <= range.e.r; ++R) {
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const cellAddress = { c: C, r: R };
-        const cellRef = XLSX.utils.encode_cell(cellAddress);
-
-        // Check if cell exists before applying styles
-        if (ws[cellRef]) {
-          ws[cellRef].s = {
-            alignment: { horizontal: 'center', vertical: 'center' }
-          };
-        }
-      }
-    }
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'DashboardTable');
-
-    // Save the Excel file
-    XLSX.writeFile(wb, 'dashboard_table.xlsx');
-  }
-
-  const handleMultipleClicks = () => {
-    props.runhandler();
-  };
-
-  const handlePeriodChange = (event) => {
-    setPeriodicity(event.target.value);
-  };
-
-  const handleLabel = (event) => {
-    setLabel(event.target.value);
-  };
-
-
-  const labelRef = useRef(label);
-
-  const additionalTableCellsCount = data.length > 6 ? data.length - 6 : 0;
-
-  useEffect(() => {
-    labelRef.current = label;
-  }, [label]);
-
-
-  const fetchData = async (selected = null, fieldName = null) => {
-    try {
-      setLoading(true); // Show loader
-      const accessToken = localStorage.getItem("accessToken");
-  
-      // Update selected values if parameters are passed
-      let updatedValues = { ...selectedValues };
-      if (selected && fieldName) {
-        updatedValues = { ...selectedValues, [fieldName]: selected };
-        setSelectedValues(updatedValues); // Update state
-      }
-  
-      // Call the dashboard API
-      const response = await axios.get('https://airlineplan.com/dashboard', {
-        params: updatedValues,
-        headers: {
-          'x-access-token': accessToken,
-        },
-      });
-  
-      // Set the received data
-      setData(response.data);
-      console.log("Data received in dashboard:", response.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false); // Hide loader
-    }
-  };
-  
-  useEffect(() => {
-     
-    // Trigger function if connections haven't been created or periodicity/label changes
-    fetchData();
-  }, [periodicity, label]);
-  
-
-
-  useEffect(() => {
-
-    const getDropdownData = async () => {
-
-      const response = await axios.get(
-        `https://airlineplan.com/dashboard/populateDropDowns`,
-        {
-          headers: {
-            "x-access-token": `${localStorage.getItem("accessToken")}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      setMultiSelectValues(response.data);
-    }
-    getDropdownData()
-
+    fetchDropdowns();
   }, []);
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      const params = {
+        label,
+        periodicity,
+        from: filters.from,
+        to: filters.to,
+        sector: filters.sector,
+        variant: filters.variant,
+        userTag1: filters.userTag1,
+        userTag2: filters.userTag2
+      };
+
+      const response = await axios.get('https://airlineplan.com/dashboard', {
+        params,
+        headers: { 'x-access-token': accessToken },
+      });
+      setData(response.data || []);
+    } catch (error) {
+      console.error("Dashboard fetch error", error);
+      toast.error("Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Trigger fetch on changes
+  useEffect(() => {
+    fetchData();
+  }, [label, periodicity, filters]);
+
+  // Handle MultiSelect Change
+  const handleFilterChange = (key, selected) => {
+    setFilters(prev => ({ ...prev, [key]: selected }));
+  };
+
+  // --- FORMATTERS ---
+  const formatValue = (val, type) => {
+    if (val === null || val === undefined || isNaN(val)) return "-";
+    switch (type) {
+      case 'percent': return `${val}%`;
+      case 'decimal': return val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      case 'round': return Math.round(val).toLocaleString();
+      case 'number': return val.toLocaleString();
+      default: return val;
+    }
+  };
+
+  const getMetricValue = (item, metric) => {
+    let rawVal;
+    if (metric.calc) {
+      rawVal = metric.calc(item);
+    } else {
+      rawVal = item[metric.id];
+    }
+    return formatValue(rawVal, metric.type);
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    if(isNaN(date)) return "-";
+    return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }).format(date);
+  };
+
+  // --- EXPORT ---
+  const handleDownload = () => {
+    if (!data.length) return toast.warn("No data to export");
+
+    const headerRow = ["Metric", ...data.map(d => formatDate(d.endDate))];
+    const rows = METRICS.map(m => {
+      return [m.label, ...data.map(d => getMetricValue(d, m))];
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet([headerRow, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Dashboard");
+    XLSX.writeFile(wb, "dashboard_report.xlsx");
+  };
+
+  // --- RENDER ---
   return (
-    <Stack direction="column" gap="1rem" my="16px">
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        mt="10px"
-      >
-        <SingleSelectDropdown
-          placeholder="Label"
-          options={singleSelectLabelOptions}
-          onChange={(selected) => fetchData(selected, "label")}
-          selected={singleSelectLabelOptions[2]}
-        />
-      </Stack>
-      <Grid container spacing={2}>
-        {/* You can adjust the spacing and other props as needed */}
-        <Grid item xs={2}>
-          <MultiSelectDropdown placeholder="From" options={multiSelectValues.from} onChange={(selected) => fetchData(selected, "from")} />
-        </Grid>
-        <Grid item xs={2}>
-          <MultiSelectDropdown placeholder="To" options={multiSelectValues.to} onChange={(selected) => fetchData(selected, "to")} />
-        </Grid>
-        <Grid item xs={2}>
-          <MultiSelectDropdown placeholder="Sector" options={multiSelectValues.sector} onChange={(selected) => fetchData(selected, "sector")} />
-        </Grid>
-
-        <Grid item xs={2}>
-          <MultiSelectDropdown placeholder="Variant" options={multiSelectValues.variant} onChange={(selected) => fetchData(selected, "variant")} />
-        </Grid>
-        <Grid item xs={2}>
-          <MultiSelectDropdown placeholder="User Tag 1" options={multiSelectValues.userTag1} onChange={(selected) => fetchData(selected, "userTag1")} />
-        </Grid>
-        <Grid item xs={2}>
-          <MultiSelectDropdown placeholder="User Tag 2" options={multiSelectValues.userTag2} onChange={(selected) => fetchData(selected, "userTag2")} />
-        </Grid>
-      </Grid>
-      <Stack direction="column" mt={5}>
-        <Paper elevation={1} sx={{ height: "fit-content" }}>
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            mt="10px"
-          >
-            {/* <TextField
-              select
-              label="Select Periodicity"
-              onChange={fetchData}
-              value={periodicity}
-              size="small"
-              sx={{ bgcolor: "white", width: "12rem" }}
-            >
-              <MenuItem value="annually">Annually</MenuItem>
-              <MenuItem value="quarterly">Quarterly</MenuItem>
-              <MenuItem value="monthly">Monthly</MenuItem>
-            </TextField> */}
-
-            <SingleSelectDropdown
-              placeholder="Periodicity"
-              options={singleSelectPeriodicityOptions}
-              onChange={(selected) => fetchData(selected, "periodicity")}
-              selected={singleSelectPeriodicityOptions[3]}
-            />
-          </Stack>
-
+    <div className="w-full h-full p-6 space-y-6 bg-slate-50 dark:bg-slate-950 min-h-screen font-sans">
+      
+      {/* HEADER & FILTERS */}
+      <div className="flex flex-col gap-6">
+        
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            {loading ? (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '40vh' }}>
-                <RotatingLines
-                  visible={loading}
-                  height="96"
-                  width="96"
-                  color="grey"
-                  strokeWidth="5"
-                  strokeColor="#3399CC"
-                  animationDuration="0.75"
-                  ariaLabel="rotating-lines-loading"
-                  wrapperStyle={{}}
-                  wrapperClass=""
-                />
-              </div>
-            ) : (
-              <TableContainer sx={{ overflowX: "scroll" }}>
-                <Table
-                  sx={{
-                    border: "1px solid black",
-                    borderCollapse: "collapse",
-                    borderSpacing: "0",
-                  }}
-                >
-                  <TableHead>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        {" "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                          fontSize: "16px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {data && data[0]?.endDate
-                          ? (() => {
-                            const date = new Date(data[0]?.endDate);
-                            if (!isNaN(date)) {
-                              const day = String(date.getDate()).padStart(2, '0');
-                              const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date);
-                              const year = String(date.getFullYear()).slice(-2);
-                              return `${day} ${month} ${year}`;
-                            } else {
-                              return " ---------           ";
-                            }
-                          })()
-                          : " ---------           "}
-
-
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                          fontSize: "16px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {data && data[1]?.endDate
-                          ? (() => {
-                            const date = new Date(data[1]?.endDate);
-                            if (!isNaN(date)) {
-                              const day = String(date.getDate()).padStart(2, '0');
-                              const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date);
-                              const year = String(date.getFullYear()).slice(-2);
-                              return `${day} ${month} ${year}`;
-                            } else {
-                              return " ---------           ";
-                            }
-                          })()
-                          : " ---------           "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                          fontSize: "16px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {data && data[2]?.endDate
-                          ? (() => {
-                            const date = new Date(data[2]?.endDate);
-                            if (!isNaN(date)) {
-                              const day = String(date.getDate()).padStart(2, '0');
-                              const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date);
-                              const year = String(date.getFullYear()).slice(-2);
-                              return `${day} ${month} ${year}`;
-                            } else {
-                              return " ---------           ";
-                            }
-                          })()
-                          : " ---------           "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                          fontSize: "16px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {data && data[3]?.endDate
-                          ? (() => {
-                            const date = new Date(data[3]?.endDate);
-                            if (!isNaN(date)) {
-                              const day = String(date.getDate()).padStart(2, '0');
-                              const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date);
-                              const year = String(date.getFullYear()).slice(-2);
-                              return `${day} ${month} ${year}`;
-                            } else {
-                              return " ---------           ";
-                            }
-                          })()
-                          : " ---------           "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                          fontSize: "16px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {data && data[4]?.endDate
-                          ? (() => {
-                            const date = new Date(data[4]?.endDate);
-                            if (!isNaN(date)) {
-                              const day = String(date.getDate()).padStart(2, '0');
-                              const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date);
-                              const year = String(date.getFullYear()).slice(-2);
-                              return `${day} ${month} ${year}`;
-                            } else {
-                              return " ---------           ";
-                            }
-                          })()
-                          : " ---------           "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                          fontSize: "16px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {data && data[5]?.endDate
-                          ? (() => {
-                            const date = new Date(data[5]?.endDate);
-                            if (!isNaN(date)) {
-                              const day = String(date.getDate()).padStart(2, '0');
-                              const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date);
-                              const year = String(date.getFullYear()).slice(-2);
-                              return `${day} ${month} ${year}`;
-                            } else {
-                              return " ---------           ";
-                            }
-                          })()
-                          : " ---------           "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const endDate = item?.endDate || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                                fontSize: "16px",
-                                fontWeight: 600,
-                              }}
-                            >
-                              {data && data[index + 6]?.endDate
-                                ? (() => {
-                                  const date = new Date(data[index + 6]?.endDate);
-                                  if (!isNaN(date)) {
-                                    const day = String(date.getDate()).padStart(2, '0');
-                                    const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date);
-                                    const year = String(date.getFullYear()).slice(-2);
-                                    return `${day} ${month} ${year}`;
-                                  } else {
-                                    return " ---------           ";
-                                  }
-                                })()
-                                : " ---------           "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Destinations{" "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.destinations
-                          ? data[0].destinations
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.destinations
-                          ? data[1].destinations
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.destinations
-                          ? data[2].destinations
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.destinations
-                          ? data[3].destinations
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.destinations
-                          ? data[4].destinations
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.destinations
-                          ? data[5].destinations
-                          : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const destinations = item?.destinations || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {destinations}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Departures
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.departures ? data[0].departures : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.departures ? data[1].departures : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.departures ? data[2].departures : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.departures ? data[3].departures : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.departures ? data[4].departures : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.departures ? data[5].departures : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const departures = item?.departures || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {departures ? departures : " ---------  "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell></TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Seats{" "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.seats ? data[0].seats : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.seats ? data[1].seats : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.seats ? data[2].seats : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.seats ? data[3].seats : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.seats ? data[4].seats : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.seats ? data[5].seats : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const seats = item?.seats || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {seats ? seats : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        {" "}
-                        Pax
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.pax ? data[0].pax : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.pax ? data[1].pax : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.pax ? data[2].pax : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.pax ? data[3].pax : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.pax ? data[4].pax : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.pax ? data[5].pax : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const pax = item?.pax || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {pax ? pax : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Pax SF{" "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {/* {data && data.length > 0 && !(data[0]?.paxLF == null) ? (isNaN(data[0]?.paxLF) ? "N/A" : data[0]?.paxLF+ "%") : " "} */}
-                        {
-                          data && data.length > 0 && data[0]
-                            ? data[0]?.paxSF != null
-                              ? isNaN(data[0]?.paxSF)
-                                ? "N/A"
-                                : data[0]?.paxSF + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {/* {data && data.length > 0 && !(data[1]?.paxSF == null)? (isNaN(data[1]?.paxSF) ? "N/A" : data[1]?.paxSF+ "%") : " "} */}
-
-                        {
-                          data && data.length > 0 && data[1]
-                            ? data[1]?.paxSF != null
-                              ? isNaN(data[1]?.paxSF)
-                                ? "N/A"
-                                : data[1]?.paxSF + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {/* {data && data.length > 0 && !(data[2]?.paxSF == null)? (isNaN(data[2]?.paxSF) ? "N/A" : data[2]?.paxSF+ "%") : " "} */}
-                        {
-                          data && data.length > 0 && data[2]
-                            ? data[2]?.paxSF != null
-                              ? isNaN(data[2]?.paxSF)
-                                ? "N/A"
-                                : data[2]?.paxSF + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {/* {data && data.length > 0 && !(data[3]?.paxSF == null)? (isNaN(data[3]?.paxSF) ? "N/A" : data[3]?.paxSF+ "%") : " "} */}
-                        {
-                          data && data.length > 0 && data[3]
-                            ? data[3]?.paxSF != null
-                              ? isNaN(data[3]?.paxSF)
-                                ? "N/A"
-                                : data[3]?.paxSF + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {/* {data && data.length > 0 && !(data[4]?.paxSF == null)? (isNaN(data[4]?.paxSF) ? "N/A" : data[4]?.paxSF+ "%") : " "} */}
-                        {
-                          data && data.length > 0 && data[4]
-                            ? data[4]?.paxSF != null
-                              ? isNaN(data[4]?.paxSF)
-                                ? "N/A"
-                                : data[4]?.paxSF + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {/* {data && data.length > 0 && !(data[5]?.paxSF == null)? (isNaN(data[5]?.paxSF) ? "N/A" : data[5]?.paxSF+ "%") : " "} */}
-                        {
-                          data && data.length > 0 && data[5]
-                            ? data[5]?.paxSF != null
-                              ? isNaN(data[5]?.paxSF)
-                                ? "N/A"
-                                : data[5]?.paxSF + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const paxSF = (item?.paxSF == null || isNaN(item?.paxSF) ? "N/A" : item?.paxSF + "%"); // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {paxSF ? paxSF : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Pax LF{" "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {/* {data && data.length > 0 && !(data[0]?.paxLF == null) ? (isNaN(data[0]?.paxLF) ? "N/A" : data[0]?.paxLF+ "%") : " "} */}
-                        {
-                          data && data.length > 0 && data[0]
-                            ? data[0]?.paxLF != null
-                              ? isNaN(data[0]?.paxLF)
-                                ? "N/A"
-                                : data[0]?.paxLF + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {/* {data && data.length > 0 && !(data[1]?.paxLF == null)? (isNaN(data[1]?.paxLF) ? "N/A" : data[1]?.paxLF+ "%") : " "} */}
-
-                        {
-                          data && data.length > 0 && data[1]
-                            ? data[1]?.paxLF != null
-                              ? isNaN(data[1]?.paxLF)
-                                ? "N/A"
-                                : data[1]?.paxLF + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {/* {data && data.length > 0 && !(data[2]?.paxLF == null)? (isNaN(data[2]?.paxLF) ? "N/A" : data[2]?.paxLF+ "%") : " "} */}
-                        {
-                          data && data.length > 0 && data[2]
-                            ? data[2]?.paxLF != null
-                              ? isNaN(data[2]?.paxLF)
-                                ? "N/A"
-                                : data[2]?.paxLF + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {/* {data && data.length > 0 && !(data[3]?.paxLF == null)? (isNaN(data[3]?.paxLF) ? "N/A" : data[3]?.paxLF+ "%") : " "} */}
-                        {
-                          data && data.length > 0 && data[3]
-                            ? data[3]?.paxLF != null
-                              ? isNaN(data[3]?.paxLF)
-                                ? "N/A"
-                                : data[3]?.paxLF + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {/* {data && data.length > 0 && !(data[4]?.paxLF == null)? (isNaN(data[4]?.paxLF) ? "N/A" : data[4]?.paxLF+ "%") : " "} */}
-                        {
-                          data && data.length > 0 && data[4]
-                            ? data[4]?.paxLF != null
-                              ? isNaN(data[4]?.paxLF)
-                                ? "N/A"
-                                : data[4]?.paxLF + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {/* {data && data.length > 0 && !(data[5]?.paxLF == null)? (isNaN(data[5]?.paxLF) ? "N/A" : data[5]?.paxLF+ "%") : " "} */}
-                        {
-                          data && data.length > 0 && data[5]
-                            ? data[5]?.paxLF != null
-                              ? isNaN(data[5]?.paxLF)
-                                ? "N/A"
-                                : data[5]?.paxLF + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const paxLF = (item?.paxLF == null || isNaN(item?.paxLF) ? "N/A" : item?.paxLF + "%"); // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {paxLF ? paxLF : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell></TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Cargo Ton Capacity{" "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.cargoCapT ? data[0].cargoCapT : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.cargoCapT ? data[1].cargoCapT : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.cargoCapT ? data[2].cargoCapT : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.cargoCapT ? data[3].cargoCapT : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.cargoCapT ? data[4].cargoCapT : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.cargoCapT ? data[5].cargoCapT : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const cargoCapT = item?.cargoCapT || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {cargoCapT ? cargoCapT : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Cargo Tons{" "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.cargoT ? data[0].cargoT : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.cargoT ? data[1].cargoT : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.cargoT ? data[2].cargoT : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.cargoT ? data[3].cargoT : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.cargoT ? data[4].cargoT : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.cargoT ? data[5].cargoT : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const cargoT = item?.cargoT || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {cargoT ? cargoT : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Cargo Tons/Cargo Ton Capacity{" "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {
-                          data && data.length > 0 && data[0]
-                            ? data[0]?.ct2ctc != null
-                              ? isNaN(data[0]?.ct2ctc)
-                                ? "N/A"
-                                : data[0]?.ct2ctc + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {
-                          data && data.length > 0 && data[1]
-                            ? data[1]?.ct2ctc != null
-                              ? isNaN(data[1]?.ct2ctc)
-                                ? "N/A"
-                                : data[1]?.ct2ctc + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {
-                          data && data.length > 0 && data[2]
-                            ? data[2]?.ct2ctc != null
-                              ? isNaN(data[2]?.ct2ctc)
-                                ? "N/A"
-                                : data[2]?.ct2ctc + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {
-                          data && data.length > 0 && data[3]
-                            ? data[3]?.ct2ctc != null
-                              ? isNaN(data[3]?.ct2ctc)
-                                ? "N/A"
-                                : data[3]?.ct2ctc + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {
-                          data && data.length > 0 && data[4]
-                            ? data[4]?.ct2ctc != null
-                              ? isNaN(data[4]?.ct2ctc)
-                                ? "N/A"
-                                : data[4]?.ct2ctc + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {
-                          data && data.length > 0 && data[5]
-                            ? data[5]?.ct2ctc != null
-                              ? isNaN(data[5]?.ct2ctc)
-                                ? "N/A"
-                                : data[5]?.ct2ctc + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-                          const ct2ctc = (item?.ct2ctc == null || isNaN(item?.ct2ctc) ? "N/A" : item?.ct2ctc + "%");
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {ct2ctc}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Cargo FTK/Cargo ATK{" "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {
-                          data && data.length > 0 && data[0]
-                            ? data[0]?.cftk2atk != null
-                              ? isNaN(data[0]?.cftk2atk)
-                                ? "N/A"
-                                : data[0]?.cftk2atk + "%"
-                              : "N/A"
-                            : " "
-                        }                  </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {
-                          data && data.length > 0 && data[1]
-                            ? data[1]?.cftk2atk != null
-                              ? isNaN(data[1]?.cftk2atk)
-                                ? "N/A"
-                                : data[1]?.cftk2atk + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {
-                          data && data.length > 0 && data[2]
-                            ? data[2]?.cftk2atk != null
-                              ? isNaN(data[2]?.cftk2atk)
-                                ? "N/A"
-                                : data[2]?.cftk2atk + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {
-                          data && data.length > 0 && data[3]
-                            ? data[3]?.cftk2atk != null
-                              ? isNaN(data[3]?.cftk2atk)
-                                ? "N/A"
-                                : data[3]?.cftk2atk + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {
-                          data && data.length > 0 && data[4]
-                            ? data[4]?.cftk2atk != null
-                              ? isNaN(data[4]?.cftk2atk)
-                                ? "N/A"
-                                : data[4]?.cftk2atk + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {
-                          data && data.length > 0 && data[5]
-                            ? data[5]?.cftk2atk != null
-                              ? isNaN(data[5]?.cftk2atk)
-                                ? "N/A"
-                                : data[5]?.cftk2atk + "%"
-                              : "N/A"
-                            : " "
-                        }
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-                          const cftk2atk = (item?.cftk2atk == null || isNaN(item?.cftk2atk) ? "N/A" : item?.cftk2atk + "%");
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {cftk2atk}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell></TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        BH
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.bh ? Math.round(data[0].bh) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.bh ? Math.round(data[1].bh) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.bh ? Math.round(data[2].bh) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.bh ? Math.round(data[3].bh) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.bh ? Math.round(data[4].bh) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.bh ? Math.round(data[5].bh) : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const bh = item?.bh || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {bh ? Math.round(bh) : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell></TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{
-                        whiteSpace: "nowrap",
-                        fontWeight: "bold",
-                        padding: "5px",
-                      }}>
-                        Weighted average stage length per FLGT</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        by GCD
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.departures
-                          ? (parseFloat(data[0].sumOfGcd) / parseFloat(data[0].departures)).toLocaleString("en-US", { maximumFractionDigits: 0 })
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.departures
-                          ? (parseFloat(data[1].sumOfGcd) / parseFloat(data[1].departures)).toLocaleString("en-US", { maximumFractionDigits: 0 })
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.departures
-                          ? (parseFloat(data[2].sumOfGcd) / parseFloat(data[2].departures)).toLocaleString("en-US", { maximumFractionDigits: 0 })
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.departures
-                          ? (parseFloat(data[3].sumOfGcd) / parseFloat(data[3].departures)).toLocaleString("en-US", { maximumFractionDigits: 0 })
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.departures
-                          ? (parseFloat(data[4].sumOfGcd) / parseFloat(data[4].departures)).toLocaleString("en-US", { maximumFractionDigits: 0 })
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.departures
-                          ? (parseFloat(data[5].sumOfGcd) / parseFloat(data[5].departures)).toLocaleString("en-US", { maximumFractionDigits: 0 })
-                          : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const sumOfGcd = item?.sumOfGcd ?? " ";
-                          const departures = item?.departures ?? " ";
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {sumOfGcd && departures ? (parseFloat(sumOfGcd) / parseFloat(departures)).toLocaleString("en-US", { maximumFractionDigits: 0 }) : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        by BH
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.departures
-                          ? (data[0].bh / data[0].departures).toFixed(2)
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.departures
-                          ? (data[1].bh / data[1].departures).toFixed(2)
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.departures
-                          ? (data[2].bh / data[2].departures).toFixed(2)
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.departures
-                          ? (data[3].bh / data[3].departures).toFixed(2)
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.departures
-                          ? (data[4].bh / data[4].departures).toFixed(2)
-                          : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.departures
-                          ? (data[5].bh / data[5].departures).toFixed(2)
-                          : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const bh = item?.bh ?? " ";
-                          const departures = item?.departures ?? " ";
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {bh && departures ? (bh / departures).toFixed(2) : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell></TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Average Daily Utilisation
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.adu ? data[0].adu : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.adu ? data[1].adu : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.adu ? data[2].adu : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.adu ? data[3].adu : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.adu ? data[4].adu : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.adu ? data[5].adu : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const adu = item?.adu || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {adu ? adu : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell></TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        ASKs (Mn)
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.sumOfask ? (parseFloat(data[0].sumOfask) / 1000000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.sumOfask ? (parseFloat(data[1].sumOfask) / 1000000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.sumOfask ? (parseFloat(data[2].sumOfask) / 1000000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.sumOfask ? (parseFloat(data[3].sumOfask) / 1000000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.sumOfask ? (parseFloat(data[4].sumOfask) / 1000000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.sumOfask ? (parseFloat(data[5].sumOfask) / 1000000).toFixed(2) : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const sumOfask = item?.sumOfask || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {sumOfask ? (parseFloat(sumOfask) / 1000000).toFixed(2) : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        RSKs (Mn)
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.sumOfrsk ? (parseFloat(data[0].sumOfrsk) / 1000000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.sumOfrsk ? (parseFloat(data[1].sumOfrsk) / 1000000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.sumOfrsk ? (parseFloat(data[2].sumOfrsk) / 1000000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.sumOfrsk ? (parseFloat(data[3].sumOfrsk) / 1000000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.sumOfrsk ? (parseFloat(data[4].sumOfrsk) / 1000000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.sumOfrsk ? (parseFloat(data[5].sumOfrsk) / 1000000).toFixed(2) : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const sumOfrsk = item?.sumOfrsk || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {sumOfrsk ? (parseFloat(sumOfrsk) / 1000000).toFixed(2) : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Cargo ATKs (Thousands)
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.sumOfcargoAtk ? (parseFloat(data[0].sumOfcargoAtk) / 1000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.sumOfcargoAtk ? (parseFloat(data[1].sumOfcargoAtk) / 1000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.sumOfcargoAtk ? (parseFloat(data[2].sumOfcargoAtk) / 1000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.sumOfcargoAtk ? (parseFloat(data[3].sumOfcargoAtk) / 1000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.sumOfcargoAtk ? (parseFloat(data[4].sumOfcargoAtk) / 1000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.sumOfcargoAtk ? (parseFloat(data[5].sumOfcargoAtk) / 1000).toFixed(2) : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const sumOfcargoAtk = item?.sumOfcargoAtk || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {sumOfcargoAtk ? (parseFloat(sumOfcargoAtk) / 1000).toFixed(2) : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                    <TableRow>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          padding: "5px",
-                        }}
-                      >
-                        Cargo FTKs (Thousands)
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[0]?.sumOfcargoRtk ? (parseFloat(data[0].sumOfcargoRtk) / 1000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[1]?.sumOfcargoRtk ? (parseFloat(data[1].sumOfcargoRtk) / 1000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[2]?.sumOfcargoRtk ? (parseFloat(data[2].sumOfcargoRtk) / 1000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[3]?.sumOfcargoRtk ? (parseFloat(data[3].sumOfcargoRtk) / 1000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[4]?.sumOfcargoRtk ? (parseFloat(data[4].sumOfcargoRtk) / 1000).toFixed(2) : " "}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          border: "1px solid black",
-                          whiteSpace: "nowrap",
-                          padding: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {data && data[5]?.sumOfcargoRtk ? (parseFloat(data[5].sumOfcargoRtk) / 1000).toFixed(2) : " "}
-                      </TableCell>
-                      {Array.from({ length: additionalTableCellsCount }).map(
-                        (_, index) => {
-                          const item = data && data[index + 6]; // Ensure item is defined
-                          const sumOfcargoRtk = item?.sumOfcargoRtk || " "; // Handle cases where destinations is not available
-                          const key = index; // Use a unique identifier as the key, replace 'id' with your actual identifier
-
-                          return (
-                            <TableCell
-                              key={key}
-                              sx={{
-                                border: "1px solid black",
-                                whiteSpace: "nowrap",
-                                padding: "5px",
-                                textAlign: "center",
-                              }}
-                            >
-                              {sumOfcargoRtk ? (parseFloat(sumOfcargoRtk) / 1000).toFixed(2) : " "}
-                            </TableCell>
-                          );
-                        }
-                      )}
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-            )}
+            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400 flex items-center gap-2">
+              <BarChart3 className="text-indigo-500" />
+              Operational Dashboard
+            </h1>
+            <p className="text-slate-500 text-sm mt-1">Analyze performance metrics over time.</p>
           </div>
-        </Paper>
-        <Stack direction="row" justifyContent="end">
-          <Button
-            variant="contained"
-            sx={{ width: "fit-content", px: "20px", mt: "5px" }}
-            onClick={downloadDashboardTable}
+          
+          <div className="flex gap-3">
+             <SingleSelect 
+               label="View" 
+               options={LABEL_OPTIONS} 
+               value={label} 
+               onChange={setLabel} 
+             />
+             <SingleSelect 
+               label="Period" 
+               options={PERIODICITY_OPTIONS} 
+               value={periodicity} 
+               onChange={setPeriodicity} 
+             />
+          </div>
+        </div>
+
+        {/* MULTI-SELECT GRID */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 bg-white/60 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 backdrop-blur-sm shadow-sm">
+          <MultiSelect label="From" options={dropdownOptions.from} selected={filters.from} onChange={(v) => handleFilterChange('from', v)} />
+          <MultiSelect label="To" options={dropdownOptions.to} selected={filters.to} onChange={(v) => handleFilterChange('to', v)} />
+          <MultiSelect label="Sector" options={dropdownOptions.sector} selected={filters.sector} onChange={(v) => handleFilterChange('sector', v)} />
+          <MultiSelect label="Variant" options={dropdownOptions.variant} selected={filters.variant} onChange={(v) => handleFilterChange('variant', v)} />
+          <MultiSelect label="User Tag 1" options={dropdownOptions.userTag1} selected={filters.userTag1} onChange={(v) => handleFilterChange('userTag1', v)} />
+          <MultiSelect label="User Tag 2" options={dropdownOptions.userTag2} selected={filters.userTag2} onChange={(v) => handleFilterChange('userTag2', v)} />
+        </div>
+
+      </div>
+
+      {/* TABLE SECTION */}
+      <div className="relative bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col min-h-[500px]">
+        
+        {/* Toolbar */}
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-end">
+          <button 
+            onClick={handleDownload}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-emerald-500/20"
           >
-            Download
-          </Button>
-        </Stack>
-      </Stack>
-      <ToastContainer />
+            <Download size={16} />
+            Export Excel
+          </button>
+        </div>
 
-    </Stack>
+        {/* Table Content */}
+        <div className="flex-1 overflow-x-auto custom-scrollbar relative">
+          {loading ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-10">
+              <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-3"></div>
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Loading metrics...</span>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr>
+                  {/* Sticky Metric Column Header */}
+                  <th className="sticky left-0 z-20 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur border-b border-r border-slate-200 dark:border-slate-700 p-4 min-w-[200px] text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)]">
+                    Metric / Date
+                  </th>
+                  {/* Date Columns */}
+                  {data.map((col, idx) => (
+                    <th key={idx} className="bg-slate-50/90 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700 p-3 min-w-[120px] text-center text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {formatDate(col.endDate)}
+                    </th>
+                  ))}
+                  {data.length === 0 && (
+                    <th className="p-4 text-center text-slate-400 font-normal italic">No data available</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {METRICS.map((metric) => (
+                  <tr key={metric.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    {/* Sticky Metric Label */}
+                    <td className="sticky left-0 z-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-r border-slate-200 dark:border-slate-800 p-3 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] group-hover:bg-slate-50 dark:group-hover:bg-slate-800/90 transition-colors">
+                      {metric.label}
+                    </td>
+                    {/* Data Cells */}
+                    {data.map((item, idx) => (
+                      <td key={idx} className="p-3 text-center text-sm text-slate-600 dark:text-slate-400 tabular-nums">
+                        {getMetricValue(item, metric)}
+                      </td>
+                    ))}
+                    {data.length === 0 && <td></td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      <ToastContainer position="bottom-right" theme="colored" />
+    </div>
   );
-};
-
-DashboardTable.propTypes = {
-  runhandler: PropTypes.func, // Expecting a function prop and it's required
 };
 
 export default DashboardTable;

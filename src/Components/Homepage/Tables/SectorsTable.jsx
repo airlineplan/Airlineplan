@@ -1,932 +1,385 @@
-import React, { useState, useEffect } from "react";
-import {
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Stack,
-  Typography,
-  TextField,
-  Menu,
-  MenuItem,
-  Button,
-  Dialog,
-  Pagination,
-  IconButton,
-} from "@mui/material";
-import CircularProgress from "@mui/material/CircularProgress";
-import DeleteIcon from "@mui/icons-material/Delete";
-import Checkbox from "@mui/material/Checkbox";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import AddIcon from "@mui/icons-material/Add";
-import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutline";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
+import moment from "moment";
+import { motion, AnimatePresence } from "framer-motion";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { 
+  Trash2, Plus, ArrowUp, ArrowDown, Search, 
+  Map, Calendar, RefreshCw, PenLine
+} from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import moment from "moment";
-import CopySector from "./CopySector";
-import UpdateSectore from "./UpdateSectore";
-import CloseIcon from "@mui/icons-material/Close";
-import AddSector from "./AddSector";
 
-const RowsPerPage = 8;
+// Note: If you have converted AddSector/UpdateSectore, import them here.
+// For now, I have added placeholder buttons for them in the UI.
+// import UpdateSectore from "./UpdateSectore"; 
+// import AddSector from "./AddSector"; 
 
-const label = { inputProps: { "aria-label": "Checkbox demo" } };
+// --- UTILITIES ---
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
+
+// --- UI COMPONENTS ---
+
+const Button = ({ children, variant = "primary", className, icon: Icon, ...props }) => {
+  const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed";
+  
+  const variants = {
+    primary: "bg-gradient-to-r from-indigo-500 to-cyan-500 text-white hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02]",
+    secondary: "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm",
+    danger: "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-transparent hover:bg-red-100 dark:hover:bg-red-900/30",
+    ghost: "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800",
+  };
+
+  return (
+    <button className={cn(baseStyles, variants[variant], className)} {...props}>
+      {Icon && <Icon size={16} className="mr-2" />}
+      {children}
+    </button>
+  );
+};
+
+const Checkbox = ({ checked, onChange }) => (
+  <div 
+    onClick={onChange}
+    className={cn(
+      "w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-all duration-200",
+      checked 
+        ? "bg-indigo-500 border-indigo-500" 
+        : "bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-indigo-400"
+    )}
+  >
+    {checked && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-white"><div className="w-2 h-2 bg-white rounded-[1px]" /></motion.div>}
+  </div>
+);
+
+const TableInput = ({ value, onChange, placeholder }) => (
+  <div className="relative group mt-1">
+    <input
+      type="text"
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      className="w-full h-8 px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 transition-all"
+    />
+    <Search size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+  </div>
+);
+
+// --- MAIN COMPONENT ---
+
+const ROWS_PER_PAGE = 8;
 
 const SectorsTable = () => {
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [openCopyModal, setOpenCopyModal] = useState(false);
-  const [openNewModal, setOpenNewModal] = useState(false);
-  const [openUpdateModal, setOpenUpdateModal] = useState(false);
-  const [sector, setSector] = useState("");
-  const [sector1, setSector1] = useState("");
-  const [sector2, setSector2] = useState("");
-  const [gcd, setGCD] = useState("");
-  const [acftType, setACFTType] = useState("");
-  const [variant, setVariant] = useState("");
-  const [bt, setBlockTime] = useState("");
-  const [paxCapacity, setPaxCapacity] = useState("");
-  const [CargoCapT, setCargoCapT] = useState("");
-  const [paxLF, setPaxLfPercent] = useState("");
-  const [cargoLF, setCargoLfPercent] = useState("");
-  const [fromDt, setFromDt] = useState("");
-  const [toDt, setToDt] = useState("");
+  // --- STATE ---
   const [sectorsTableData, setSectorsTableData] = useState([]);
-  const [checkedRows, setCheckedRows] = useState([]);
-  const [deletedData, setDeletedData] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [arrow, setArrow] = useState({ column: null, direction: "Up" });
   const [loading, setLoading] = useState(true);
-  const [arrowDirection, setArrowDirection] = useState(true);
-  const [add, setAdd] = useState(true);
+  const [checkedRows, setCheckedRows] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  // Sorting & Filters
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [filters, setFilters] = useState({
+    sector: "", gcd: "", acftType: "", variant: "", bt: "",
+    paxCapacity: "", CargoCapT: "", paxLF: "", cargoLF: "",
+    fromDt: "", toDt: ""
+  });
 
-
-  const open = Boolean(anchorEl);
-  const handleClick = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-  const handleClose = () => {
-    if (add) {
-      setAnchorEl(null);
-    }
-  };
-
-
-  var filteredIds = sectorsTableData
-    .filter(
-      (row) =>
-        (row.sector1 || "")
-          ?.toLowerCase()
-          .includes(sector1?.toLowerCase()) &&
-        (row.gcd || "")
-          ?.toLowerCase()
-          .includes(gcd?.toLowerCase()) &&
-        (row.acftType || "")
-          ?.toLowerCase()
-          .includes(acftType.toLowerCase()) &&
-        (row.variant || "")
-          ?.toLowerCase()
-          .includes(variant.toLowerCase()) &&
-        (row.bt || "")?.toLowerCase().includes(bt.toLowerCase()) &&
-        (row.paxCapacity || "")
-          ?.toLowerCase()
-          .includes(paxCapacity.toLowerCase()) &&
-        (row.CargoCapT || "")
-          ?.toLowerCase()
-          .includes(CargoCapT.toLowerCase()) &&
-        (row.paxLF || "")
-          ?.toLowerCase()
-          .includes(paxLF.toLowerCase()) &&
-        (row.cargoLF || "")
-          ?.toLowerCase()
-          .includes(cargoLF.toLowerCase()) &&
-        (moment(row.fromDt).format("DD-MMM-YY") || "")
-          ?.toLowerCase()
-          .includes(fromDt.toLowerCase()) &&
-        (moment(row.toDt).format("DD-MMM-YY") || "")?.toLowerCase().includes(toDt.toLowerCase()))
-    .map((row) => row._id);
-
-  const sortedData = () => {
-    if (!arrow.column) return sectorsTableData;
-
-    const sorted = [...sectorsTableData].sort((a, b) => {
-      const colA = a[arrow.column];
-      const colB = b[arrow.column];
-
-      if (arrow.direction === "Up") {
-        return colA.localeCompare(colB);
-      } else {
-        return colB.localeCompare(colA);
-      }
-    });
-
-    return sorted;
-  };
-
-  const handleCheckboxChange = (event, rowId, filteredIds) => {
-    if (event.target.name === "AllSelect") {
-      if (event.target.checked) {
-        setCheckedRows(filteredIds);
-      } else {
-        setCheckedRows([]);
-      }
-    } else {
-      if (event.target.checked) {
-        setCheckedRows((prevCheckedRows) => [...prevCheckedRows, rowId]);
-      } else {
-        setCheckedRows((prevCheckedRows) =>
-          prevCheckedRows.filter((id) => id !== rowId)
-        );
-      }
-    }
-  };
-
-
-
-  //.................................Filter_onChange_handlers...............................
-
-  const handleSector = (event) => {
-    setSector(event.target.value);
-  };
-
-  const handleSector1 = (event) => {
-    setSector1(event.target.value);
-  };
-  const handleSector2 = (event) => {
-    setSector2(event.target.value);
-  };
-  const handleGCD = (event) => {
-    setGCD(event.target.value);
-  };
-  const handleACFT = (event) => {
-    setACFTType(event.target.value);
-  };
-  const handleVariant = (event) => {
-    setVariant(event.target.value);
-  };
-  const handleBlockTime = (event) => {
-    setBlockTime(event.target.value);
-  };
-  const handlePaxCapacity = (event) => {
-    setPaxCapacity(event.target.value);
-  };
-  const handleCargoCapT = (event) => {
-    setCargoCapT(event.target.value);
-  };
-  const handlePaxPercent = (event) => {
-    setPaxLfPercent(event.target.value);
-  };
-  const handleCargoPercent = (event) => {
-    setCargoLfPercent(event.target.value);
-  };
-  const handleFromDt = (event) => {
-    setFromDt(event.target.value);
-  };
-  const handleToDt = (event) => {
-    setToDt(event.target.value);
-  };
-
+  // --- API CALLS ---
   useEffect(() => {
     const fetchData = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
         const response = await axios.get("https://airlineplan.com/sectors", {
-          headers: {
-            "x-access-token": accessToken,
-          },
+          headers: { "x-access-token": accessToken },
         });
-
-        setSectorsTableData(response.data);
-        setLoading(false);
+        setSectorsTableData(response.data || []);
       } catch (error) {
         console.error("Error fetching data:", error);
+        toast.error("Failed to load sector data");
+      } finally {
+        setLoading(false);
       }
     };
-
     fetchData();
   }, []);
 
-  const handleDeleteData = async () => {
-    const isConfirmed = window.confirm(
-      "Are you sure you want to delete this data?"
-    );
-
-    if (!isConfirmed) {
-      return;
-    }
+  const handleDelete = async () => {
+    if (!checkedRows.length) return toast.warn("No rows selected");
+    if (!window.confirm(`Delete ${checkedRows.length} sectors?`)) return;
 
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.delete("https://airlineplan.com/delete-sector", {
-        headers: {
-          "x-access-token": accessToken,
-        },
+        headers: { "x-access-token": accessToken },
         data: { ids: checkedRows },
       });
 
-      if (
-        response.data &&
-        response.data.message === "Data deleted successfully"
-      ) {
-        // createConnections();
-        toast.success("Delete Successful");
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+      if (response.data?.message === "Data deleted successfully") {
+        toast.success("Sectors deleted");
+        setSectorsTableData(prev => prev.filter(r => !checkedRows.includes(r._id)));
+        setCheckedRows([]);
       } else {
-        toast.error("Delete Failed");
+        toast.error("Delete failed");
       }
     } catch (error) {
-      toast.error("An error occurred while deleting");
-      console.error(error);
+      toast.error("Error deleting data");
     }
   };
 
+  // --- FILTER & SORT LOGIC ---
 
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1);
+  };
 
-  const handleArrow = (columnName) => {
-    setArrow((prevArrow) => ({
-      column: columnName,
-      direction:
-        prevArrow.column === columnName && prevArrow.direction === "Up"
-          ? "Down"
-          : "Up",
+  const handleSort = (key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc"
     }));
   };
-  const handleArrowDirection = () => {
-    setArrowDirection(!arrowDirection);
+
+  const processedData = useMemo(() => {
+    let data = [...sectorsTableData];
+
+    // 1. Filter
+    data = data.filter(row => {
+      const match = (val, filter) => String(val || "").toLowerCase().includes(filter.toLowerCase());
+      
+      return (
+        match(row.sector1, filters.sector) &&
+        match(row.gcd, filters.gcd) &&
+        match(row.acftType, filters.acftType) &&
+        match(row.variant, filters.variant) &&
+        match(row.bt, filters.bt) &&
+        match(row.paxCapacity, filters.paxCapacity) &&
+        match(row.CargoCapT, filters.CargoCapT) &&
+        match(row.paxLF, filters.paxLF) &&
+        match(row.cargoLF, filters.cargoLF) &&
+        match(moment(row.fromDt).format("DD-MMM-YY"), filters.fromDt) &&
+        match(moment(row.toDt).format("DD-MMM-YY"), filters.toDt)
+      );
+    });
+
+    // 2. Sort
+    if (sortConfig.key) {
+      data.sort((a, b) => {
+        const valA = a[sortConfig.key];
+        const valB = b[sortConfig.key];
+        
+        if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return data;
+  }, [sectorsTableData, filters, sortConfig]);
+
+  // --- PAGINATION ---
+  const totalPages = Math.ceil(processedData.length / ROWS_PER_PAGE);
+  const paginatedData = processedData.slice(
+    (currentPage - 1) * ROWS_PER_PAGE, 
+    currentPage * ROWS_PER_PAGE
+  );
+
+  // --- SELECTION ---
+  const handleCheckRow = (id) => {
+    setCheckedRows(prev => 
+      prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
+    );
   };
 
-  const startIndex = (currentPage - 1) * RowsPerPage;
-  const endIndex = startIndex + RowsPerPage;
-
-  const handlePageChange = (event, page) => {
-    setCurrentPage(page);
+  const handleCheckAll = () => {
+    if (checkedRows.length === paginatedData.length && paginatedData.length > 0) {
+      setCheckedRows([]);
+    } else {
+      setCheckedRows(paginatedData.map(r => r._id));
+    }
   };
+
+  // --- RENDER HELPERS ---
+  const columns = [
+    { key: "sector1", label: "Sector", filterKey: "sector" }, // Filters based on sector1
+    { key: "gcd", label: "GCD", filterKey: "gcd" },
+    { key: "acftType", label: "ACFT Type", filterKey: "acftType" },
+    { key: "variant", label: "Variant", filterKey: "variant" },
+    { key: "bt", label: "Block Time", filterKey: "bt" },
+    { key: "paxCapacity", label: "Pax Cap", filterKey: "paxCapacity" },
+    { key: "CargoCapT", label: "Cargo Cap", filterKey: "CargoCapT" },
+    { key: "paxLF", label: "Pax LF%", filterKey: "paxLF" },
+    { key: "cargoLF", label: "Cargo LF%", filterKey: "cargoLF" },
+    { key: "fromDt", label: "From Dt", filterKey: "fromDt" },
+    { key: "toDt", label: "To Dt", filterKey: "toDt" },
+  ];
 
   return (
-    <Stack gap={4}>
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        mt="15px"
-      >
-        <Stack direction="row" alignItems="center" gap="16px">
-          {/* <Button
-            variant="contained"
-            sx={{ textTransform: "capitalize", width: "fit-content" }}
-            startIcon={<AddIcon />}
-            id="addbutton"
-            aria-controls={open ? "addOptions" : undefined}
-            aria-haspopup="true"
-            aria-expanded={open ? "true" : undefined}
-            onClick={handleClick}
-          >
-            Add
-          </Button>
-          <Menu
-            id="addOptions"
-            anchorEl={anchorEl}
-            open={open}
-            onClose={handleClose}
-            MenuListProps={{
-              "aria-labelledby": "addbutton",
-            }}
-          >
-            <CopySector checkedRows={checkedRows} setAdd={setAdd}/>
-            <AddSector setAdd={setAdd}/>
-          </Menu> */}
+    <div className="w-full space-y-4">
+      
+      {/* --- HEADER ACTIONS --- */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <Map className="text-indigo-500" size={24} />
+            Sector Management
+          </h2>
+          <p className="text-xs text-slate-500">Manage aircraft sectors and capacities.</p>
+        </div>
 
-          {/* // ..........................Update_Row_Form................................ */}
-
-          <UpdateSectore checkedRows={checkedRows} />
-        </Stack>
-        <Stack>
-          <Button
-            variant="outlined"
-            startIcon={<DeleteIcon />}
-            onClick={() => handleDeleteData(checkedRows)}
-            sx={{
-              textTransform: "capitalize",
-              borderColor: "#FF5733",
-              color: "#FF5733",
-              "&:hover": {
-                bgcolor: "#FF5733",
-                color: "white",
-                borderColor: "#FF5733",
-              },
-            }}
-          >
-            Delete
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Placeholder Buttons for Update/Add - you can hook these up to your modals */}
+          <Button variant="secondary" icon={PenLine} onClick={() => toast.info("Update Modal Triggered")}>
+            Update
           </Button>
-        </Stack>
-      </Stack>
-      <Stack>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ paddingX: "4px" }}>
-                <Typography sx={{ fontWeight: "bold", fontSize: "14px" }}>
-                  Filter:-
-                </Typography>
-              </TableCell>
-              <TableCell sx={{ paddingX: "4px" }}>
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  placeholder="Sector"
-                  onChange={handleSector1}
-                  sx={{
-                    minWidth: "10px",
-                    fontSize: "10px",
-                    "& .MuiOutlinedInput-input": { fontSize: "14px" },
-                  }}
-                />
-              </TableCell>
-              <TableCell sx={{ paddingX: "4px" }}>
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  placeholder="GCD"
-                  onChange={handleGCD}
-                  sx={{
-                    minWidth: "10px",
-                    fontSize: "10px",
-                    "& .MuiOutlinedInput-input": { fontSize: "14px" },
-                  }}
-                />
-              </TableCell>
-              <TableCell sx={{ paddingX: "4px" }}>
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  placeholder="ACFT Type"
-                  onChange={handleACFT}
-                  sx={{
-                    minWidth: "10px",
-                    fontSize: "10px",
-                    "& .MuiOutlinedInput-input": { fontSize: "14px" },
-                  }}
-                />
-              </TableCell>
-              <TableCell sx={{ paddingX: "4px" }}>
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  placeholder="Variant"
-                  onChange={handleVariant}
-                  sx={{
-                    minWidth: "10px",
-                    fontSize: "10px",
-                    "& .MuiOutlinedInput-input": { fontSize: "14px" },
-                  }}
-                />
-              </TableCell>
-              <TableCell sx={{ paddingX: "4px" }}>
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  placeholder="Block Time"
-                  onChange={handleBlockTime}
-                  sx={{
-                    minWidth: "10px",
-                    fontSize: "10px",
-                    "& .MuiOutlinedInput-input": { fontSize: "14px" },
-                  }}
-                />
-              </TableCell>
-              <TableCell sx={{ paddingX: "4px" }}>
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  placeholder="Pax Capacity"
-                  onChange={handlePaxCapacity}
-                  sx={{
-                    minWidth: "10px",
-                    fontSize: "10px",
-                    "& .MuiOutlinedInput-input": { fontSize: "14px" },
-                  }}
-                />
-              </TableCell>
-              <TableCell sx={{ paddingX: "4px" }}>
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  placeholder="Cargo Cap T"
-                  onChange={handleCargoCapT}
-                  sx={{
-                    minWidth: "10px",
-                    fontSize: "10px",
-                    "& .MuiOutlinedInput-input": { fontSize: "14px" },
-                  }}
-                />
-              </TableCell>
-              <TableCell sx={{ paddingX: "4px" }}>
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  placeholder="Pax LF%"
-                  onChange={handlePaxPercent}
-                  sx={{
-                    minWidth: "10px",
-                    fontSize: "10px",
-                    "& .MuiOutlinedInput-input": { fontSize: "14px" },
-                  }}
-                />
-              </TableCell>
-              <TableCell sx={{ paddingX: "4px" }}>
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  placeholder="Cargo LF%"
-                  onChange={handleCargoPercent}
-                  sx={{
-                    minWidth: "10px",
-                    fontSize: "10px",
-                    "& .MuiOutlinedInput-input": { fontSize: "14px" },
-                  }}
-                />
-              </TableCell>
-              <TableCell sx={{ paddingX: "4px" }}>
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  placeholder="From Dt"
-                  onChange={handleFromDt}
-                  sx={{
-                    minWidth: "10px",
-                    fontSize: "10px",
-                    "& .MuiOutlinedInput-input": { fontSize: "14px" },
-                  }}
-                />
-              </TableCell>
-              <TableCell sx={{ paddingX: "4px" }}>
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  placeholder="To Dt"
-                  onChange={handleToDt}
-                  sx={{
-                    minWidth: "10px",
-                    fontSize: "10px",
-                    "& .MuiOutlinedInput-input": { fontSize: "14px" },
-                  }}
-                />
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableHead>
-            <TableRow sx={{ bgcolor: "#F5F5F5" }}>
-              <TableCell
-                sx={{
-                  fontWeight: "bold",
-                  fontSize: "12px",
-                  textAlign: "center",
-                  padding: "0px",
-                }}
-              >
-                {/* <Checkbox {...label} size="small" /> */}
-                <Checkbox
-                  {...label}
-                  size="small"
-                  name="AllSelect"
-                  checked={checkedRows.length === filteredIds.length}
-                  onChange={(event) =>
-                    handleCheckboxChange(event, null, filteredIds)
-                  }
-                />
-              </TableCell>
-              <TableCell
-                sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  fontSize: "12px",
-                  textAlign: "center",
-                  padding: "0px",
-                }}
-              >
-                Sector
-                <IconButton
-                  onClick={() => {
-                    handleArrow("sector1");
-                    handleArrowDirection();
-                  }}
-                >
-                  {arrowDirection ? (
-                    <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                  ) : (
-                    <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                  )}
-                </IconButton>
-              </TableCell>
-              <TableCell
-                sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}
-              >
-                GCD
-                <IconButton
-                  onClick={() => {
-                    handleArrow("gcd");
-                    handleArrowDirection();
-                  }}
-                >
-                  {arrowDirection ? (
-                    <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                  ) : (
-                    <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                  )}
-                </IconButton>
-              </TableCell>
-              <TableCell
-                sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  fontSize: "12px",
-                  textAlign: "center",
-                  padding: "0px",
-                }}
-              >
-                ACFT Type
-                <IconButton
-                  onClick={() => {
-                    handleArrow("acftType");
-                    handleArrowDirection();
-                  }}
-                >
-                  {arrowDirection ? (
-                    <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                  ) : (
-                    <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                  )}
-                </IconButton>
-              </TableCell>
-              <TableCell
-                sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  fontSize: "12px",
-                  textAlign: "center",
-                  padding: "0px",
-                }}
-              >
-                Variant
-                <IconButton
-                  onClick={() => {
-                    handleArrow("variant");
-                    handleArrowDirection();
-                  }}
-                >
-                  {arrowDirection ? (
-                    <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                  ) : (
-                    <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                  )}
-                </IconButton>
-              </TableCell>
-              <TableCell
-                sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  fontSize: "12px",
-                  textAlign: "center",
-                  padding: "0px",
-                }}
-              >
-                Block Time
-                <IconButton
-                  onClick={() => {
-                    handleArrow("bt");
-                    handleArrowDirection();
-                  }}
-                >
-                  {arrowDirection ? (
-                    <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                  ) : (
-                    <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                  )}
-                </IconButton>
-              </TableCell>
-              <TableCell
-                sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  fontSize: "12px",
-                  textAlign: "center",
-                  padding: "0px",
-                }}
-              >
-                Pax Capacity
-                <IconButton
-                  onClick={() => {
-                    handleArrow("paxCapacity");
-                    handleArrowDirection();
-                  }}
-                >
-                  {arrowDirection ? (
-                    <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                  ) : (
-                    <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                  )}
-                </IconButton>
-              </TableCell>
-              <TableCell
-                sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  fontSize: "12px",
-                  textAlign: "center",
-                  padding: "0px",
-                }}
-              >
-                Cargo Cap T
-                <IconButton
-                  onClick={() => {
-                    handleArrow("CargoCapT");
-                    handleArrowDirection();
-                  }}
-                >
-                  {arrowDirection ? (
-                    <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                  ) : (
-                    <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                  )}
-                </IconButton>
-              </TableCell>
-              <TableCell
-                sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  fontSize: "12px",
-                  textAlign: "center",
-                  padding: "0px",
-                }}
-              >
-                Pax LF%
-                <IconButton
-                  onClick={() => {
-                    handleArrow("paxLF");
-                    handleArrowDirection();
-                  }}
-                >
-                  {arrowDirection ? (
-                    <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                  ) : (
-                    <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                  )}
-                </IconButton>
-              </TableCell>
-              <TableCell
-                sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  fontSize: "12px",
-                  textAlign: "center",
-                  padding: "0px",
-                }}
-              >
-                Cargo LF%
-                <IconButton
-                  onClick={() => {
-                    handleArrow("cargoLF");
-                    handleArrowDirection();
-                  }}
-                >
-                  {arrowDirection ? (
-                    <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                  ) : (
-                    <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                  )}
-                </IconButton>
-              </TableCell>
-              <TableCell
-                sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  fontSize: "12px",
-                  textAlign: "center",
-                  padding: "0px",
-                }}
-              >
-                From Dt
-                <IconButton
-                  onClick={() => {
-                    handleArrow("fromDt");
-                    handleArrowDirection();
-                  }}
-                >
-                  {arrowDirection ? (
-                    <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                  ) : (
-                    <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                  )}
-                </IconButton>
-              </TableCell>
-              <TableCell
-                sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  fontSize: "12px",
-                  textAlign: "center",
-                  padding: "0px",
-                }}
-              >
-                To Dt
-                <IconButton
-                  onClick={() => {
-                    handleArrow("toDt");
-                    handleArrowDirection();
-                  }}
-                >
-                  {arrowDirection ? (
-                    <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                  ) : (
-                    <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                  )}
-                </IconButton>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {sortedData()
-              .filter(
-                (row, index) =>
-                  (row.sector1 || "")
-                    ?.toLowerCase()
-                    .includes(sector1?.toLowerCase()) &&
-                  (row.gcd || "")
-                    ?.toLowerCase()
-                    .includes(gcd?.toLowerCase()) &&
-                  (row.acftType || "")
-                    ?.toLowerCase()
-                    .includes(acftType.toLowerCase()) &&
-                  (row.variant || "")
-                    ?.toLowerCase()
-                    .includes(variant.toLowerCase()) &&
-                  (row.bt || "")?.toLowerCase().includes(bt.toLowerCase()) &&
-                  (row.paxCapacity || "")
-                    ?.toLowerCase()
-                    .includes(paxCapacity.toLowerCase()) &&
-                  (row.CargoCapT || "")
-                    ?.toLowerCase()
-                    .includes(CargoCapT.toLowerCase()) &&
-                  (row.paxLF || "")
-                    ?.toLowerCase()
-                    .includes(paxLF.toLowerCase()) &&
-                  (row.cargoLF || "")
-                    ?.toLowerCase()
-                    .includes(cargoLF.toLowerCase()) &&
-                  (moment(row.fromDt).format("DD-MMM-YY") || "")
-                    ?.toLowerCase()
-                    .includes(fromDt.toLowerCase()) &&
-                  (moment(row.toDt).format("DD-MMM-YY") || "")?.toLowerCase().includes(toDt.toLowerCase())
-              )
-              .slice(startIndex, endIndex)
-              ?.map((row, index) => (
-                <TableRow key={index} sx={{ backgroundColor: index % 2 !== 0 ? '#f0f0f0' : 'inherit' }}>
-                  <TableCell
-                    sx={{
-                      fontSize: "12px",
-                      padding: "0px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {loading ? (
-                      <CircularProgress
-                        sx={{ display: "flex", marginLeft: "800px" }}
+          <Button variant="primary" icon={Plus} onClick={() => toast.info("Add Modal Triggered")}>
+            Add Sector
+          </Button>
+          
+          {checkedRows.length > 0 && (
+            <Button variant="danger" icon={Trash2} onClick={handleDelete}>
+              Delete ({checkedRows.length})
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* --- TABLE CARD --- */}
+      <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col h-[70vh]">
+        
+        <div className="flex-1 overflow-auto custom-scrollbar">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-100/90 dark:bg-slate-800/90 sticky top-0 z-20 backdrop-blur-sm">
+              <tr>
+                <th className="p-4 w-12 text-center sticky left-0 bg-slate-100/90 dark:bg-slate-800/90 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                  <div className="flex justify-center">
+                    <Checkbox 
+                      checked={paginatedData.length > 0 && checkedRows.length === paginatedData.length} 
+                      onChange={handleCheckAll} 
+                    />
+                  </div>
+                </th>
+                {columns.map((col) => (
+                  <th key={col.key} className="p-3 min-w-[100px] font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    <div className="flex flex-col gap-1">
+                      <div 
+                        className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                        onClick={() => handleSort(col.key)}
+                      >
+                        {col.label}
+                        {sortConfig.key === col.key ? (
+                          sortConfig.direction === "asc" ? <ArrowUp size={12}/> : <ArrowDown size={12}/> 
+                        ) : (
+                          <ArrowUp size={12} className="opacity-0 group-hover:opacity-30"/>
+                        )}
+                      </div>
+                      <TableInput 
+                        value={filters[col.filterKey]} 
+                        onChange={(e) => handleFilterChange(col.filterKey, e.target.value)}
+                        placeholder="Filter..."
                       />
-                    ) : (
-                      <Checkbox
-                        checked={checkedRows.includes(row._id)}
-                        onChange={(event) => handleCheckboxChange(event, row._id)}
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      whiteSpace: "nowrap",
-                      fontSize: "12px",
-                      padding: "0px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {row.sector1}-{row.sector2}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      whiteSpace: "nowrap",
-                      fontSize: "12px",
-                      padding: "0px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {row.gcd}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontSize: "12px",
-                      padding: "0px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {row.acftType}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontSize: "12px",
-                      padding: "0px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {row.variant}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontSize: "12px",
-                      padding: "0px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {row.bt}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontSize: "12px",
-                      padding: "0px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {row.paxCapacity}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontSize: "12px",
-                      padding: "0px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {row.CargoCapT}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontSize: "12px",
-                      padding: "0px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {row.paxLF}%
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontSize: "12px",
-                      padding: "0px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {row.cargoLF}%
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      whiteSpace: "nowrap",
-                      fontSize: "12px",
-                      padding: "0px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {moment(row.fromDt).format("DD-MMM-YY")}
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      whiteSpace: "nowrap",
-                      fontSize: "12px",
-                      padding: "0px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {moment(row.toDt).format("DD-MMM-YY")}
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </Stack>
-      <Stack direction="row" justifyContent="end">
-        <Pagination
-          count={Math.ceil(sectorsTableData.length / RowsPerPage)}
-          page={currentPage}
-          onChange={handlePageChange}
-          color="primary"
-        />
-      </Stack>
-      <ToastContainer />
-    </Stack>
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+              {loading ? (
+                <tr>
+                  <td colSpan={columns.length + 1} className="p-10 text-center">
+                    <div className="flex flex-col items-center justify-center gap-3 text-slate-500">
+                      <RefreshCw className="animate-spin text-indigo-500" size={24} />
+                      <span className="text-sm">Loading sectors...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedData.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length + 1} className="p-10 text-center text-slate-500 text-sm">
+                    No sectors found matching your filters.
+                  </td>
+                </tr>
+              ) : (
+                <AnimatePresence>
+                  {paginatedData.map((row) => (
+                    <motion.tr
+                      key={row._id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className={cn(
+                        "group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors",
+                        checkedRows.includes(row._id) && "bg-indigo-50/50 dark:bg-indigo-900/10"
+                      )}
+                    >
+                      <td className="p-4 sticky left-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 z-10 text-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                        <div className="flex justify-center">
+                          <Checkbox 
+                            checked={checkedRows.includes(row._id)} 
+                            onChange={() => handleCheckRow(row._id)} 
+                          />
+                        </div>
+                      </td>
+                      
+                      <td className="p-3 text-sm font-medium text-slate-700 dark:text-slate-200">
+                        {row.sector1}-{row.sector2}
+                      </td>
+                      <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.gcd}</td>
+                      <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.acftType}</td>
+                      <td className="p-3 text-sm text-slate-600 dark:text-slate-400">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-xs border border-slate-200 dark:border-slate-700">
+                          {row.variant}
+                        </span>
+                      </td>
+                      <td className="p-3 text-sm text-slate-600 dark:text-slate-400 font-mono">{row.bt}</td>
+                      <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.paxCapacity}</td>
+                      <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.CargoCapT}</td>
+                      <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.paxLF}%</td>
+                      <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.cargoLF}%</td>
+                      <td className="p-3 text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                        {moment(row.fromDt).format("DD-MMM-YY")}
+                      </td>
+                      <td className="p-3 text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                        {moment(row.toDt).format("DD-MMM-YY")}
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* --- FOOTER / PAGINATION --- */}
+        <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+             Page {currentPage} of {totalPages || 1}
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 rounded border border-slate-200 dark:border-slate-700 text-xs hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="px-3 py-1 rounded border border-slate-200 dark:border-slate-700 text-xs hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <ToastContainer position="bottom-right" theme="colored" />
+    </div>
   );
 };
 

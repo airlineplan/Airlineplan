@@ -1,793 +1,419 @@
-import React, { useState, useEffect,useRef } from "react";
-
-import {
-  Stack,
-  Typography,
-  TextField,
-  Button,
-  MenuItem,
-  Dialog,
-  IconButton,
-
-} from "@mui/material";
+import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
+import { motion, AnimatePresence } from "framer-motion";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { X, Save, AlertCircle, Calendar, Plus } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import axios from "axios";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import LoadingButton from "@mui/lab/LoadingButton";
-import CloseIcon from "@mui/icons-material/Close";
 
+// --- UTILITIES ---
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
 
-const AddNetwork = (props) => {
+// --- REUSABLE COMPONENTS ---
 
+const InputField = ({ label, error, icon: Icon, ...props }) => (
+  <div className="flex flex-col space-y-1.5 w-full">
+    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+      {label} {props.required && <span className="text-red-500">*</span>}
+    </label>
+    <div className="relative group">
+      {Icon && (
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+          <Icon size={16} />
+        </div>
+      )}
+      <input
+        className={cn(
+          "flex h-10 w-full rounded-lg border bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200",
+          Icon ? "pl-9" : "",
+          error 
+            ? "border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-900/10" 
+            : "border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600"
+        )}
+        {...props}
+      />
+    </div>
+    {error && (
+      <div className="flex items-center gap-1 text-xs text-red-500 mt-1 animate-in slide-in-from-top-1">
+        <AlertCircle size={12} />
+        <span>{error}</span>
+      </div>
+    )}
+  </div>
+);
 
-  const [addbutton, setAddbutton] = useState(null);
-  const [openModal, setOpenModal] = useState(false);
-  const [arrow, setArrow] = useState("Up");
-  const [flight, setFlight] = useState("");
-  const [depStn, setDepStn] = useState("");
-  const [std, setStd] = useState("");
-  const [bt, setBt] = useState("");
-  const [sta, setSta] = useState("");
-  const [arrStn, setArrStn] = useState("");
-  const [variant, setVariant] = useState("");
-  const [effFromDt, setEffFromDt] = useState("");
-  const [effToDt, setEffToDt] = useState("");
-  const [dow, setDow] = useState("");
-  const [domINTL, setDomIntl] = useState("");
-  const [userTag1, setUserTag1] = useState("");
-  const [userTag2, setUserTag2] = useState("");
-  const [remarks1, setRemarks1] = useState("");
-  const [remarks2, setRemarks2] = useState("");
-  const [flightError, setFlightError] = useState("");
-  const [depStnError, setDepStnError] = useState("");
-  const [arrStnError, seArrStnError] = useState("");
-  const [variantError, setVariantError] = useState("");
-  const [dowError, setDowError] = useState("");
-  const [effToDtError, setEffToDtError] = useState("");
-  const [effFromDtError, setEffFromDtError] = useState("");
+const AddNetwork = ({ setAdd }) => {
+  // --- STATE ---
+  const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Form Fields
+  const [formData, setFormData] = useState({
+    flight: "", depStn: "", std: "", bt: "", sta: "", arrStn: "", variant: "",
+    effFromDt: "", effToDt: "", dow: "", domINTL: "", 
+    userTag1: "", userTag2: "", remarks1: "", remarks2: ""
+  });
 
+  // Errors
+  const [errors, setErrors] = useState({});
 
-  const [userTag1Error, setUserTag1Error] = useState("");
-  const [userTag2Error, setUserTag2Error] = useState("");
-  const [remarks1Error, setRemarks1Error] = useState("");
-  const [remarks2Error, setRemarks2Error] = useState("");
+  // --- HANDLERS ---
 
+  const handleOpen = () => {
+    setIsOpen(true);
+    if(setAdd) setAdd(false); // Notify parent menu to close if needed
+  };
 
+  const handleClose = () => {
+    setIsOpen(false);
+    if(setAdd) setAdd(true);
+    // Optional: Reset form on close
+    // setFormData({ ...initialState });
+    setErrors({});
+  };
 
-
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === "Tab" && dialogRef.current) {
-        event.preventDefault();
-      }
-    };
-
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
     
-    return () => {
-   handleKeyDown
-    };
-  }, []);
+    // Clear error when user types
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: "" }));
+    }
 
-  const handleAddClose = () => {
-    setAddbutton(null);
-    setFlightError(null);
-    setDepStnError(null);
-    seArrStnError(null);
-    setVariantError(null);
-    setDowError(null);
-    setEffToDtError(null);
-    setEffFromDtError(null);
-    setUserTag1Error(null);
-    setUserTag2Error(null);
-    setRemarks1Error(null);
-    setRemarks2Error(null);
+    // Live Validation Logic (Ported from original)
+    validateField(name, value);
   };
 
-  const handleFlight = (event) => {
-    const value = event.target.value;
-    if (/^[a-zA-Z0-9\s]{0,8}$/.test(value)) {
-      setFlight(value);
-      setFlightError("");
-    } else {
-      setFlightError("Flight must be 8 characters long");
-    }
-  };
+  const validateField = (name, value) => {
+    let errorMsg = "";
 
-  const handleDepStn = (event) => {
-    const value = event.target.value;
-    if (/^[a-zA-Z0-9\s]{0,4}$/.test(value)) {
-      setDepStn(value);
-      setDepStnError("");
-    } else {
-      setDepStnError("Arr Stn must be 4 characters long");
+    switch (name) {
+      case "flight":
+        if (!/^[a-zA-Z0-9\s]{0,8}$/.test(value)) errorMsg = "Max 8 alphanumeric chars";
+        break;
+      case "depStn":
+      case "arrStn":
+        if (!/^[a-zA-Z0-9\s]{0,4}$/.test(value)) errorMsg = "Max 4 alphanumeric chars";
+        break;
+      case "variant":
+        if (!/^[a-zA-Z0-9\s-]{0,8}$/.test(value)) errorMsg = "Max 8 chars (letters, nums, -)";
+        break;
+      case "dow":
+        if (!/^[1-7]{0,7}$/.test(value)) errorMsg = "Digits 1-7 only (Max 7 digits)";
+        break;
+      case "userTag1":
+      case "userTag2":
+      case "remarks1":
+      case "remarks2":
+        if (!/^\s*.{0,12}\s*$/.test(value)) errorMsg = "Max 12 characters";
+        break;
+      default:
+        break;
     }
-  };
 
-  const handleSTD = (event) => {
-    setStd(event.target.value);
+    setErrors(prev => ({ ...prev, [name]: errorMsg }));
   };
-  const handleBT = (event) => {
-    setBt(event.target.value);
-  };
-  const handleSTA = (event) => {
-    setSta(event.target.value);
-  };
-
-  const handleArrStn = (event) => {
-    const value = event.target.value;
-    if (/^[a-zA-Z0-9\s]{0,4}$/.test(value)) {
-      setArrStn(value);
-      seArrStnError("");
-    } else {
-      seArrStnError("Det Stn must be 4 characters long");
-    }
-  };
-
-  const handleVariant = (event) => {
-    const value = event.target.value;
-    if (/^[a-zA-Z0-9\s-]{0,8}$/.test(value)) {
-      setVariant(value);
-      setVariantError("");
-    } else {
-      setVariantError(
-        'Must be 8 characters and can only contain letters, numbers, "-", and blank spaces'
-      );
-    }
-  };
-  const handleEffFromDt = (event) => {
-    setEffFromDt(event.target.value);
-  };
-  const handleDow = (event) => {
-    const value = event.target.value;
-    if (/^[1-7]{0,7}$/.test(value)) {
-      setDow(value);
-      setDowError("");
-    } else {
-      setDowError(
-        "Must be 7 digits and each digit can only be between 1 and 7."
-      );
-    }
-  };
-  const handleDomIntl = (event) => {
-    setDomIntl(event.target.value.toLowerCase());
-  };
-
-  const handleUserTag1 = (event) => {
-    const input = event.target.value.trim();
-    const isValid = /^\s*.{0,12}\s*$/.test(input);
-    if (isValid) {
-      setUserTag1(input);
-      setUserTag1Error("");
-    } else {
-      setUserTag1Error("Must be 12 characters and can only contain letters");
-    }
-  };
-
-  const handleUserTag2 = (event) => {
-    const input = event.target.value.trim();
-    const isValid = /^\s*.{0,12}\s*$/.test(input);
-    if (isValid) {
-      setUserTag2(input);
-      setUserTag2Error("");
-    } else {
-      setUserTag2Error("Must be 12 characters and can only contain letters");
-    }
-  };
-  const handleRemarks1 = (event) => {
-    const input = event.target.value;
-    const isValid = /^\s*.{0,12}\s*$/.test(input);
-    if (isValid) {
-      setRemarks1(input);
-      setRemarks1Error("");
-    } else {
-      setRemarks1Error("Must be 12 characters and can only contain letters");
-    }
-  };
-  const handleRemarks2 = (event) => {
-    const input = event.target.value;
-    const isValid = /^\s*.{0,12}\s*$/.test(input);
-    if (isValid) {
-      setRemarks2(input);
-      setRemarks2Error("");
-    } else {
-      setRemarks2Error("Must be 12 characters and can only contain letters");
-    }
-  };
-
-  useEffect(() => {
-    if (!effToDt) {
-      setEffToDtError("This field is required.");
-    } else {
-      setEffToDtError("");
-    }
-  }, [effToDt]);
-
-  useEffect(() => {
-    if (!effFromDt) {
-      setEffFromDtError("This field is required.");
-    } else {
-      setEffFromDtError("");
-    }
-  }, [effFromDt]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!effFromDt) {
-      setEffFromDtError(" This field is required.");
-      return;
-    }
-    if (!effToDt) {
-      setEffToDtError(" This field is required.");
+    
+    // Final Validation Check
+    const hasErrors = Object.values(errors).some(x => x !== "") || 
+                      !formData.effFromDt || !formData.effToDt;
+    
+    if (!formData.effFromDt) setErrors(prev => ({ ...prev, effFromDt: "Required" }));
+    if (!formData.effToDt) setErrors(prev => ({ ...prev, effToDt: "Required" }));
+
+    if (hasErrors) {
+      toast.error("Please fix form errors before submitting.");
       return;
     }
 
-    if (
-      flightError ||
-      depStnError ||
-      arrStnError ||
-      variantError ||
-      dowError ||
-      userTag1Error ||
-      userTag2Error ||
-      remarks1Error ||
-      remarks2Error ||
-      false
-    ) {
-      return;
-    }
-
+    setLoading(true);
     try {
-      setLoading(true);
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
+      // Formatting payload
+      const payload = {
+        ...formData,
+        domINTL: formData.domINTL.toLowerCase(),
+        timeZone
+      };
+
       const response = await axios.post(
         "https://airlineplan.com/add-Data",
-        {
-          flight,
-          depStn,
-          std,
-          bt,
-          sta,
-          arrStn,
-          variant,
-          effFromDt,
-          effToDt,
-          dow,
-          userTag1,
-          userTag2,
-          remarks1,
-          remarks2,
-          timeZone,
-          domINTL
-        },
+        payload,
         {
           headers: {
-            "x-access-token": `${localStorage.getItem("accessToken")}`,
+            "x-access-token": localStorage.getItem("accessToken"),
             "Content-Type": "application/json",
           },
         }
       );
 
       if (response.status === 201) {
-        setLoading(false);
-        toast.success("Update successful!");
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+        toast.success("Record added successfully!");
+        setTimeout(() => window.location.reload(), 1500);
+        handleClose();
       }
-      console.log(response.data);
     } catch (err) {
       console.error(err);
-
-      if (err.response && err.response.status === 400) {
-        setLoading(false);
-
-        toast.error("Already exist");
-        setLoading(false);
-
-      } else {
-        setLoading(false);
-
-        toast.error("An error occurred while processing your request.");
-        setLoading(false);
-
-      }
+      const msg = err.response?.status === 400 ? "Record already exists" : "An error occurred";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <>
-      <MenuItem
-        onClick={() => {
-          handleAddClose();
-          props.setAdd(false)
-          setOpenModal(true);
-        }}
-        sx={{ fontWeight: "500", fontSize: "15px", paddingX: "24px" }}
+      {/* Trigger Button (Menu Item Style) */}
+      <button
+        onClick={handleOpen}
+        className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
       >
-        New
-      </MenuItem>
-      <Dialog
-        open={openModal}
-        onClose={()=>{setOpenModal(false);props.setAdd(true)}}
-        fullWidth={true}
-        maxWidth={"xl"}
-        onKeyDown={(event) => {
-          if (event.key === "Tab") {
-            event.preventDefault();
-            const inputFields = document.querySelectorAll(
-              'input:not([type="hidden"]), TextField'
-            );
-            const currentFocusedIndex = Array.from(inputFields).indexOf(
-              document.activeElement
-            );
-                  const nextFocusedIndex =
-              (currentFocusedIndex + 1) % inputFields.length;      
-            inputFields[nextFocusedIndex].focus();
-          }
-        }}
-      >
-        <Stack sx={{ padding: "2%", width: "fit-content" }}>
-          <Stack
-            flexDirection="row"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{ borderBottom: "1px solid #D8D8D8" }}
-          >
-            <Typography sx={{ fontWeight: "bold" }}>Add New Row</Typography>
-            <IconButton
-              sx={{ mb: "10px" }}
-              onClick={() => {
-                setOpenModal(false);
-                setLoading(false)
-                props.setAdd(true)
-              }}
+        <Plus size={16} />
+        <span>Add New</span>
+      </button>
+
+      {/* Modal Overlay */}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleClose}
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50"
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 m-auto z-[60] w-[95vw] max-w-5xl h-fit max-h-[90vh] overflow-hidden bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col"
             >
-              <CloseIcon />
-            </IconButton>
-          </Stack>
-          <form onSubmit={handleSubmit}>
-            <Stack direction="row" spacing={2}>
-              <Stack alignItems="center" spacing={2} sx={{width: '100%'}} style={{ marginTop: '10px' }}>
-                <Typography
-                  sx={{textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
+                <div>
+                  <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
+                    Add Network Record
+                  </h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Enter flight details and schedule information.</p>
+                </div>
+                <button 
+                  onClick={handleClose}
+                  className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
                 >
-                  Flight
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    name="flight"
-                    placeholder="AZ 90980"
-                    required
-                    onChange={handleFlight}
-                  />
+                  <X size={20} />
+                </button>
+              </div>
 
-                  {flightError && (
-                    <div style={{ color: "red" }}>{flightError}</div>
-                  )}
-                </div>
-              </Stack>
+              {/* Modal Body - Scrollable Form */}
+              <div className="overflow-y-auto p-6 md:p-8 custom-scrollbar">
+                <form onSubmit={handleSubmit} id="add-network-form">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    
+                    {/* --- FLIGHT INFO --- */}
+                    <div className="lg:col-span-3 pb-2 border-b border-slate-100 dark:border-slate-800 mb-2">
+                       <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">Flight Details</h3>
+                    </div>
 
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Dep Stn
-                </Typography>
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    name="depStn"
-                    placeholder="VI89,VIDP"
-                    required
-                    onChange={handleDepStn}
-                  />
-                  {depStnError && (
-                    <div style={{ color: "red" }}>{depStnError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  STD(LT)
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    type="time"
-                    required
-                    name="std"
-                    onChange={handleSTD}
-                  />
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-                required
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  BT
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    type="time"
-                    required
-                    name="bt"
-                    onChange={handleBT}
-                  />
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  STA(LT)
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    type="time"
-                    required
-                    name="sta"
-                    onChange={handleSTA}
-                  />
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Arr Stn
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    name="arrStn"
-                    required
-                    placeholder="VI89,VIDP"
-                    onChange={handleArrStn}
-                  />
-                  {arrStnError && (
-                    <div style={{ color: "red" }}>{arrStnError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Variant
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    required
-                    name="variant"
-                    placeholder="A330-200"
-                    onChange={handleVariant}
-                  />
-                  {variantError && (
-                    <div style={{ color: "red" }}>{variantError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "135px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Eff from Dt
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <LocalizationProvider dateAdapter={AdapterDayjs} required>
-                    <DatePicker
-                      format="DD/MMM/YY"
-                      value={effFromDt}
-                      onChange={(date) => {
-                        setEffFromDt(date);
-                      }}
-                      slotProps={{ field: { shouldRespectLeadingZeros: true } }}
+                    <InputField 
+                      label="Flight No" 
+                      name="flight" 
+                      placeholder="e.g. AZ 90980" 
+                      value={formData.flight} 
+                      onChange={handleChange} 
+                      error={errors.flight}
+                      required 
                     />
-                  </LocalizationProvider>
-                  {effFromDtError && (
-                    <div style={{ color: "red" }}>{effFromDtError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "135px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Eff to Dt
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <LocalizationProvider dateAdapter={AdapterDayjs} required>
-                    <DatePicker
-                      format="DD/MMM/YY"
-                      value={effToDt}
-                      onChange={(date) => setEffToDt(date)}
-                      minDate={effFromDt}
-                      slotProps={{ field: { shouldRespectLeadingZeros: true } }}
+                    
+                    <InputField 
+                      label="Departure Stn" 
+                      name="depStn" 
+                      placeholder="e.g. VIDP" 
+                      value={formData.depStn} 
+                      onChange={handleChange} 
+                      error={errors.depStn}
+                      required 
                     />
-                  </LocalizationProvider>
-                  {effToDtError && (
-                    <div style={{ color: "red" }}>{effToDtError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  DoW
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    required
-                    placeholder="1-7"
-                    name="dow"
-                    type="number"
-                    onChange={handleDow}
-                  />
-                  {dowError && <div style={{ color: "red" }}>{dowError}</div>}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Dom / INTL
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    required
-                    name="domINTL"
-                    onChange={handleDomIntl}
-                  />
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  User Tag 1
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    placeholder="NorthAmerica"
-                    name="userTag1"
-                    onChange={handleUserTag1}
-                  />
+                    
+                    <InputField 
+                      label="Arrival Stn" 
+                      name="arrStn" 
+                      placeholder="e.g. VI89" 
+                      value={formData.arrStn} 
+                      onChange={handleChange} 
+                      error={errors.arrStn}
+                      required 
+                    />
 
-                  {userTag1Error && (
-                    <div style={{ color: "red" }}>{userTag1Error}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  User Tag 2
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    placeholder="NorthAmerica"
-                    name="userTag2"
-                    onChange={handleUserTag2}
-                  />
-                  {userTag2Error && (
-                    <div style={{ color: "red" }}>{userTag2Error}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Remarks 1
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    placeholder="NorthAmerica"
-                    name="remarks1"
-                    onChange={handleRemarks1}
-                  />
-                  {remarks1Error && (
-                    <div style={{ color: "red" }}>{remarks1Error}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Remarks 2
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    placeholder="NorthAmerica"
-                    name="remarks2"
-                    onChange={handleRemarks2}
-                  />
+                    <InputField 
+                      label="Variant" 
+                      name="variant" 
+                      placeholder="e.g. A330-200" 
+                      value={formData.variant} 
+                      onChange={handleChange} 
+                      error={errors.variant}
+                      required 
+                    />
 
-                  {remarks2Error && (
-                    <div style={{ color: "red" }}>{remarks2Error}</div>
+                    <InputField 
+                      label="Dom / Intl" 
+                      name="domINTL" 
+                      placeholder="DOM or INTL" 
+                      value={formData.domINTL} 
+                      onChange={handleChange} 
+                      required 
+                    />
+                    
+                    <div className="hidden lg:block"></div> {/* Spacer */}
+
+                    {/* --- TIMING --- */}
+                    <div className="lg:col-span-3 pb-2 border-b border-slate-100 dark:border-slate-800 mb-2 mt-2">
+                       <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">Schedule & Timing</h3>
+                    </div>
+
+                    <InputField 
+                      label="STD (Local)" 
+                      name="std" 
+                      type="time" 
+                      value={formData.std} 
+                      onChange={handleChange} 
+                      required 
+                    />
+
+                    <InputField 
+                      label="BT" 
+                      name="bt" 
+                      type="time" 
+                      value={formData.bt} 
+                      onChange={handleChange} 
+                      required 
+                    />
+
+                    <InputField 
+                      label="STA (Local)" 
+                      name="sta" 
+                      type="time" 
+                      value={formData.sta} 
+                      onChange={handleChange} 
+                      required 
+                    />
+
+                    <InputField 
+                      label="Effective From" 
+                      name="effFromDt" 
+                      type="date" 
+                      icon={Calendar}
+                      value={formData.effFromDt} 
+                      onChange={handleChange} 
+                      error={errors.effFromDt}
+                      required 
+                    />
+
+                    <InputField 
+                      label="Effective To" 
+                      name="effToDt" 
+                      type="date" 
+                      icon={Calendar}
+                      value={formData.effToDt} 
+                      onChange={handleChange} 
+                      error={errors.effToDt}
+                      required 
+                      min={formData.effFromDt}
+                    />
+
+                    <InputField 
+                      label="Days of Week" 
+                      name="dow" 
+                      type="number"
+                      placeholder="e.g. 1234567" 
+                      value={formData.dow} 
+                      onChange={handleChange} 
+                      error={errors.dow}
+                      required 
+                    />
+
+                    {/* --- TAGS & REMARKS --- */}
+                    <div className="lg:col-span-3 pb-2 border-b border-slate-100 dark:border-slate-800 mb-2 mt-2">
+                       <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">Additional Info</h3>
+                    </div>
+
+                    <InputField 
+                      label="User Tag 1" 
+                      name="userTag1" 
+                      value={formData.userTag1} 
+                      onChange={handleChange} 
+                      error={errors.userTag1}
+                    />
+                    <InputField 
+                      label="User Tag 2" 
+                      name="userTag2" 
+                      value={formData.userTag2} 
+                      onChange={handleChange} 
+                      error={errors.userTag2}
+                    />
+                    <div className="hidden lg:block"></div>
+
+                    <InputField 
+                      label="Remarks 1" 
+                      name="remarks1" 
+                      value={formData.remarks1} 
+                      onChange={handleChange} 
+                      error={errors.remarks1}
+                    />
+                    <InputField 
+                      label="Remarks 2" 
+                      name="remarks2" 
+                      value={formData.remarks2} 
+                      onChange={handleChange} 
+                      error={errors.remarks2}
+                    />
+
+                  </div>
+                </form>
+              </div>
+
+              {/* Footer / Actions */}
+              <div className="p-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-3 rounded-b-2xl">
+                <button 
+                  type="button"
+                  onClick={handleClose}
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  form="add-network-form"
+                  disabled={loading}
+                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2 transition-all hover:scale-[1.02]"
+                >
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={16} />
+                      <span>Submit Record</span>
+                    </>
                   )}
-                </div>
-              </Stack>
-            </Stack>
-            <Stack direction="row" justifyContent="end" mt="10px">
-               <LoadingButton
-                type="submit"
-                loading={loading}
-                variant="contained"
-              >
-                <span>Submit</span>
-              </LoadingButton>
-            </Stack>
-          </form>
-        </Stack>
-      </Dialog>
-      <ToastContainer />
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      <ToastContainer position="bottom-right" theme="colored" />
     </>
   );
 };

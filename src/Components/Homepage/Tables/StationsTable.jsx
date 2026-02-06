@@ -1,104 +1,136 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Stack, Select, MenuItem, Table, TableHead, TableRow, TextField, TableCell, TableBody } from '@mui/material';
-import { ToastContainer, toast } from "react-toastify";
-import LoadingButton from "@mui/lab/LoadingButton";
 import axios from "axios";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import dayjs from 'dayjs';
+import { motion } from "framer-motion";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { Save, Clock, AlertCircle, RadioTower } from "lucide-react";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
+// --- UTILITIES ---
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
+
+// --- CONSTANTS ---
+const TIMEZONES = [
+  'UTC-12:00', 'UTC-11:45', 'UTC-11:30', 'UTC-11:15', 'UTC-11:00', 'UTC-10:45', 'UTC-10:30', 'UTC-10:15', 'UTC-10:00', 'UTC-9:45', 'UTC-9:30', 'UTC-9:15', 'UTC-9:00', 'UTC-8:45', 'UTC-8:30', 'UTC-8:15', 'UTC-8:00', 'UTC-7:45', 'UTC-7:30', 'UTC-7:15', 'UTC-7:00', 'UTC-6:45', 'UTC-6:30', 'UTC-6:15', 'UTC-6:00', 'UTC-5:45', 'UTC-5:30', 'UTC-5:15', 'UTC-5:00', 'UTC-4:45', 'UTC-4:30', 'UTC-4:15', 'UTC-4:00', 'UTC-3:45', 'UTC-3:30', 'UTC-3:15', 'UTC-3:00', 'UTC-2:45', 'UTC-2:30', 'UTC-2:15', 'UTC-2:00', 'UTC-1:45', 'UTC-1:30', 'UTC-1:15', 'UTC-1:00', 'UTC-0:45', 'UTC-0:30', 'UTC-0:15', 'UTC+0:00', 'UTC+0:15', 'UTC+0:30', 'UTC+0:45', 'UTC+1:00', 'UTC+1:15', 'UTC+1:30', 'UTC+1:45', 'UTC+2:00', 'UTC+2:15', 'UTC+2:30', 'UTC+2:45', 'UTC+3:00', 'UTC+3:15', 'UTC+3:30', 'UTC+3:45', 'UTC+4:00', 'UTC+4:15', 'UTC+4:30', 'UTC+4:45', 'UTC+5:00', 'UTC+5:15', 'UTC+5:30', 'UTC+5:45', 'UTC+6:00', 'UTC+6:15', 'UTC+6:30', 'UTC+6:45', 'UTC+7:00', 'UTC+7:15', 'UTC+7:30', 'UTC+7:45', 'UTC+8:00', 'UTC+8:15', 'UTC+8:30', 'UTC+8:45', 'UTC+9:00', 'UTC+9:15', 'UTC+9:30', 'UTC+9:45', 'UTC+10:00', 'UTC+10:15', 'UTC+10:30', 'UTC+10:45', 'UTC+11:00', 'UTC+11:15', 'UTC+11:30', 'UTC+11:45', 'UTC+12:00'
+];
+
+// --- UI COMPONENTS ---
+
+const StyledInput = ({ value, onChange, error, placeholder, type = "text", ...props }) => (
+  <div className="flex flex-col w-full">
+    <input
+      type={type}
+      value={value || ""}
+      onChange={onChange}
+      placeholder={placeholder}
+      className={cn(
+        "w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900/50 border rounded focus:outline-none focus:ring-2 transition-all",
+        error 
+          ? "border-red-400 focus:ring-red-400 bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-300" 
+          : "border-slate-300 dark:border-slate-700 focus:border-indigo-500 focus:ring-indigo-500 text-slate-700 dark:text-slate-200"
+      )}
+      {...props}
+    />
+    {error && <span className="text-[10px] text-red-500 mt-0.5 leading-tight">{error}</span>}
+  </div>
+);
+
+const StyledSelect = ({ value, onChange, options }) => (
+  <select
+    value={value || ""}
+    onChange={onChange}
+    className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 dark:text-slate-200 cursor-pointer appearance-none"
+    style={{ backgroundImage: 'none' }} // Remove default arrow if needed, or style it
+  >
+    {options.map((opt) => (
+      <option key={opt} value={opt}>{opt}</option>
+    ))}
+  </select>
+);
+
+// --- MAIN COMPONENT ---
 
 const StationsTable = () => {
-
-  const timezones = [
-    'UTC-12:00', 'UTC-11:45', 'UTC-11:30', 'UTC-11:15', 'UTC-11:00', 'UTC-10:45', 'UTC-10:30', 'UTC-10:15', 'UTC-10:00', 'UTC-9:45', 'UTC-9:30', 'UTC-9:15', 'UTC-9:00', 'UTC-8:45', 'UTC-8:30', 'UTC-8:15', 'UTC-8:00', 'UTC-7:45', 'UTC-7:30', 'UTC-7:15', 'UTC-7:00', 'UTC-6:45', 'UTC-6:30', 'UTC-6:15', 'UTC-6:00', 'UTC-5:45', 'UTC-5:30', 'UTC-5:15', 'UTC-5:00', 'UTC-4:45', 'UTC-4:30', 'UTC-4:15', 'UTC-4:00', 'UTC-3:45', 'UTC-3:30', 'UTC-3:15', 'UTC-3:00', 'UTC-2:45', 'UTC-2:30', 'UTC-2:15', 'UTC-2:00', 'UTC-1:45', 'UTC-1:30', 'UTC-1:15', 'UTC-1:00', 'UTC-0:45', 'UTC-0:30', 'UTC-0:15', 'UTC+0:00', 'UTC+0:15', 'UTC+0:30', 'UTC+0:45', 'UTC+1:00', 'UTC+1:15', 'UTC+1:30', 'UTC+1:45', 'UTC+2:00', 'UTC+2:15', 'UTC+2:30', 'UTC+2:45', 'UTC+3:00', 'UTC+3:15', 'UTC+3:30', 'UTC+3:45', 'UTC+4:00', 'UTC+4:15', 'UTC+4:30', 'UTC+4:45', 'UTC+5:00', 'UTC+5:15', 'UTC+5:30', 'UTC+5:45', 'UTC+6:00', 'UTC+6:15', 'UTC+6:30', 'UTC+6:45', 'UTC+7:00', 'UTC+7:15', 'UTC+7:30', 'UTC+7:45', 'UTC+8:00', 'UTC+8:15', 'UTC+8:30', 'UTC+8:45', 'UTC+9:00', 'UTC+9:15', 'UTC+9:30', 'UTC+9:45', 'UTC+10:00', 'UTC+10:15', 'UTC+10:30', 'UTC+10:45', 'UTC+11:00', 'UTC+11:15', 'UTC+11:30', 'UTC+11:45', 'UTC+12:00'
-  ];
-
   const [selectedHomeTimeZone, setSelectedHomeTimeZone] = useState('UTC+5:30');
-  const [previousStations, setPreviousStations] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-
-  const handleTimeZoneChange = (event) => {
-    setSelectedHomeTimeZone(event.target.value);
-  };
-
   const [data, setData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
 
-  const handleInputChange = (newValue, rowIndex, columnName) => {
-    let value;
-    // Check if newValue is a date object
-    if (newValue instanceof Date) {
-      value = newValue; // Store the date object directly
-    } else {
-      // If not a date object, assume it's a standard event and extract the value
-      value = newValue.target ? newValue.target.value : newValue;
+  // --- LOGIC ---
+
+  const handleTimeZoneChange = (e) => setSelectedHomeTimeZone(e.target.value);
+
+  const handleInputChange = (e, rowIndex, columnName) => {
+    let value = e.target ? e.target.value : e;
+    
+    // For date inputs, standard HTML5 input returns YYYY-MM-DD strings
+    // If we receive a Date object (rare with native inputs but possible), convert it
+    if (value instanceof Date) {
+        value = dayjs(value).format('YYYY-MM-DD');
     }
 
-    const newData = data.map((row, index) => {
-      if (index === rowIndex) {
-        return {
-          ...row,
-          [columnName]: value,
-        };
-      }
-      return row;
+    setData(prevData => {
+      const newData = [...prevData];
+      newData[rowIndex] = { ...newData[rowIndex], [columnName]: value };
+      return newData;
     });
-
-    setData(newData);
   };
 
-  function isInRange(value, range) {
-    return value >= range[0] && value <= range[1];
-  }
-
-
-  function normalizeTimeFormat(time) {
-    // Extract digits from the input
-    const extractedDigits = time.match(/\d+/g);
-
-    if (!extractedDigits || extractedDigits.length < 2) {
-      // If no digits are found, return an empty string or handle it as needed
-      return '';
-    }
-
-    // Take the first two groups of digits as hours and minutes
+  // Validation Helpers
+  const normalizeTimeFormat = (time) => {
+    if(!time) return '';
+    const extractedDigits = String(time).match(/\d+/g);
+    if (!extractedDigits || extractedDigits.length < 2) return '';
     const [hours, minutes] = extractedDigits.slice(0, 2).map(Number);
-
-    // Return the normalized time in HH:mm format
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-  }
-
-  const range1 = ['00:20', '03:00'];
-  const range2 = ['00:30', '04:00'];
-  const range3 = ['02:00', '10:00'];
-
-  const isValidDDMinTime = (value) => {
-    const normalizedValue = normalizeTimeFormat(value);
-    return isInRange(normalizedValue, range1);
   };
 
-  const isValidIIMinTime = (value) => {
-    const normalizedValue = normalizeTimeFormat(value);
-    return isInRange(normalizedValue, range2);
+  const isInRange = (value, [min, max]) => value >= min && value <= max;
 
+  const validateTime = (value, range) => {
+    const normalized = normalizeTimeFormat(value);
+    return !normalized || isInRange(normalized, range); // Return true if valid (or empty)
   };
 
-  const isValidIIMaxTime = (value) => {
-    const normalizedValue = normalizeTimeFormat(value);
-    return isInRange(normalizedValue, range3);
+  const ranges = {
+    range1: ['00:20', '03:00'],
+    range2: ['00:30', '04:00'],
+    range3: ['02:00', '10:00']
   };
+
+  // API Calls
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const accessToken = localStorage.getItem("accessToken");
+        const response = await axios.get("https://airlineplan.com/get-stationData", {
+          headers: { "x-access-token": accessToken },
+        });
+        if(response.data?.data) {
+          setData(response.data.data);
+          if(response.data.hometimeZone) setSelectedHomeTimeZone(response.data.hometimeZone);
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        toast.error("Failed to load station data");
+      } finally {
+        setIsFetching(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const saveStation = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true)
       const accessToken = localStorage.getItem("accessToken");
-
-      // Prepare the data to be sent to the backend
       const requestData = {
-        stations: data, // Station data
-        homeTimeZone: selectedHomeTimeZone, // Selected home timezone
+        stations: data,
+        homeTimeZone: selectedHomeTimeZone,
       };
 
       const response = await axios.post('https://airlineplan.com/saveStation', requestData, {
@@ -109,574 +141,183 @@ const StationsTable = () => {
       });
 
       if (response.status === 201 || response.status === 200) {
-        toast.success("Update successful!");
-
-        // Call createConnections only if stations array has changed
-        // createConnections();
-        // Update the previous stations array
-        setPreviousStations(data);
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-
+        toast.success("Stations updated successfully!");
+        setTimeout(() => window.location.reload(), 1500);
       }
-      console.log(response.data);
     } catch (error) {
-      toast.error("An error occurred while processing your request.");
+      toast.error("An error occurred while saving.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const accessToken = localStorage.getItem("accessToken");
-
-        const response = await axios.get("https://airlineplan.com/get-stationData", {
-          headers: {
-            "x-access-token": accessToken,
-          },
-        });
-        console.log(response.data, "response.data");
-        setData(response.data.data);
-        setPreviousStations(response.data.data);
-        setSelectedHomeTimeZone(response.data.hometimeZone)
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    };
-
-    fetchData();
-  }, []);
-
   return (
-    <>
-      <div>
-        <Stack direction="row" spacing={5} mt={5}>
-          <Typography variant="h6" style={{ fontSize: "18px" }}>Home timezone</Typography>
-          <Stack style={{ "marginLeft": "45px" }}>
-            <Select
-              value={selectedHomeTimeZone}
-              sx={{ height: '40px' }}
-              onChange={handleTimeZoneChange}
-            >
-              {timezones.map((timezone, index) => (
-                <MenuItem key={index} value={timezone}>
-                  {timezone}
-                </MenuItem>
-              ))}
-            </Select>
-          </Stack>
-        </Stack>
-        <Stack mt={5} sx={{ alignItems: 'end' }}>
-          <Table style={{ "overflow": "scroll" }}>
-            <TableHead>
-              <TableRow sx={{ bgcolor: "#F5F5F5" }}>
-                <TableCell rowSpan={2} sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>S.no.</TableCell>
-                <TableCell rowSpan={2} sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>Station</TableCell>
-                <TableCell rowSpan={2} sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>STD TZ</TableCell>
-                <TableCell rowSpan={2} sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>DST TZ</TableCell>
-                <TableCell rowSpan={2} sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>Next DST Start</TableCell>
-                <TableCell rowSpan={2} sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>Next DST End</TableCell>
-                <TableCell colSpan={2} sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>Dom-Dom</TableCell>
-                <TableCell colSpan={2} sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>Dom-INTL</TableCell>
-                <TableCell colSpan={2} sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>INTL-Dom</TableCell>
-                <TableCell colSpan={2} sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>INTL-INTL</TableCell>
-              </TableRow>
-              <TableRow sx={{ bgcolor: "#F5F5F5" }}>
-                <TableCell sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>Min CT</TableCell>
-                <TableCell sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>Max CT</TableCell>
-                <TableCell sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>Min CT</TableCell>
-                <TableCell sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>Max CT</TableCell>
-                <TableCell sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>Min CT</TableCell>
-                <TableCell sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>Max CT</TableCell>
-                <TableCell sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>Min CT</TableCell>
-                <TableCell sx={{
-                  whiteSpace: "nowrap",
-                  fontWeight: "bold",
-                  padding: "0px",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}>Max CT</TableCell>
+    <div className="w-full h-[calc(100vh-140px)] flex flex-col gap-4">
+      
+      {/* --- HEADER --- */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <RadioTower className="text-indigo-500" size={24} />
+            Station Configuration
+          </h2>
+          <p className="text-xs text-slate-500">Manage timezones and minimum/maximum connection times.</p>
+        </div>
 
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data.map((row, index) => (
-                <TableRow key={index} sx={{ backgroundColor: index % 2 !== 0 ? '#f0f0f0' : 'inherit' }}>
-                  <TableCell sx={{
-                    padding: "5px",
-                    fontSize: "14px",
-                    textAlign: "center",
-                  }}>{index + 1}</TableCell>
-                  <TableCell sx={{
-                    padding: "5px",
-                    fontSize: "14px",
-                    textAlign: "center",
-                  }}>{row.stationName}</TableCell>
-                  <TableCell sx={{
-                    padding: "5px",
-                    textAlign: "center",
-                    // height: "50px"
-                  }}>
-                    <Select
-                      value={row.stdtz}
-                      size="small"
-                      sx={{ height: "35px", fontSize: "14px" }}
-                      onChange={(e) => handleInputChange(e, index, 'stdtz')}
-                      displayEmpty
-                      inputProps={{ 'aria-label': 'Select Timezone' }}
-                    >
-                      {timezones.map((timezone) => (
-                        <MenuItem key={timezone} value={timezone}>
-                          {timezone}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </TableCell>
-                  <TableCell sx={{
-                    padding: "5px",
-                    fontSize: "12px",
-                    textAlign: "center",
-                  }}>
-                    <Select
-                      value={row.dsttz}
-                      size="small"
-                      sx={{ height: "35px", fontSize: "14px" }}
-                      onChange={(e) => handleInputChange(e, index, 'dsttz')}
-                      displayEmpty
-                      inputProps={{ 'aria-label': 'Select Timezone' }}
-                    >
-                      {timezones.map((timezone) => (
-                        <MenuItem key={timezone} value={timezone}>
-                          {timezone}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </TableCell>
-                  <TableCell sx={{
-                    padding: "5px",
-                    fontSize: "12px",
-                    textAlign: "center",
-                  }}>
-                    {/* <TextField
-                  size="small"
-                  value={row.nextDSTStart}
-                  onChange={(e) => handleInputChange(e, 'nextDSTStart')} // Add a function to handle input changes
-                /> */}
-                    <LocalizationProvider dateAdapter={AdapterDayjs}>
-                      <DatePicker
-                        size="small"
-                        // label="Next DST Start"
-                        value={dayjs(row.nextDSTStart)}
-                        onChange={(date) => handleInputChange(date, index, "nextDSTStart")}
-                        renderInput={(params) => <TextField {...params} />}
-                        // Use slotProps to set the size of the input field
-                        slotProps={{ textField: { size: "small" } }}
-                        // Use sx to adjust the width and height of the input field and the calendar
-                        sx={{
-                          // Set the width of the input field
-                          width: "135px",
-                          // Target the input element inside the input field
-                          "& .MuiInputBase-input": {
-                            // Set the height of the input element
-                            height: "18px",
-                            // Set the font size of the input element
-                            fontSize: "14px",
-                          },
-                          // Target the calendar element
-                          "& .MuiPickersCalendar-root": {
-                            // Target the day elements inside the calendar
-                            "& .MuiPickersDay-root": {
-                              // Set the font size of the day elements
-                              fontSize: "14px",
-                            },
-                            // Target the icon button elements inside the calendar header
-                            "& .MuiPickersCalendarHeader-iconButton": {
-                              // Set the font size of the icon button elements
-                              fontSize: "14px",
-                            },
-                          },
-                        }}
-                      />
-                    </LocalizationProvider>
-                  </TableCell>
-                  <TableCell sx={{
-                    padding: "5px",
-                    fontSize: "12px",
-                    textAlign: "center",
-                  }}>
-                    {/* <TextField
-                  size="small"
-                  value={row.nextDSTEnd}
-                  onChange={(e) => handleInputChange(e, 'nextDSTEnd')} // Add a function to handle input changes
-                /> */}
-                    <LocalizationProvider dateAdapter={AdapterDayjs}>
-                      <DatePicker
-                        size="small"
-                        // label="Next DST Start"
-                        value={dayjs(row.nextDSTEnd)}
-                        onChange={(date) => handleInputChange(date, index, "nextDSTEnd")}
-                        renderInput={(params) => <TextField {...params} />}
-                        // Use slotProps to set the size of the input field
-                        slotProps={{ textField: { size: "small" } }}
-                        // Use sx to adjust the width and height of the input field and the calendar
-                        sx={{
-                          // Set the width of the input field
-                          width: "135px",
-                          // Target the input element inside the input field
-                          "& .MuiInputBase-input": {
-                            // Set the height of the input element
-                            height: "18px",
-                            // Set the font size of the input element
-                            fontSize: "14px",
-                          },
-                          // Target the calendar element
-                          "& .MuiPickersCalendar-root": {
-                            // Target the day elements inside the calendar
-                            "& .MuiPickersDay-root": {
-                              // Set the font size of the day elements
-                              fontSize: "14px",
-                            },
-                            // Target the icon button elements inside the calendar header
-                            "& .MuiPickersCalendarHeader-iconButton": {
-                              // Set the font size of the icon button elements
-                              fontSize: "14px",
-                            },
-                          },
-                        }}
-                      />
-                    </LocalizationProvider>
-                  </TableCell>
-                  <TableCell sx={{
-                    padding: "5px",
-                    fontSize: "12px",
-                    textAlign: "center",
-                    position: 'relative',
-
-                  }}>
-                    <div style={{ display: 'inline-flex', flexDirection: 'column' }}>
-                      <TextField
-                        size="small"
-                        sx={{ width: "65px", fontSize:"14px" }}
-                        value={row.ddMinCT}    
-                        onChange={(e) => handleInputChange(e, index, 'ddMinCT')}
-                        error={!isValidDDMinTime(row.ddMinCT)}
-                        inputProps={{ style: { padding: "10px", height:"15px", fontSize: "14px" } }}
-
-                      />
-                      {!isValidDDMinTime(row.ddMinCT) && (
-                        <span style={{
-                          color: 'red',
-                          fontSize: '10px',
-                        }}>
-                          Enter a valid time (between 0:20 and 3:00)
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell sx={{
-                    padding: "5px",
-                    fontSize: "12px",
-                    textAlign: "center",
-
-                  }}>
-                    <div style={{ display: 'inline-flex', flexDirection: 'column' }}>
-                      <TextField
-                        size="small"
-                        sx={{ width: "65px" }}
-                        value={row.ddMaxCT}
-                        onChange={(e) => handleInputChange(e, index, 'ddMaxCT')}
-                        error={!isValidIIMaxTime(row.ddMaxCT)}
-                        inputProps={{ style: { padding: "10px", height:"15px", fontSize: "14px" } }}
-                      />
-                      {!isValidIIMaxTime(row.ddMaxCT) && (
-                        <span style={{
-                          color: 'red',
-                          fontSize: '10px',
-                        }}>
-                          Enter a valid time (between 2:00 and 10:00)
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell sx={{
-                    padding: "5px",
-                    fontSize: "12px",
-                    textAlign: "center",
-
-                  }}>
-                    <div style={{ display: 'inline-flex', flexDirection: 'column' }}>
-                      <TextField
-                        size="small"
-                        sx={{ width: "65px" }}
-                        value={row.dInMinCT}
-                        onChange={(e) => handleInputChange(e, index, 'dInMinCT')}
-                        error={!isValidIIMinTime(row.dInMinCT)}
-                        inputProps={{ style: { padding: "10px", height:"15px", fontSize: "14px" } }}
-
-                      />
-                      {!isValidIIMinTime(row.dInMinCT) && (
-                        <span style={{
-                          color: 'red',
-                          fontSize: '10px',
-                        }}>
-                          Enter a valid time (between 0:30 and 4:00)
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell sx={{
-                    padding: "5px",
-                    fontSize: "12px",
-                    textAlign: "center",
-
-                  }}>
-                    <div style={{ display: 'inline-flex', flexDirection: 'column' }}>
-                      <TextField
-                        size="small"
-                        sx={{ width: "65px" }}
-                        value={row.dInMaxCT}
-                        onChange={(e) => handleInputChange(e, index, 'dInMaxCT')}
-                        error={!isValidIIMaxTime(row.dInMaxCT)}
-                        inputProps={{ style: { padding: "10px", height:"15px", fontSize: "14px" } }}
-
-                      />
-                      {!isValidIIMaxTime(row.dInMaxCT) && (
-                        <span style={{
-                          color: 'red',
-                          fontSize: '10px',
-                        }}>
-                          Enter a valid time (between 2:00 and 10:00)
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell sx={{
-                    padding: "5px",
-                    fontSize: "12px",
-                    textAlign: "center",
-
-                  }}>
-                    <div style={{ display: 'inline-flex', flexDirection: 'column' }}>
-                      <TextField
-                        size="small"
-                        sx={{ width: "65px" }}
-                        value={row.inDMinCT}
-                        onChange={(e) => handleInputChange(e, index, 'inDMinCT')}
-                        error={!isValidIIMinTime(row.inDMinCT)}
-                        inputProps={{ style: { padding: "10px", height:"15px", fontSize: "14px" } }}
-
-                      />
-                      {!isValidIIMinTime(row.inDMinCT) && (
-                        <span style={{
-                          color: 'red',
-                          fontSize: '10px',
-                        }}>
-                          Enter a valid time (between 0:20 and 3:00)
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-
-                  <TableCell sx={{
-                    padding: "5px",
-                    fontSize: "12px",
-                    textAlign: "center",
-
-                  }}>
-                    <div style={{ display: 'inline-flex', flexDirection: 'column' }}>
-                      <TextField
-                        size="small"
-                        sx={{ width: "65px" }}
-                        value={row.inDMaxCT}
-                        onChange={(e) => handleInputChange(e, index, 'inDMaxCT')}
-                        error={!isValidIIMaxTime(row.inDMaxCT)}
-                        inputProps={{ style: { padding: "10px", height:"15px", fontSize: "14px" } }}
-
-                      />
-                      {!isValidIIMaxTime(row.inDMaxCT) && (
-                        <span style={{
-                          color: 'red',
-                          fontSize: '10px',
-                        }}>
-                          Enter a valid time (between 2:00 and 10:00)
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell sx={{
-                    padding: "5px",
-                    fontSize: "12px",
-                    textAlign: "center",
-
-                  }}>
-                    <div style={{ display: 'inline-flex', flexDirection: 'column' }}>
-                      <TextField
-                        size="small"
-                        sx={{ width: "65px" }}
-                        value={row.inInMinDT}
-                        onChange={(e) => handleInputChange(e, index, 'inInMinDT')}
-                        error={!isValidIIMinTime(row.inInMinDT)}
-                        inputProps={{ style: { padding: "10px", height:"15px", fontSize: "14px" } }}
-
-                      />
-                      {!isValidIIMinTime(row.inInMinDT) && (
-                        <span style={{
-                          color: 'red',
-                          fontSize: '10px',
-                        }}>
-                          Enter a valid time (between 0:30 and 4:00)
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell sx={{
-                    padding: "5px",
-                    fontSize: "12px",
-                    textAlign: "center",
-                  }}>
-                    <div style={{ display: 'inline-flex', flexDirection: 'column' }}>
-                      <TextField
-                        size="small"
-                        sx={{ width: "65px" }}
-                        value={row.inInMaxDT}
-                        onChange={(e) => handleInputChange(e, index, 'inInMaxDT')}
-                        error={!isValidIIMaxTime(row.inInMaxDT)}
-                        inputProps={{ style: { padding: "10px", height:"15px", fontSize: "14px" } }}
-
-                      />
-                      {!isValidIIMaxTime(row.inInMaxDT) && (
-                        <span style={{
-                          color: 'red',
-                          fontSize: '10px',
-                        }}>
-                          Enter a valid time (between 2:00 and 10:00)
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <LoadingButton
-            variant="contained"
-            sx={{ width: 100, marginTop: 3 }}
-            onClick={saveStation}
-            loading={isLoading}
-          >
-            Save
-          </LoadingButton>
-
-        </Stack>
+        <div className="flex items-center gap-3 bg-white/70 dark:bg-slate-900/60 backdrop-blur-sm px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                <Clock size={16} className="text-indigo-500" />
+                Home Timezone
+            </div>
+            <div className="relative">
+                <select
+                    value={selectedHomeTimeZone}
+                    onChange={handleTimeZoneChange}
+                    className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 py-1.5 pl-3 pr-8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                    {TIMEZONES.map((tz) => (
+                        <option key={tz} value={tz}>{tz}</option>
+                    ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                    <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                </div>
+            </div>
+        </div>
       </div>
-      <ToastContainer />
-    </>
+
+      {/* --- TABLE CARD --- */}
+      <div className="flex-1 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col relative">
+        
+        <div className="flex-1 overflow-auto custom-scrollbar">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-100/95 dark:bg-slate-800/95 sticky top-0 z-20 backdrop-blur-sm shadow-sm">
+              {/* Top Header Row */}
+              <tr>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-12 text-xs font-bold text-slate-500 dark:text-slate-400">#</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[100px] text-xs font-bold text-slate-500 dark:text-slate-400">Station</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[110px] text-xs font-bold text-slate-500 dark:text-slate-400">STD TZ</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[110px] text-xs font-bold text-slate-500 dark:text-slate-400">DST TZ</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[130px] text-xs font-bold text-slate-500 dark:text-slate-400">Next DST Start</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[130px] text-xs font-bold text-slate-500 dark:text-slate-400">Next DST End</th>
+                
+                <th colSpan={2} className="p-1 border-r border-b border-slate-200 dark:border-slate-700 text-center text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/10">Dom - Dom</th>
+                <th colSpan={2} className="p-1 border-r border-b border-slate-200 dark:border-slate-700 text-center text-xs font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-50/50 dark:bg-cyan-900/10">Dom - INTL</th>
+                <th colSpan={2} className="p-1 border-r border-b border-slate-200 dark:border-slate-700 text-center text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10">INTL - Dom</th>
+                <th colSpan={2} className="p-1 border-b border-slate-200 dark:border-slate-700 text-center text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-900/10">INTL - INTL</th>
+              </tr>
+              {/* Sub Header Row */}
+              <tr>
+                {/* Dom-Dom */}
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-indigo-50/30">Min CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-indigo-50/30">Max CT</th>
+                {/* Dom-Intl */}
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-cyan-50/30">Min CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-cyan-50/30">Max CT</th>
+                {/* Intl-Dom */}
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-emerald-50/30">Min CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-emerald-50/30">Max CT</th>
+                {/* Intl-Intl */}
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-purple-50/30">Min CT</th>
+                <th className="p-2 border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-purple-50/30">Max CT</th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+              {isFetching ? (
+                <tr>
+                  <td colSpan={14} className="p-10 text-center text-slate-500 text-sm">Loading station data...</td>
+                </tr>
+              ) : (
+                data.map((row, index) => (
+                  <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <td className="p-2 text-center text-xs font-medium text-slate-500 border-r border-slate-100 dark:border-slate-800">{index + 1}</td>
+                    <td className="p-2 text-center text-xs font-medium text-slate-800 dark:text-slate-200 border-r border-slate-100 dark:border-slate-800">{row.stationName}</td>
+                    
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800">
+                      <StyledSelect value={row.stdtz} options={TIMEZONES} onChange={(e) => handleInputChange(e, index, 'stdtz')} />
+                    </td>
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800">
+                      <StyledSelect value={row.dsttz} options={TIMEZONES} onChange={(e) => handleInputChange(e, index, 'dsttz')} />
+                    </td>
+                    
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800">
+                      <StyledInput 
+                        type="date" 
+                        value={dayjs(row.nextDSTStart).isValid() ? dayjs(row.nextDSTStart).format('YYYY-MM-DD') : ''} 
+                        onChange={(e) => handleInputChange(e, index, 'nextDSTStart')} 
+                      />
+                    </td>
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800">
+                      <StyledInput 
+                        type="date" 
+                        value={dayjs(row.nextDSTEnd).isValid() ? dayjs(row.nextDSTEnd).format('YYYY-MM-DD') : ''} 
+                        onChange={(e) => handleInputChange(e, index, 'nextDSTEnd')} 
+                      />
+                    </td>
+
+                    {/* Dom-Dom */}
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-indigo-50/10">
+                      <StyledInput value={row.ddMinCT} onChange={(e) => handleInputChange(e, index, 'ddMinCT')} error={!validateTime(row.ddMinCT, ranges.range1) && "00:20 - 03:00"} />
+                    </td>
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-indigo-50/10">
+                      <StyledInput value={row.ddMaxCT} onChange={(e) => handleInputChange(e, index, 'ddMaxCT')} error={!validateTime(row.ddMaxCT, ranges.range3) && "02:00 - 10:00"} />
+                    </td>
+
+                    {/* Dom-Intl */}
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-cyan-50/10">
+                      <StyledInput value={row.dInMinCT} onChange={(e) => handleInputChange(e, index, 'dInMinCT')} error={!validateTime(row.dInMinCT, ranges.range2) && "00:30 - 04:00"} />
+                    </td>
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-cyan-50/10">
+                      <StyledInput value={row.dInMaxCT} onChange={(e) => handleInputChange(e, index, 'dInMaxCT')} error={!validateTime(row.dInMaxCT, ranges.range3) && "02:00 - 10:00"} />
+                    </td>
+
+                    {/* Intl-Dom */}
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-emerald-50/10">
+                      <StyledInput value={row.inDMinCT} onChange={(e) => handleInputChange(e, index, 'inDMinCT')} error={!validateTime(row.inDMinCT, ranges.range1) && "00:20 - 03:00"} />
+                    </td>
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-emerald-50/10">
+                      <StyledInput value={row.inDMaxCT} onChange={(e) => handleInputChange(e, index, 'inDMaxCT')} error={!validateTime(row.inDMaxCT, ranges.range3) && "02:00 - 10:00"} />
+                    </td>
+
+                    {/* Intl-Intl */}
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-purple-50/10">
+                      <StyledInput value={row.inInMinDT} onChange={(e) => handleInputChange(e, index, 'inInMinDT')} error={!validateTime(row.inInMinDT, ranges.range2) && "00:30 - 04:00"} />
+                    </td>
+                    <td className="p-1 border-slate-100 dark:border-slate-800 bg-purple-50/10">
+                      <StyledInput value={row.inInMaxDT} onChange={(e) => handleInputChange(e, index, 'inInMaxDT')} error={!validateTime(row.inInMaxDT, ranges.range3) && "02:00 - 10:00"} />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* --- FOOTER --- */}
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex justify-end">
+            <button
+                onClick={saveStation}
+                disabled={isLoading}
+                className="inline-flex items-center justify-center px-6 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+                {isLoading ? (
+                    <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                        Saving Changes...
+                    </>
+                ) : (
+                    <>
+                        <Save size={16} className="mr-2" />
+                        Save Changes
+                    </>
+                )}
+            </button>
+        </div>
+      </div>
+
+      <ToastContainer position="bottom-right" theme="colored" />
+    </div>
   );
 };
 

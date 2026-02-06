@@ -1,142 +1,107 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import {
-  Container,
-  Stack,
-  Box,
-  Grid,
-  Paper,
-  Table,
-  TableHead,
-  TableRow,
-  IconButton,
-  TableCell,
-  TableBody,
-  TextField,
-  Button,
-  MenuItem,
-  Typography,
-  Pagination,
-} from "@mui/material";
-import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import axios from "axios";
 import dayjs from "dayjs";
 import moment from "moment";
+import { motion, AnimatePresence } from "framer-motion";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { 
+  Save, Trash2, Plus, ArrowUp, ArrowDown, 
+  Search, Clock, Plane, Calendar, ChevronRight, 
+  ChevronLeft, AlertCircle, RotateCw, Loader2
+} from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
-import axios from "axios";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import LoadingButton from "@mui/lab/LoadingButton";
-import FlgtsTable from "./FlgtsTable";
+import "react-toastify/dist/ReactToastify.css";
 
-const DropDownMenu = ({ data, onChange, fieldProps, selectedValue }) => {
-  const handleChange = (event) => {
-    const selectedValue = event.target.value;
-    onChange(selectedValue);
-  };
+// --- UTILITIES ---
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
 
-  return (
-    <TextField
-      size="small"
-      select
-      style={{ width: "135px" }}
-      sx={{
-        width: "135px",
-        "& .MuiSelect-select": {
-          paddingTop: "6px",
-          paddingBottom: "6px",
-          fontSize: "14px",
-          lineHeight: "1.8",
-        },
-        "& .MuiMenuItem-root": {
-          fontSize: "14px",
-          lineHeight: "1.8",
-        },
-      }}
-      {...fieldProps}
-      value={selectedValue} // Set the selected value
-      onChange={handleChange}
-    >
-      {data.map((item) => (
-        <MenuItem key={item.value} value={item.value}>
-          {item.label}
-        </MenuItem>
-      ))}
-    </TextField>
-  );
+const addTime = (firstTime, secondTime) => {
+  if (!firstTime || !secondTime) return "00:00";
+  const [h1, m1] = firstTime.split(":").map(Number);
+  const [h2, m2] = secondTime.split(":").map(Number);
+  const totalMinutes = h1 * 60 + m1 + h2 * 60 + m2;
+  const hours = Math.floor(totalMinutes / 60) % 24;
+  const minutes = totalMinutes % 60;
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 };
 
-const RotationDropDownMenu = ({
-  data,
-  handleRotationChange,
-  selectedRotation,
-}) => {
-  const [newRotationVal, setNewRotationVal] = useState(selectedRotation || "");
-  const options = [{ value: "new", label: "New" }, ...data];
+// --- UI COMPONENTS ---
 
-  const handleChange = async (event) => {
-    const selectedValue = event.target.value;
-    const newRotationVal = await handleRotationChange(selectedValue);
+const Label = ({ children, required }) => (
+  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1 block">
+    {children} {required && <span className="text-red-500">*</span>}
+  </label>
+);
 
-    setNewRotationVal(newRotationVal);
-  };
+const StyledInput = ({ className, error, ...props }) => (
+  <input
+    className={cn(
+      "w-full h-9 px-3 text-sm bg-white dark:bg-slate-800/50 border rounded-lg focus:outline-none focus:ring-2 transition-all shadow-sm",
+      error 
+        ? "border-red-400 focus:ring-red-400 bg-red-50 dark:bg-red-900/10" 
+        : "border-slate-300 dark:border-slate-700 focus:ring-indigo-500 focus:border-indigo-500 text-slate-700 dark:text-slate-200",
+      className
+    )}
+    {...props}
+  />
+);
 
-  // Check if newRotationVal is not already in options before adding it
-  const isRotationValInOptions = options.some(
-    (item) => item.value === newRotationVal
-  );
-  const updatedOptions = isRotationValInOptions
-    ? options
-    : [{ value: newRotationVal, label: newRotationVal }, ...options];
-
-  // Separate the "New" option and other options
-  const newOption = updatedOptions.find((item) => item.value === "new");
-  const otherOptions = updatedOptions.filter((item) => item.value !== "new");
-
-  // Sort other options alphabetically based on the label
-  otherOptions.sort((a, b) => a.label.localeCompare(b.label));
-
-  // Combine the "New" option and other options
-  const sortedOptions = [newOption, ...otherOptions];
-
-  return (
-    <TextField
-      select
-      size="small"
-      style={{ width: "135px" }}
-      onChange={handleChange}
-      value={newRotationVal}
-      sx={{
-        width: "135px", // Set the width of the TextField
-        "& .MuiSelect-select": {
-          // Target the select element within the TextField
-          paddingTop: "6px", // Adjust the top padding as needed
-          paddingBottom: "6px", // Adjust the bottom padding as needed
-          fontSize: "14px", // Set the font size
-          lineHeight: "1.8", // Adjust the line height as needed
-        },
-        "& .MuiMenuItem-root": {
-          // Target the MenuItem elements
-          fontSize: "14px", // Set the font size
-          lineHeight: "1.8", // Adjust the line height as needed
-        },
-      }}
+const StyledSelect = ({ options, value, onChange, placeholder, className, ...props }) => (
+  <div className="relative">
+    <select
+      value={value || ""}
+      onChange={onChange}
+      className={cn(
+        "w-full h-9 pl-3 pr-8 text-sm bg-white dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none shadow-sm cursor-pointer text-slate-700 dark:text-slate-200",
+        className
+      )}
+      {...props}
     >
-      {sortedOptions.map((item) => (
-        <MenuItem key={item.value} value={item.value}>
-          {item.label}
-        </MenuItem>
+      <option value="" disabled>{placeholder || "Select..."}</option>
+      {options.map((opt) => (
+        <option key={opt.value} value={opt.value}>{opt.label}</option>
       ))}
-    </TextField>
-  );
-};
+    </select>
+    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+      <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
+    </div>
+  </div>
+);
+
+const StatsCard = ({ label, value, icon: Icon, colorClass }) => (
+  <div className="flex items-center justify-between p-3 bg-white/50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+    <div className="flex items-center gap-2">
+      <div className={cn("p-1.5 rounded-lg", colorClass)}>
+        <Icon size={14} className="text-white" />
+      </div>
+      <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">{label}</span>
+    </div>
+    <span className="text-sm font-bold text-slate-800 dark:text-white font-mono">{value}</span>
+  </div>
+);
+
+// --- MAIN COMPONENT ---
 
 const Rotations = () => {
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [arrow, setArrow] = useState({ column: null, direction: "Up" });
+  // --- STATE ---
+  // Data & Tables
   const [flgtsTableData, setFlgtsTableData] = useState([]);
-  const [date, setDate] = useState("");
-  const [day, setDay] = useState("");
+  const [rotationDevelopmentTableData, setRotationDevelopmentTableData] = useState([]);
+  const [listOfVariant, setListOfVariant] = useState([]);
+  const [listOfRotation, setListOfRotations] = useState([]);
+  
+  // Selection & Forms
+  const [selectedVariant, setSelectedVariant] = useState("");
+  const [selectedRotation, setSelectedRotation] = useState("");
+  const [rotationTag, setRotationTag] = useState("");
+  const [effFromDate, setEffFromDate] = useState("");
+  const [effToDate, setEffToDate] = useState("");
+  const [dow, setDow] = useState("");
+  
+  // New Leg Inputs
   const [flight, setFlight] = useState("");
   const [depStn, setDepStn] = useState("");
   const [std, setStd] = useState("");
@@ -144,154 +109,91 @@ const Rotations = () => {
   const [sta, setSta] = useState("");
   const [arrStn, setArrStn] = useState("");
   const [gt, setGt] = useState("00:00");
-  const [sector, setSector] = useState("");
-  const [variant, setVariant] = useState("");
-  const [selectedVariant, setSelectedVariant] = useState("");
-  const [seats, setSeats] = useState("");
-  const [cargoCapT, setCargoCapT] = useState("");
-  const [dist, setDist] = useState("");
-  const [pax, setPax] = useState("");
-  const [cargoT, setCargoT] = useState("");
-  const [ask, setAsk] = useState("");
-  const [rsk, setRsk] = useState("");
-  const [cargoAtk, setCargoAtk] = useState("");
-  const [cargoRtk, setCargoRtk] = useState("");
   const [domIntl, setDomIntl] = useState("");
-  const [userTag1, setUserTag1] = useState("");
-  const [userTag2, setUserTag2] = useState("");
-  const [remarks1, setRemarks1] = useState("");
-  const [remarks2, setRemarks2] = useState("");
-  const [rotation, setRotation] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [arrowDirection, setArrowDirection] = useState(true);
-  const [listOfVariant, setListOfVariant] = useState([]);
-  const [listOfRotation, setListOfRotations] = useState([]);
-  const [selectedRotation, setSelectedRotation] = useState("");
-  const [rotationTag, setRotationTag] = useState("");
-  const [effFromDate, setEffFromDate] = useState(null); // Use a Date object
-  const [effToDate, setEffToDate] = useState(null); // Use a Date object
-  const [dow, setDow] = useState("");
-  const [depCount, setDepCount] = useState(1);
-  const [leftPanelError, setLeftPanelError] = useState(false);
-  const [rotationDevelopmentTableData, setRotationDevelopmentTableData] =
-    useState([]);
+  
+  // System State
   const [isLoading, setIsLoading] = useState(false);
   const [isPrevLoading, setIsPrevLoading] = useState(false);
   const [isRotationDeleting, setIsRotationDeleting] = useState(false);
   const [editable, setEditable] = useState(true);
+  const [depCount, setDepCount] = useState(1);
+  const [leftPanelError, setLeftPanelError] = useState(false);
+  
+  // Original Values for fallback
   const [originalDepStn, setOriginalDepStn] = useState("");
   const [originalStd, setOriginalStd] = useState("");
-  const [filter, setFilter] = useState({
-    flight: "",
-    depStn: "",
-    std: "",
-    bt: "",
-    sta: "",
-    arrStn: "",
-    variant: "",
-    date: "",
-    day: "",
-  });
+
+  // Filtering & Sorting
+  const [currentPage, setCurrentPage] = useState(1);
+  const RowsPerPage = 8;
+  const [arrow, setArrow] = useState({ column: null, direction: "Up" });
+  const [filter, setFilter] = useState({});
 
   const flightInputRef = useRef(null);
 
-  const handleRotationChange = async (event) => {
-    if (event == "new") {
-      try {
-        const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get(
-          "https://airlineplan.com/getNextRotationNumber",
-          {
-            headers: {
-              "x-access-token": accessToken,
-            },
-          }
-        );
-        setSelectedRotation(response.data.nextRotationNumber);
-
-        //set rotation summary value to default
-        setEffToDate(null);
-        setEffFromDate(null);
-        setDow("");
-        setRotationDevelopmentTableData([]);
-        setEditable(true);
-        return response.data.nextRotationNumber;
-      } catch (error) {
-        console.error("Error fetching data:", error);
+  // --- CALCULATIONS ---
+  const totalBt = useMemo(() => {
+    const totalMinutes = rotationDevelopmentTableData.reduce((total, item) => {
+      if (item.bt && /^\d{2}:\d{2}$/.test(item.bt)) {
+        const [h, m] = item.bt.split(":").map(Number);
+        return total + h * 60 + m;
       }
-    } else {
-      try {
-        const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get(
-          `https://airlineplan.com/rotationbyid/${event}`,
-          {
-            headers: {
-              "x-access-token": accessToken,
-            },
-          }
-        );
+      return total;
+    }, 0);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+  }, [rotationDevelopmentTableData]);
 
-        const { rotationDetails, rotationSummary } = response.data;
-
-        // Set rotation development table data and selected rotation
-        setRotationDevelopmentTableData(rotationDetails);
-        setSelectedRotation(parseInt(event));
-
-        setSelectedVariant(rotationSummary.variant);
-        setEffFromDate(rotationSummary.effFromDt);
-        setEffToDate(rotationSummary.effToDt);
-        setDow(rotationSummary.dow);
-
-        return event;
-      } catch (error) {
-        console.error("Error fetching data:", error);
+  const totalGt = useMemo(() => {
+    const totalMinutes = rotationDevelopmentTableData.reduce((total, item) => {
+      if (item.gt && /^\d{2}:\d{2}$/.test(item.gt)) {
+        const [h, m] = item.gt.split(":").map(Number);
+        return total + h * 60 + m;
       }
-    }
-  };
+      return total;
+    }, 0);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+  }, [rotationDevelopmentTableData]);
 
-  // useEffect(() => {
-  //     if (selectedRotation && selectedVariant) {
-  //         // setEditable(false);
-  //     }
-  // }, [selectedRotation, selectedVariant]);
+  // --- API & LOGIC HANDLERS ---
 
   useEffect(() => {
-    // Call getFgtsWORotations when rotationDetails, rotationSummary, and other states are updated
-    if (
-      selectedRotation &&
-      selectedVariant &&
-      effFromDate &&
-      effToDate &&
-      dow
-    ) {
-      setEditable(false);
+    // Initial Load
+    const loadDropdowns = async () => {
+      try {
+        const token = localStorage.getItem("accessToken");
+        const [varRes, rotRes] = await Promise.all([
+          axios.get("https://airlineplan.com/listVariants", { headers: { "x-access-token": token } }),
+          axios.get("https://airlineplan.com/listRotations", { headers: { "x-access-token": token } })
+        ]);
+        setListOfVariant(varRes.data);
+        setListOfRotations(rotRes.data);
+      } catch (e) { console.error(e); }
+    };
+    loadDropdowns();
+  }, []);
 
-      if (!editable) {
-        getFgtsWORotations();
-      }
+  // Update STD/DepStn when table changes
+  useEffect(() => {
+    if (rotationDevelopmentTableData.length > 0) {
+      const lastItem = rotationDevelopmentTableData[rotationDevelopmentTableData.length - 1];
+      setStd(addTime(lastItem.sta, lastItem.gt));
+      setDepStn(lastItem.arrStn);
+      setOriginalDepStn(lastItem.arrStn); // Track original for fallback
+      setOriginalStd(addTime(lastItem.sta, lastItem.gt));
+    } else {
+        setStd("");
+        setDepStn("");
     }
-  }, [
-    selectedRotation,
-    selectedVariant,
-    effFromDate,
-    effToDate,
-    rotationDevelopmentTableData,
-    editable,
-  ]);
+  }, [rotationDevelopmentTableData]);
 
   const getFgtsWORotations = async () => {
-    const lastObjectIndex = rotationDevelopmentTableData.length - 1;
-    let allowedDeptStn, allowedStdLt;
-
-    if (lastObjectIndex >= 0) {
-      const lastObject = rotationDevelopmentTableData[lastObjectIndex];
-      const { arrStn, sta, gt } = lastObject;
-      allowedDeptStn = arrStn;
-      allowedStdLt = addTime(sta, gt);
-    } else {
-      allowedDeptStn = "";
-      allowedStdLt = "";
-    }
+    const lastObject = rotationDevelopmentTableData[rotationDevelopmentTableData.length - 1];
+    let allowedDeptStn = lastObject ? lastObject.arrStn : "";
+    let allowedStdLt = lastObject ? addTime(lastObject.sta, lastObject.gt) : "";
 
     const requestData = {
       allowedDeptStn,
@@ -302,1868 +204,393 @@ const Rotations = () => {
       dow,
     };
 
-    const responseFlgts = await axios.post(
-      "https://airlineplan.com/flightsWoRotations",
-      requestData,
-      {
-        headers: {
-          "x-access-token": `${localStorage.getItem("accessToken")}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    console.log("Flights data is " + JSON.stringify(responseFlgts.data.data));
-    setFlgtsTableData(responseFlgts.data.data);
+    try {
+      const res = await axios.post("https://airlineplan.com/flightsWoRotations", requestData, {
+        headers: { "x-access-token": localStorage.getItem("accessToken") }
+      });
+      setFlgtsTableData(res.data.data);
+    } catch (e) { console.error(e); }
   };
 
-  const RowsPerPage = 8;
-
-  const sortedData = () => {
-    if (!arrow.column) return flgtsTableData;
-
-    const sorted = [...flgtsTableData].sort((a, b) => {
-      const colA = a[arrow.column];
-      const colB = b[arrow.column];
-
-      if (arrow.direction === "Up") {
-        return colA.localeCompare(colB);
-      } else {
-        return colB.localeCompare(colA);
-      }
-    });
-
-    return sorted;
-  };
-
-  const handleArrow = (columnName) => {
-    setArrow((prevArrow) => ({
-      column: columnName,
-      direction:
-        prevArrow.column === columnName && prevArrow.direction === "Up"
-          ? "Down"
-          : "Up",
-    }));
-  };
-
-  const handleArrowDirection = () => {
-    setArrowDirection(!arrowDirection);
-  };
-
-  const handleDate = (e) => {
-    setDate(e.target.value);
-  };
-  const handleDay = (e) => {
-    setDay(e.target.value);
-  };
-  const handleFlight = (event) => {
-    setFlight(event.target.value);
-  };
-  const handleDepStn = (event) => {
-    setDepStn(event.target.value);
-  };
-  const handleSTD = (event) => {
-    setStd(event.target.value);
-  };
-  const handleBT = (event) => {
-    setBt(event.target.value);
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFilter((prevFilter) => ({
-      ...prevFilter,
-      [name]: value,
-    }));
-  };
-
-  const handleSTA = (event) => {
-    setSta(event.target.value);
-  };
-  const handleArrStn = (event) => {
-    setArrStn(event.target.value);
-  };
-
-  const handleVariant = (event) => {
-    setVariant(event.target.value);
-  };
-
-  const handleDropDownChange = (selectedValue) => {
-    setSelectedVariant(selectedValue);
-    if (selectedRotation && selectedVariant) {
+  useEffect(() => {
+    if (selectedRotation && selectedVariant && effFromDate && effToDate && dow) {
       setEditable(false);
+      getFgtsWORotations();
     }
-  };
+  }, [selectedRotation, selectedVariant, effFromDate, effToDate, rotationDevelopmentTableData]);
 
-  const startIndex = (currentPage - 1) * RowsPerPage;
-  const endIndex = startIndex + RowsPerPage;
-
-  const handlePageChange = (event, page) => {
-    setCurrentPage(page);
+  const handleRotationChange = async (val) => {
+    if (val === "new") {
+      try {
+        const res = await axios.get("https://airlineplan.com/getNextRotationNumber", {
+          headers: { "x-access-token": localStorage.getItem("accessToken") }
+        });
+        setSelectedRotation(res.data.nextRotationNumber);
+        setEffToDate(""); setEffFromDate(""); setDow("");
+        setRotationDevelopmentTableData([]);
+        setEditable(true);
+      } catch (e) { console.error(e); }
+    } else {
+      try {
+        const res = await axios.get(`https://airlineplan.com/rotationbyid/${val}`, {
+          headers: { "x-access-token": localStorage.getItem("accessToken") }
+        });
+        const { rotationDetails, rotationSummary } = res.data;
+        setRotationDevelopmentTableData(rotationDetails);
+        setSelectedRotation(parseInt(val));
+        setSelectedVariant(rotationSummary.variant);
+        setEffFromDate(rotationSummary.effFromDt ? dayjs(rotationSummary.effFromDt).format("YYYY-MM-DD") : "");
+        setEffToDate(rotationSummary.effToDt ? dayjs(rotationSummary.effToDt).format("YYYY-MM-DD") : "");
+        setDow(rotationSummary.dow);
+      } catch (e) { console.error(e); }
+    }
   };
 
   const handleSave = async () => {
-    try {
-      if (
-        !selectedRotation ||
-        !effFromDate ||
-        !effToDate ||
-        !dow ||
-        !selectedVariant
-      ) {
-        // Handle the case where one or more fields are empty
-        console.error(
-          "One or more fields are empty. Please fill in all required fields."
-        );
-        return;
-      }
-
-      // Make a single request to update all fields
-      await axios.post(
-        "https://airlineplan.com/updateRotationSummary",
-        {
-          rotationNumber: selectedRotation,
-          rotationTag,
-          effFromDate,
-          effToDate,
-          dow,
-          selectedVariant,
-        },
-        {
-          headers: {
-            "x-access-token": `${localStorage.getItem("accessToken")}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      // Once saved, set fields as uneditable
-      setEditable(false);
-    } catch (error) {
-      console.error("Error updating RotationSummary:", error);
+    if (!selectedRotation || !effFromDate || !effToDate || !dow || !selectedVariant) {
+      setLeftPanelError(true);
+      return;
     }
+    try {
+      await axios.post("https://airlineplan.com/updateRotationSummary", {
+        rotationNumber: selectedRotation,
+        rotationTag, effFromDate, effToDate, dow, selectedVariant
+      }, { headers: { "x-access-token": localStorage.getItem("accessToken") } });
+      setEditable(false);
+      toast.success("Rotation saved successfully");
+    } catch (e) { toast.error("Error saving rotation"); }
   };
 
-  const fieldProps = editable ? {} : { disabled: true };
-  const rotationDevelopmentProps = editable ? { disabled: true } : {};
-
-  const totalBt = useMemo(() => {
-    const totalMinutes = rotationDevelopmentTableData.reduce((total, item) => {
-      // Check if item.bt is defined and has the expected format
-      if (item.bt && /^\d{2}:\d{2}$/.test(item.bt)) {
-        const [hours, minutes] = item.bt.split(":").map(Number);
-        return total + hours * 60 + minutes;
-      }
-      return total;
-    }, 0);
-
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    return `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}`;
-  }, [rotationDevelopmentTableData]);
-
-  const totalGt = useMemo(() => {
-    const totalMinutes = rotationDevelopmentTableData.reduce((total, item) => {
-      // Check if item.bt is defined and has the expected format
-      if (item.gt && /^\d{2}:\d{2}$/.test(item.gt)) {
-        const [hours, minutes] = item.gt.split(":").map(Number);
-        return total + hours * 60 + minutes;
-      }
-      return total;
-    }, 0);
-
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    return `${hours.toString().padStart(2, "0")}:${minutes
-      .toString()
-      .padStart(2, "0")}`;
-  }, [rotationDevelopmentTableData]);
-
   const handleAddCurrent = async () => {
+    if (!effFromDate || !effToDate) {
+      setLeftPanelError(true);
+      return;
+    }
+    setIsLoading(true);
     try {
-      setIsLoading(true);
+      const res = await axios.post("https://airlineplan.com/addRotationDetailsFlgtChange", {
+        rotationNumber: selectedRotation,
+        depNumber: rotationDevelopmentTableData.length + 1,
+        flightNumber: flight,
+        depStn: depStn.trim() || originalDepStn,
+        std: std.trim() || originalStd,
+        bt, sta, arrStn, variant: selectedVariant, dow,
+        effFromDate, effToDate, domIntl, gt
+      }, { headers: { "x-access-token": localStorage.getItem("accessToken") } });
 
-      if (!effFromDate || !effToDate) {
-        setLeftPanelError(true);
-        console.error("effFromDate and effToDate are required.");
-        return;
+      if (res.status === 200 || res.status === 201) {
+        toast.success("Leg added");
+        setRotationDevelopmentTableData(prev => [...prev, {
+            ...res.data.data, // Assuming API returns the created object or similar structure
+            rotationNumber: selectedRotation,
+            depNumber: rotationDevelopmentTableData.length + 1,
+            flightNumber: flight,
+            depStn: depStn.trim() || originalDepStn,
+            std: std.trim() || originalStd,
+            bt, sta, arrStn, variant: selectedVariant, dow, effFromDate, effToDate, domIntl, gt
+        }]);
+        // Reset Inputs
+        setFlight(""); setBt(""); setSta(""); setArrStn(""); setDomIntl(""); setGt("00:00");
+        flightInputRef.current?.focus();
       }
-
-      const response = await axios.post(
-        "https://airlineplan.com/addRotationDetailsFlgtChange",
-        {
-          rotationNumber: selectedRotation,
-          depNumber: rotationDevelopmentTableData.length + 1,
-          flightNumber: flight,
-          depStn: depStn.trim() !== "" ? depStn : originalDepStn,
-          std: std.trim() !== "" ? std : originalStd,
-          bt,
-          sta,
-          arrStn,
-          variant: selectedVariant,
-          dow,
-          effFromDate,
-          effToDate,
-          domIntl,
-          gt,
-        },
-        {
-          headers: {
-            "x-access-token": `${localStorage.getItem("accessToken")}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.status === 201 || response.status === 200) {
-        setDepCount((prevDepCount) => prevDepCount + 1);
-
-        // createConnections();
-        toast.success("Update successful!");
-
-        setRotationDevelopmentTableData((prevData) => {
-          return [
-            ...prevData,
-            {
-              rotationNumber: selectedRotation,
-              depNumber: depCount,
-              flightNumber: flight,
-              depStn: depStn.trim() !== "" ? depStn : originalDepStn,
-              std: std.trim() !== "" ? std : originalStd,
-              bt,
-              sta,
-              arrStn,
-              variant: selectedVariant,
-              dow,
-              effFromDate,
-              effToDate,
-              domIntl,
-              gt,
-            },
-          ];
-        });
-
-        // Reset form fields
-        resetFormFields();
-
-        flightInputRef.current.focus();
-      }
-    } catch (error) {
-      const { flightNumber } = error.response.data; // Extract flightNumber from response data
-
-      toast.error("Error adding current rotation:", flightNumber);
-
-      // Reset form fields
-      resetFormFields();
-
-      flightInputRef.current.focus();
+    } catch (e) { 
+        toast.error(`Error adding leg: ${e.response?.data?.flightNumber || ''}`);
+        flightInputRef.current?.focus();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Function to reset form fields
-  const resetFormFields = () => {
-    setFlight("");
-    setBt("");
-    setSta("");
-    setArrStn("");
-    setDomIntl("");
-    setGt("");
-    setDepStn("");
-    setStd("");
-  };
-
   const handleDeleteRotation = async () => {
+    setIsRotationDeleting(true);
     try {
-      // Make an Axios DELETE request to delete the rotation
-      setIsRotationDeleting(true);
-      const response = await axios.post(
-        "https://airlineplan.com/deleteCompleteRotation",
-        {
-          rotationNumber: selectedRotation,
-          selectedVariant: selectedVariant,
-          totalDepNumber: rotationDevelopmentTableData.length,
-        },
-        {
-          headers: {
-            "x-access-token": `${localStorage.getItem("accessToken")}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      // Check the response status and handle accordingly
-      if (response.status === 201 || response.status === 200) {
-        toast.success("Update successful!");
-        // createConnections();
-
-        if (response.status === 201 || response.status === 200) {
-          toast.success("Update successful!");
-
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-        }
-
-        setRotationDevelopmentTableData((prevData) => {
-          return prevData.filter(
-            (row) =>
-              row.rotationNumber !== selectedRotation &&
-              row.variant !== selectedVariant
-          );
-        });
-      } else {
-        console.error("Error deleting rotation:", response.data);
-        // Handle the error condition as per your application's requirements
-      }
-    } catch (error) {
-      console.error("Error deleting rotation:", error);
-      // Handle the error condition as per your application's requirements
-    } finally {
-      // Set loading state to false when the request is completed
-      setIsRotationDeleting(false);
-    }
+      await axios.post("https://airlineplan.com/deleteCompleteRotation", {
+        rotationNumber: selectedRotation,
+        selectedVariant,
+        totalDepNumber: rotationDevelopmentTableData.length
+      }, { headers: { "x-access-token": localStorage.getItem("accessToken") } });
+      
+      toast.success("Rotation deleted");
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (e) { console.error(e); } finally { setIsRotationDeleting(false); }
   };
 
   const handlePreviousInRotation = async () => {
+    setIsPrevLoading(true);
     try {
-      // Make an Axios DELETE request to delete the rotation
-
-      const lastObject =
-        rotationDevelopmentTableData[rotationDevelopmentTableData.length - 1];
-      let response;
-      // Make sure lastObject is defined before proceeding
-      if (!lastObject) {
-        response = await axios.post(
-          "https://airlineplan.com/deleteRotation",
-          {
-            rotationNumber: selectedRotation,
-            selectedVariant: selectedVariant,
-          },
-          {
-            headers: {
-              "x-access-token": `${localStorage.getItem("accessToken")}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (response.status === 201 || response.status === 200) {
-          toast.success("Update successful!");
-          // createConnections();
-
-          setRotationDevelopmentTableData((prevData) => {
-            return prevData.filter(
-              (row) =>
-                row.rotationNumber !== selectedRotation &&
-                row.variant !== selectedVariant
-            );
-          });
-
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-        }
-      } else {
-        setIsPrevLoading(true);
-        const { _id } = lastObject;
-        response = await axios.post(
-          "https://airlineplan.com/deletePrevInRotation",
-          {
-            rotationNumber: selectedRotation,
-            selectedVariant: selectedVariant,
-            depNumber: rotationDevelopmentTableData.length,
-            _id: _id,
-          },
-          {
-            headers: {
-              "x-access-token": `${localStorage.getItem("accessToken")}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        // Check the response status and handle accordingly
-        if (response.status === 201 || response.status === 200) {
-          toast.success("Update successful!");
-          // createConnections();
-
-          setRotationDevelopmentTableData((prevData) => {
-            // Filter out the lastObject from the previous state array
-            const newData = prevData.filter((item) => item._id !== _id);
-
-            // Use the callback to execute code after state update
-            // This ensures that the state update is completed before proceeding
-            if (newData.length === 0) {
-              setDepStn("");
-              setStd("");
+        const lastObject = rotationDevelopmentTableData[rotationDevelopmentTableData.length - 1];
+        let res;
+        
+        if(!lastObject) {
+             res = await axios.post("https://airlineplan.com/deleteRotation", {
+                rotationNumber: selectedRotation, selectedVariant
+             }, { headers: { "x-access-token": localStorage.getItem("accessToken") } });
+             if(res.status === 200) window.location.reload();
+        } else {
+            res = await axios.post("https://airlineplan.com/deletePrevInRotation", {
+                rotationNumber: selectedRotation, selectedVariant,
+                depNumber: rotationDevelopmentTableData.length,
+                _id: lastObject._id
+            }, { headers: { "x-access-token": localStorage.getItem("accessToken") } });
+            
+            if(res.status === 200) {
+                setRotationDevelopmentTableData(prev => prev.filter(i => i._id !== lastObject._id));
+                toast.success("Previous leg deleted");
             }
-
-            return newData;
-          });
         }
-      }
-    } catch (error) {
-      console.error("Error deleting rotation:", error);
-      // Handle the error condition as per your application's requirements
-    } finally {
-      // Set loading state to false when the request is completed
-      setIsPrevLoading(false);
-    }
+    } catch(e) { console.error(e); } finally { setIsPrevLoading(false); }
   };
 
-  const addTime = (firstTime, secondTime) => {
-    // Convert firstTime and secondTime to total minutes
-    const totalMinutes =
-      parseInt(firstTime.split(":")[0]) * 60 +
-      parseInt(firstTime.split(":")[1]) +
-      parseInt(secondTime.split(":")[0]) * 60 +
-      parseInt(secondTime.split(":")[1]);
-
-    // Calculate total hours and minutes remaining
-    const totalHours = Math.floor(totalMinutes / 60) % 24; // Remainder when dividing by 24 to wrap around
-    const totalMinutesRemaining = totalMinutes % 60;
-
-    // Pad single digit minutes and hours with leading zero
-    const formattedHours = totalHours.toString().padStart(2, "0");
-    const formattedMinutes = totalMinutesRemaining.toString().padStart(2, "0");
-
-    return `${formattedHours}:${formattedMinutes}`;
+  // --- TABLE HELPERS ---
+  const handleFilterChange = (e) => setFilter({ ...filter, [e.target.name]: e.target.value });
+  
+  const sortedData = () => {
+    if (!arrow.column) return flgtsTableData;
+    return [...flgtsTableData].sort((a, b) => {
+        const valA = String(a[arrow.column] || "");
+        const valB = String(b[arrow.column] || "");
+        return arrow.direction === "Up" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    });
   };
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get(
-          "https://airlineplan.com/listVariants",
-          {
-            headers: {
-              "x-access-token": accessToken,
-            },
-          }
-        );
-        setListOfVariant(response.data);
+  const paginatedData = sortedData()?.filter(row => {
+      return Object.keys(filter).every(key => {
+          if(!filter[key]) return true;
+          const val = key === 'date' ? moment(row.date).format("DD-MMM-YY") : String(row[key] || "");
+          return val.toLowerCase().includes(filter[key].toLowerCase());
+      });
+  })?.slice((currentPage - 1) * RowsPerPage, currentPage * RowsPerPage);
 
-        const res = await axios.get("https://airlineplan.com/listRotations", {
-          headers: {
-            "x-access-token": accessToken,
-          },
-        });
-        setListOfRotations(res.data);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (rotationDevelopmentTableData.length > 0) {
-      const lastItem =
-        rotationDevelopmentTableData[rotationDevelopmentTableData.length - 1];
-      setStd(addTime(lastItem.sta, lastItem.gt));
-      setDepStn(lastItem.arrStn);
-    }
-  }, [rotationDevelopmentTableData]);
+  const rotationOptions = useMemo(() => {
+      const opts = listOfRotation.map(r => ({ label: r.label, value: r.value }));
+      opts.unshift({ label: "New Rotation", value: "new" });
+      return opts;
+  }, [listOfRotation]);
 
   return (
-    <>
-      <div>
-        <Grid container mt={3} spacing={2}>
-          {/* Top Left Container */}
-          <Grid item xs={3}>
-            <Paper>
-              <Stack direction="column" spacing={1}>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  {/* Labels and Dropdowns */}
-                  <Typography
-                    color="text.secondary"
-                    style={{ fontSize: "14px" }}
-                  >
-                    Variant:
-                  </Typography>
-                  <DropDownMenu
-                    data={listOfVariant}
-                    onChange={handleDropDownChange}
-                    fieldProps={fieldProps}
-                    selectedValue={selectedVariant}
-                  />
-                </Stack>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  {/* Labels and Dropdowns */}
-                  <Typography
-                    color="text.secondary"
-                    style={{ fontSize: "14px" }}
-                  >
-                    Rotation #:
-                  </Typography>
-                  <RotationDropDownMenu
-                    data={listOfRotation}
-                    handleRotationChange={handleRotationChange}
-                    selectedRotation={selectedRotation}
-                  />
-                </Stack>
-                {/* Add more rows as needed */}
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Typography
-                    color="text.secondary"
-                    style={{ fontSize: "14px" }}
-                  >
-                    Rotation Tag:
-                  </Typography>
-                  <TextField
-                    {...fieldProps}
-                    size="small"
-                    style={{ width: 135 }}
-                    value={rotationTag}
-                    onChange={(event) => setRotationTag(event.target.value)}
-                    // onBlur={handleRotationTagBlur}
-                    inputProps={{
-                      style: {
-                        padding: "10px",
-                        height: "15px",
-                        fontSize: "14px",
-                      },
-                    }}
-                  />
-                </Stack>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Typography
-                    color="text.secondary"
-                    style={{ fontSize: "14px" }}
-                  >
-                    Eff from date:
-                  </Typography>
-                  <div
-                    style={{
-                      position: "relative",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "flex-end",
-                    }}
-                  >
-                    <LocalizationProvider dateAdapter={AdapterDayjs}>
-                      <DatePicker
-                        format="DD/MMM/YY"
-                        value={dayjs(effFromDate)}
-                        size="small"
-                        onChange={(date) => setEffFromDate(date)}
-                        // onChange={(date) => effFromDtChange(date, 'effFromDate')}
-                        slotProps={{
-                          field: { shouldRespectLeadingZeros: true },
-                        }}
-                        sx={{
-                          // Set the width of the input field
-                          width: "135px",
-                          // Target the input element inside the input field
-                          "& .MuiInputBase-input": {
-                            // Set the height of the input element
-                            height: "8px",
-                            // Set the font size of the input element
-                            fontSize: "14px",
-                          },
-                          // Target the calendar element
-                          "& .MuiPickersCalendar-root": {
-                            // Target the day elements inside the calendar
-                            "& .MuiPickersDay-root": {
-                              // Set the font size of the day elements
-                              fontSize: "14px",
-                            },
-                            // Target the icon button elements inside the calendar header
-                            "& .MuiPickersCalendarHeader-iconButton": {
-                              // Set the font size of the icon button elements
-                              fontSize: "14px",
-                            },
-                          },
-                        }}
-                        {...fieldProps}
-                      />
-                      {/* Conditional rendering of the warning message */}
-                      {leftPanelError && !effFromDate && (
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            position: "absolute",
-                            right: "100%",
-                            color: "red",
-                          }}
-                        >
-                          required
-                        </Typography>
-                      )}
-                    </LocalizationProvider>
-                  </div>
-                </Stack>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Typography
-                    color="text.secondary"
-                    style={{ fontSize: "14px" }}
-                  >
-                    Eff to date:
-                  </Typography>
+    <div className="w-full h-[calc(100vh-100px)] bg-slate-50 dark:bg-slate-950 p-4 font-sans flex gap-6 overflow-hidden">
+      
+      {/* --- LEFT PANEL: CONTROLS --- */}
+      <div className="w-[320px] flex-shrink-0 flex flex-col gap-4">
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col gap-5 h-full overflow-y-auto custom-scrollbar">
+            
+            <div className="flex items-center gap-2 mb-2">
+                <RotateCw className="text-indigo-500" size={20} />
+                <h2 className="text-lg font-bold text-slate-800 dark:text-white">Configuration</h2>
+            </div>
 
-                  <div
-                    style={{
-                      position: "relative",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "flex-end",
-                    }}
-                  >
-                    <LocalizationProvider dateAdapter={AdapterDayjs}>
-                      <DatePicker
-                        format="DD/MMM/YY"
-                        value={dayjs(effToDate)}
-                        onChange={(date) => setEffToDate(date)}
-                        // onChange={(date) => effToDtChange(date, 'effToDate')}
-                        slotProps={{
-                          field: { shouldRespectLeadingZeros: true },
-                        }}
-                        sx={{
-                          // Set the width of the input field
-                          width: "135px",
-                          // Target the input element inside the input field
-                          "& .MuiInputBase-input": {
-                            // Set the height of the input element
-                            height: "8px",
-                            // Set the font size of the input element
-                            fontSize: "14px",
-                          },
-                          // Target the calendar element
-                          "& .MuiPickersCalendar-root": {
-                            // Target the day elements inside the calendar
-                            "& .MuiPickersDay-root": {
-                              // Set the font size of the day elements
-                              fontSize: "14px",
-                            },
-                            // Target the icon button elements inside the calendar header
-                            "& .MuiPickersCalendarHeader-iconButton": {
-                              // Set the font size of the icon button elements
-                              fontSize: "14px",
-                            },
-                          },
-                        }}
-                        {...fieldProps}
-                      />
-                      {/* Conditional rendering of the warning message */}
-                      {leftPanelError && !effToDate && (
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            position: "absolute",
-                            right: "100%",
-                            color: "red",
-                          }}
-                        >
-                          required
-                        </Typography>
-                      )}
-                    </LocalizationProvider>
-                  </div>
-                </Stack>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Typography
-                    color="text.secondary"
-                    style={{ fontSize: "14px" }}
-                  >
-                    DoW:
-                  </Typography>
-                  <div
-                    style={{
-                      position: "relative",
-                      display: "flex",
-                      alignItems: "bottom",
-                      justifyContent: "flex-end",
-                    }}
-                  >
-                    <TextField
-                      {...fieldProps}
-                      value={dow}
-                      style={{ width: 135 }}
-                      size="small"
-                      onChange={(event) => setDow(event.target.value)}
-                      // onBlur={handleDowBlur}
-                      inputProps={{
-                        style: {
-                          padding: "10px",
-                          height: "15px",
-                          fontSize: "14px",
-                        },
-                      }}
+            {/* Form Fields */}
+            <div className="space-y-4">
+                <div>
+                    <Label>Variant</Label>
+                    <StyledSelect 
+                        options={listOfVariant.map(v => ({ label: v.label, value: v.value }))}
+                        value={selectedVariant}
+                        onChange={(e) => setSelectedVariant(e.target.value)}
+                        disabled={!editable && selectedRotation}
                     />
-                    {leftPanelError && !dow && (
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          position: "absolute",
-                          right: "100%",
-                          color: "red",
-                        }}
-                      >
-                        DoW is required.
-                      </Typography>
-                    )}
-                    {leftPanelError && dow && isNaN(dow) && (
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          position: "absolute",
-                          right: "100%",
-                          color: "red",
-                        }}
-                      >
-                        DoW must be a number.
-                      </Typography>
-                    )}
-                  </div>
-                </Stack>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Typography
-                    color="text.secondary"
-                    style={{ fontSize: "14px", flex: "1", textAlign: "start" }}
-                  >
-                    BH total:
-                  </Typography>
-                  <Typography
-                    variant="p"
-                    color="text.secondary"
-                    style={{ flex: "1", textAlign: "center" }}
-                  >
-                    {totalBt}
-                  </Typography>
-                </Stack>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Typography
-                    color="text.secondary"
-                    style={{ fontSize: "14px", flex: "1", textAlign: "start" }}
-                  >
-                    GT total:
-                  </Typography>
-                  <Typography
-                    variant="p"
-                    color="text.secondary"
-                    style={{ flex: "1", textAlign: "center" }}
-                  >
-                    {totalGt}
-                  </Typography>
-                </Stack>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-                  <Typography
-                    color="text.secondary"
-                    style={{ fontSize: "14px", flex: "1", textAlign: "start" }}
-                  >
-                    Rtn total time:
-                  </Typography>
-                  <Typography
-                    variant="p"
-                    color="text.secondary"
-                    style={{ flex: "1", textAlign: "center" }}
-                  >
-                    {addTime(totalBt, totalGt)}
-                  </Typography>
-                </Stack>
-                <Stack
-                  direction="row"
-                  justifyContent="end"
-                  sx={{ width: "100%", height: "32px", marginTop: "5px" }}
-                >
-                  {/* Your other components here */}
-                  {editable && (
-                    <Box sx={{ mr: 2 }}>
-                      {" "}
-                      {/* Adjust the marginRight value as needed */}
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        sx={{ width: "100px", height: "32px" }}
-                        onClick={handleSave}
-                      >
-                        Save
-                      </Button>
-                    </Box>
-                  )}
-                </Stack>
-              </Stack>
-            </Paper>
-          </Grid>
+                </div>
+                
+                <div>
+                    <Label>Rotation #</Label>
+                    <StyledSelect 
+                        options={rotationOptions}
+                        value={selectedRotation}
+                        onChange={(e) => handleRotationChange(e.target.value)}
+                        placeholder="Select or Create New"
+                    />
+                </div>
 
-          {/* Top Right Container */}
-          <Grid item xs={8} ml={4}>
-            <Typography color="text.secondary" style={{ fontSize: "16px" }}>
-              Rotation Development
-            </Typography>
-            <Paper>
-              <Table style={{ width: "100%" }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell
-                      sx={{
-                        whiteSpace: "nowrap",
-                        fontWeight: "bold",
-                        fontSize: "12px",
-                        paddingX: "0px",
-                        paddingY: "5px",
-                        textAlign: "center",
-                      }}
-                    >
-                      Dep #
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        whiteSpace: "nowrap",
-                        fontWeight: "bold",
-                        fontSize: "12px",
-                        paddingX: "0px",
-                        paddingY: "5px",
-                        textAlign: "center",
-                      }}
-                    >
-                      Flight #
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        whiteSpace: "nowrap",
-                        fontWeight: "bold",
-                        fontSize: "12px",
-                        paddingX: "0px",
-                        paddingY: "5px",
-                        textAlign: "center",
-                      }}
-                    >
-                      Dep Stn
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        whiteSpace: "nowrap",
-                        fontWeight: "bold",
-                        fontSize: "12px",
-                        paddingX: "0px",
-                        paddingY: "5px",
-                        textAlign: "center",
-                      }}
-                    >
-                      STD(LT)
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        whiteSpace: "nowrap",
-                        fontWeight: "bold",
-                        fontSize: "12px",
-                        paddingX: "0px",
-                        paddingY: "5px",
-                        textAlign: "center",
-                      }}
-                    >
-                      BT
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        whiteSpace: "nowrap",
-                        fontWeight: "bold",
-                        fontSize: "12px",
-                        paddingX: "0px",
-                        paddingY: "5px",
-                        textAlign: "center",
-                      }}
-                    >
-                      STA(LT)
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        whiteSpace: "nowrap",
-                        fontWeight: "bold",
-                        fontSize: "12px",
-                        paddingX: "0px",
-                        paddingY: "5px",
-                        textAlign: "center",
-                      }}
-                    >
-                      Arr Stn
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        whiteSpace: "nowrap",
-                        fontWeight: "bold",
-                        fontSize: "12px",
-                        paddingX: "0px",
-                        paddingY: "5px",
-                        textAlign: "center",
-                      }}
-                    >
-                      Dom / INTL
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        whiteSpace: "nowrap",
-                        fontWeight: "bold",
-                        fontSize: "12px",
-                        paddingX: "0px",
-                        paddingY: "5px",
-                        textAlign: "center",
-                      }}
-                    >
-                      GT
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {rotationDevelopmentTableData.map((row, index) => (
-                    <TableRow key={row._id}>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          paddingX: "0px",
-                          paddingY: "12px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {index + 1}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          paddingX: "0px",
-                          paddingY: "12px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {row.flightNumber}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          paddingX: "0px",
-                          paddingY: "12px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {row.depStn}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          paddingX: "0px",
-                          paddingY: "12px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {row.std}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          paddingX: "0px",
-                          paddingY: "12px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {row.bt}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          paddingX: "0px",
-                          paddingY: "12px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {row.sta}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          paddingX: "0px",
-                          paddingY: "12px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {row.arrStn}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          paddingX: "0px",
-                          paddingY: "12px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {row.domIntl}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          paddingX: "0px",
-                          paddingY: "12px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {row.gt}
-                      </TableCell>
-                      {/* Add more table cells for additional columns */}
-                    </TableRow>
-                  ))}
-                  {selectedRotation !== "" && (
-                    <TableRow key={1} style={{ width: "50px" }}>
-                      <TableCell
-                        sx={{
-                          padding: "8px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        {rotationDevelopmentTableData.length + 1}
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          padding: "8px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <TextField
-                          ref={flightInputRef}
-                          sx={{ width: "65px" }}
-                          size="small"
-                          value={flight}
-                          onChange={(e) => setFlight(e.target.value)}
-                          inputProps={{
-                            style: {
-                              padding: "10px",
-                              height: "15px",
-                              fontSize: "12px",
-                            },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          padding: "8px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <TextField
-                          sx={{ width: "65px" }}
-                          size="small"
-                          // Use optional chaining to access arrStn only if rotationDevelopmentTableData exists and is not empty
-                          value={depStn}
-                          onChange={(e) => setDepStn(e.target.value)}
-                          inputProps={{
-                            style: {
-                              padding: "10px",
-                              height: "15px",
-                              fontSize: "12px",
-                            },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          padding: "8px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <TextField
-                          sx={{ width: "85px" }}
-                          size="small"
-                          type="time"
-                          ampm={false}
-                          value={std}
-                          onChange={(e) => setStd(e.target.value)}
-                          inputProps={{
-                            style: {
-                              padding: "10px",
-                              height: "15px",
-                              fontSize: "12px",
-                            },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          padding: "8px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <TextField
-                          sx={{ width: "85px" }}
-                          size="small"
-                          type="time"
-                          ampm={false}
-                          value={bt}
-                          onChange={(e) => setBt(e.target.value)}
-                          inputProps={{
-                            style: {
-                              padding: "10px",
-                              height: "15px",
-                              fontSize: "12px",
-                            },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          padding: "8px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <TextField
-                          sx={{ width: "85px" }}
-                          size="small"
-                          type="time"
-                          ampm={false}
-                          value={sta}
-                          onChange={(e) => setSta(e.target.value)}
-                          inputProps={{
-                            style: {
-                              padding: "10px",
-                              height: "15px",
-                              fontSize: "12px",
-                            },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          padding: "8px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <TextField
-                          size="small"
-                          sx={{ width: "65px" }}
-                          value={arrStn}
-                          onChange={(e) => setArrStn(e.target.value)}
-                          inputProps={{
-                            style: {
-                              padding: "10px",
-                              height: "15px",
-                              fontSize: "12px",
-                            },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          padding: "8px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <TextField
-                          size="small"
-                          sx={{ width: "65px" }}
-                          value={domIntl}
-                          onChange={(e) => setDomIntl(e.target.value)}
-                          inputProps={{
-                            style: {
-                              padding: "10px",
-                              height: "15px",
-                              fontSize: "12px",
-                            },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          padding: "8px",
-                          fontSize: "12px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <TextField
-                          sx={{ width: "85px" }}
-                          size="small"
-                          type="time"
-                          ampm={false}
-                          value={gt}
-                          onChange={(e) => setGt(e.target.value)}
-                          inputProps={{
-                            style: {
-                              padding: "10px",
-                              height: "15px",
-                              fontSize: "12px",
-                            },
-                          }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                <div>
+                    <Label>Rotation Tag</Label>
+                    <StyledInput 
+                        value={rotationTag}
+                        onChange={(e) => setRotationTag(e.target.value)}
+                        disabled={!editable}
+                    />
+                </div>
 
-              {/* Buttons */}
-              <Stack direction="row" justifyContent="space-between" mt={4}>
-                <LoadingButton
-                  variant="contained"
-                  onClick={handleDeleteRotation}
-                  sx={{
-                    textTransform: "capitalize",
-                    borderColor: "#FF5733",
-                    color: "#FFF",
-                    "&:hover": {
-                      bgcolor: "#7a98cc",
-                      color: "white",
-                      borderColor: "#FF5733",
-                    },
-                  }}
-                  loading={isRotationDeleting}
-                  {...rotationDevelopmentProps}
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <Label required>Eff From</Label>
+                        <StyledInput 
+                            type="date"
+                            value={effFromDate}
+                            onChange={(e) => setEffFromDate(e.target.value)}
+                            error={leftPanelError && !effFromDate}
+                            disabled={!editable}
+                        />
+                    </div>
+                    <div>
+                        <Label required>Eff To</Label>
+                        <StyledInput 
+                            type="date"
+                            value={effToDate}
+                            onChange={(e) => setEffToDate(e.target.value)}
+                            error={leftPanelError && !effToDate}
+                            disabled={!editable}
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <Label required>Days (DoW)</Label>
+                    <StyledInput 
+                        value={dow}
+                        onChange={(e) => setDow(e.target.value)}
+                        error={leftPanelError && (!dow || isNaN(dow))}
+                        placeholder="e.g. 1357"
+                        disabled={!editable}
+                    />
+                </div>
+            </div>
+
+            {/* Stats Card */}
+            <div className="mt-4 space-y-3">
+                <StatsCard label="Total Block Time" value={totalBt} icon={Clock} colorClass="bg-blue-500" />
+                <StatsCard label="Total Ground Time" value={totalGt} icon={Plane} colorClass="bg-amber-500" />
+                <StatsCard label="Rotation Total" value={addTime(totalBt, totalGt)} icon={RotateCw} colorClass="bg-emerald-500" />
+            </div>
+
+            {/* Save Action */}
+            {editable && (
+                <button 
+                    onClick={handleSave}
+                    className="mt-auto w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium shadow-md shadow-indigo-500/20 transition-all flex items-center justify-center gap-2"
                 >
-                  Delete Rotation
-                </LoadingButton>
-                {/* Spacer */}
-                <Stack direction="row" spacing={2}>
-                  <LoadingButton
-                    variant="contained"
-                    sx={{
-                      textTransform: "capitalize",
-                      borderColor: "#FF5733",
-                      color: "#FFF",
-                      "&:hover": {
-                        bgcolor: "#7a98cc",
-                        color: "white",
-                        borderColor: "#FF5733",
-                      },
-                    }}
-                    {...rotationDevelopmentProps}
-                    onClick={handlePreviousInRotation}
-                    loading={isPrevLoading}
-                  >
-                    Delete Previous
-                  </LoadingButton>
-                  <LoadingButton
-                    variant="contained"
-                    sx={{
-                      textTransform: "capitalize",
-                      borderColor: "#FF5733",
-                      color: "#FFF",
-                      "&:hover": {
-                        bgcolor: "#7a98cc",
-                        color: "white",
-                        borderColor: "#FF5733",
-                      },
-                    }}
-                    {...rotationDevelopmentProps}
-                    onClick={handleAddCurrent}
-                    loading={isLoading} // loading state boolean
-                  >
-                    Add Current
-                  </LoadingButton>
-                </Stack>
-              </Stack>
-            </Paper>
-          </Grid>
-
-          {/* Bottom Left Container */}
-          <Grid item xs={3}>
-            {/* Void Space */}
-          </Grid>
-
-          {/* Bottom Right Container */}
-          <Grid item xs={8} ml={4}>
-            <Typography color="text.secondary" style={{ fontSize: "16px" }}>
-              Flights not assigned to a rotation
-            </Typography>
-
-            <Paper>
-              <Stack
-                sx={{ overflowX: "scroll", scrollbarWidth: "thin" }}
-                className="custom-scrollbar"
-              >
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ paddingX: "4px" }}>
-                        <Typography
-                          sx={{ fontWeight: "bold", fontSize: "14px" }}
-                        >
-                          Filter:-
-                        </Typography>
-                      </TableCell>
-                      <TableCell sx={{ paddingX: "4px" }}>
-                        <TextField
-                          variant="outlined"
-                          size="small"
-                          placeholder="Date"
-                          onChange={handleChange}
-                          name="date"
-                          sx={{
-                            minWidth: "10px",
-                            fontSize: "10px",
-                            "& .MuiOutlinedInput-input": { fontSize: "12px" },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ paddingX: "4px" }}>
-                        <TextField
-                          variant="outlined"
-                          size="small"
-                          placeholder="Day"
-                          name="day"
-                          onChange={handleChange}
-                          sx={{
-                            minWidth: "10px",
-                            fontSize: "10px",
-                            "& .MuiOutlinedInput-input": { fontSize: "12px" },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ paddingX: "4px" }}>
-                        <TextField
-                          variant="outlined"
-                          size="small"
-                          name="flight"
-                          placeholder="Flight #"
-                          onChange={handleChange}
-                          sx={{
-                            minWidth: "10px",
-                            fontSize: "10px",
-                            "& .MuiOutlinedInput-input": { fontSize: "12px" },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ paddingX: "4px" }}>
-                        <TextField
-                          variant="outlined"
-                          size="small"
-                          name="depStn"
-                          placeholder="Dep Stn"
-                          onChange={handleChange}
-                          sx={{
-                            minWidth: "10px",
-                            fontSize: "10px",
-                            "& .MuiOutlinedInput-input": { fontSize: "12px" },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ paddingX: "4px" }}>
-                        <TextField
-                          variant="outlined"
-                          size="small"
-                          name="std"
-                          placeholder="STD(LT)"
-                          onChange={handleChange}
-                          sx={{
-                            minWidth: "10px",
-                            fontSize: "10px",
-                            "& .MuiOutlinedInput-input": { fontSize: "12px" },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ paddingX: "4px" }}>
-                        <TextField
-                          variant="outlined"
-                          size="small"
-                          name="bt"
-                          placeholder="BT"
-                          onChange={handleChange}
-                          sx={{
-                            minWidth: "10px",
-                            fontSize: "10px",
-                            "& .MuiOutlinedInput-input": { fontSize: "12px" },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ paddingX: "4px" }}>
-                        <TextField
-                          variant="outlined"
-                          size="small"
-                          name="sta"
-                          placeholder="STA(LT)"
-                          onChange={handleChange}
-                          sx={{
-                            minWidth: "10px",
-                            fontSize: "10px",
-                            "& .MuiOutlinedInput-input": { fontSize: "12px" },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ paddingX: "4px" }}>
-                        <TextField
-                          variant="outlined"
-                          size="small"
-                          name="arrStn"
-                          placeholder="Arr Stn"
-                          onChange={handleChange}
-                          sx={{
-                            minWidth: "10px",
-                            fontSize: "10px",
-                            "& .MuiOutlinedInput-input": { fontSize: "12px" },
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ paddingX: "4px" }}>
-                        <TextField
-                          variant="outlined"
-                          size="small"
-                          name="variant"
-                          placeholder="Variant"
-                          onChange={handleChange}
-                          sx={{
-                            minWidth: "10px",
-                            fontSize: "10px",
-                            "& .MuiOutlinedInput-input": { fontSize: "12px" },
-                          }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: "#F5F5F5" }}>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                          marginLeft: "50px",
-                          paddingX: "0px",
-                          paddingY: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        S.No
-                        <IconButton>
-                          {arrowDirection ? (
-                            <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                          ) : (
-                            <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                          )}
-                        </IconButton>
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                          paddingX: "0px",
-                          paddingY: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        Date
-                        <IconButton
-                          onClick={() => {
-                            handleArrow("date");
-                            handleArrowDirection();
-                          }}
-                        >
-                          {arrowDirection ? (
-                            <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                          ) : (
-                            <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                          )}
-                        </IconButton>
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                          paddingX: "0px",
-                          paddingY: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        Day
-                        <IconButton
-                          onClick={() => {
-                            handleArrow("day");
-                            handleArrowDirection();
-                          }}
-                        >
-                          {arrowDirection ? (
-                            <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                          ) : (
-                            <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                          )}
-                        </IconButton>
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                          paddingX: "0px",
-                          paddingY: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        Flight #
-                        <IconButton
-                          onClick={() => {
-                            handleArrow("flight");
-                            handleArrowDirection();
-                          }}
-                        >
-                          {arrowDirection ? (
-                            <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                          ) : (
-                            <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                          )}
-                        </IconButton>
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                          paddingX: "0px",
-                          paddingY: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        Dep Stn
-                        <IconButton
-                          onClick={() => {
-                            handleArrow("depStn");
-                            handleArrowDirection();
-                          }}
-                        >
-                          {arrowDirection ? (
-                            <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                          ) : (
-                            <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                          )}
-                        </IconButton>
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                          paddingX: "0px",
-                          paddingY: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        STD(LT)
-                        <IconButton
-                          onClick={() => {
-                            handleArrow("std");
-                            handleArrowDirection();
-                          }}
-                        >
-                          {arrowDirection ? (
-                            <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                          ) : (
-                            <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                          )}
-                        </IconButton>
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                          paddingX: "0px",
-                          paddingY: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        BT
-                        <IconButton
-                          onClick={() => {
-                            handleArrow("bt");
-                            handleArrowDirection();
-                          }}
-                        >
-                          {arrowDirection ? (
-                            <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                          ) : (
-                            <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                          )}
-                        </IconButton>
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                          paddingX: "0px",
-                          paddingY: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        STA(LT)
-                        <IconButton
-                          onClick={() => {
-                            handleArrow("sta");
-                            handleArrowDirection();
-                          }}
-                        >
-                          {arrowDirection ? (
-                            <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                          ) : (
-                            <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                          )}
-                        </IconButton>
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                          paddingX: "0px",
-                          paddingY: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        Arr Stn
-                        <IconButton
-                          onClick={() => {
-                            handleArrow("arrStn");
-                            handleArrowDirection();
-                          }}
-                        >
-                          {arrowDirection ? (
-                            <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                          ) : (
-                            <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                          )}
-                        </IconButton>
-                      </TableCell>
-                      <TableCell
-                        sx={{
-                          whiteSpace: "nowrap",
-                          fontWeight: "bold",
-                          fontSize: "12px",
-                          paddingX: "0px",
-                          paddingY: "5px",
-                          textAlign: "center",
-                        }}
-                      >
-                        Variant
-                        <IconButton
-                          onClick={() => {
-                            handleArrow("variant");
-                            handleArrowDirection();
-                          }}
-                        >
-                          {arrowDirection ? (
-                            <ArrowUpwardIcon sx={{ fontSize: "16px" }} />
-                          ) : (
-                            <ArrowDownwardIcon sx={{ fontSize: "16px" }} />
-                          )}
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {sortedData()
-                      ?.filter(
-                        (row) =>
-                          (row.flight || "")
-                            ?.toLowerCase()
-                            .includes(filter.flight?.toLowerCase()) &&
-                          (row.depStn || "")
-                            ?.toLowerCase()
-                            ?.includes(filter.depStn?.toLowerCase()) &&
-                          (row.std || "")
-                            ?.toLowerCase()
-                            ?.includes(filter.std?.toLowerCase()) &&
-                          (row.bt || "")
-                            ?.toLowerCase()
-                            ?.includes(filter.bt?.toLowerCase()) &&
-                          (row.sta || "")
-                            ?.toLowerCase()
-                            ?.includes(filter.sta?.toLowerCase()) &&
-                          (row.arrStn || "")
-                            ?.toLowerCase()
-                            ?.includes(filter.arrStn?.toLowerCase()) &&
-                          (row.variant || "")
-                            ?.toLowerCase()
-                            ?.includes(filter.variant?.toLowerCase()) &&
-                          (moment(row.date).format("DD-MMM-YY") || "")
-                            ?.toLowerCase()
-                            ?.includes(filter.date?.toLowerCase()) &&
-                          (row.day || "")
-                            ?.toLowerCase()
-                            ?.includes(filter.day?.toLowerCase())
-                      )
-                      ?.map((row, index) => (
-                        <TableRow
-                          key={index}
-                          sx={{
-                            backgroundColor:
-                              index % 2 !== 0 ? "#f0f0f0" : "inherit",
-                          }}
-                        >
-                          <TableCell
-                            sx={{
-                              paddingX: "0px",
-                              paddingY: "12px",
-                              fontSize: "12px",
-                              textAlign: "center",
-                            }}
-                          >
-                            {(currentPage - 1) * 8 + index + 1}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              whiteSpace: "nowrap",
-                              paddingX: "0px",
-                              paddingY: "12px",
-                              fontSize: "12px",
-                              textAlign: "center",
-                            }}
-                          >
-                            {moment(row.date).format("DD-MMM-YY")}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              paddingX: "0px",
-                              paddingY: "12px",
-                              fontSize: "12px",
-                              textAlign: "center",
-                            }}
-                          >
-                            {row.day}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              paddingX: "0px",
-                              paddingY: "12px",
-                              fontSize: "12px",
-                              textAlign: "center",
-                            }}
-                          >
-                            {row.flight}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              paddingX: "0px",
-                              paddingY: "12px",
-                              fontSize: "12px",
-                              textAlign: "center",
-                            }}
-                          >
-                            {row.depStn}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              paddingX: "0px",
-                              paddingY: "12px",
-                              fontSize: "12px",
-                              textAlign: "center",
-                            }}
-                          >
-                            {row.std}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              paddingX: "0px",
-                              paddingY: "12px",
-                              fontSize: "12px",
-                              textAlign: "center",
-                            }}
-                          >
-                            {row.bt}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              paddingX: "0px",
-                              paddingY: "12px",
-                              fontSize: "12px",
-                              textAlign: "center",
-                            }}
-                          >
-                            {row.sta}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              paddingX: "0px",
-                              paddingY: "12px",
-                              fontSize: "12px",
-                              textAlign: "center",
-                            }}
-                          >
-                            {row.arrStn}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              paddingX: "0px",
-                              paddingY: "12px",
-                              fontSize: "12px",
-                              textAlign: "center",
-                            }}
-                          >
-                            {row.variant}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </Stack>
-              <Stack direction="row" justifyContent="end">
-                <Pagination
-                  count={Math.ceil(flgtsTableData?.length / RowsPerPage)}
-                  page={currentPage}
-                  onChange={handlePageChange}
-                  color="primary"
-                />
-              </Stack>
-              {/* <FlgtsTable flightsData={flgtsTableData} isMaster={false}/> */}
-            </Paper>
-          </Grid>
-        </Grid>
+                    <Save size={16} /> Save Config
+                </button>
+            )}
+        </div>
       </div>
-      <ToastContainer />
-    </>
+
+      {/* --- RIGHT PANEL: WORKSPACE --- */}
+      <div className="flex-1 flex flex-col gap-6 overflow-hidden">
+        
+        {/* TOP: Rotation Development Table */}
+        <div className="flex-1 flex flex-col bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg overflow-hidden min-h-[300px]">
+            <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
+                <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                    <Plane className="text-emerald-500" size={18} /> Rotation Development
+                </h3>
+                <div className="flex gap-2">
+                    <button onClick={handleDeleteRotation} disabled={isRotationDeleting} className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors flex items-center gap-1">
+                        {isRotationDeleting ? <Loader2 className="animate-spin" size={14}/> : <Trash2 size={14}/>} Delete Rotation
+                    </button>
+                    <button onClick={handlePreviousInRotation} disabled={isPrevLoading} className="px-3 py-1.5 text-xs font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-md transition-colors">
+                        {isPrevLoading ? "Deleting..." : "Delete Last Leg"}
+                    </button>
+                    <button onClick={handleAddCurrent} disabled={isLoading} className="px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm transition-colors flex items-center gap-1">
+                        {isLoading ? <Loader2 className="animate-spin" size={14}/> : <Plus size={14}/>} Add Leg
+                    </button>
+                </div>
+            </div>
+            
+            <div className="flex-1 overflow-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 z-10 bg-slate-100/95 dark:bg-slate-800/95 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider shadow-sm">
+                        <tr>
+                            {["Dep #", "Flight #", "Dep Stn", "STD (LT)", "BT", "STA (LT)", "Arr Stn", "Dom/Intl", "GT"].map(h => (
+                                <th key={h} className="p-3 border-b border-slate-200 dark:border-slate-700 text-center">{h}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {rotationDevelopmentTableData.map((row, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                <td className="p-2 text-center text-xs text-slate-500">{idx + 1}</td>
+                                <td className="p-2 text-center text-xs font-medium text-slate-800 dark:text-white">{row.flightNumber}</td>
+                                <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300">{row.depStn}</td>
+                                <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300">{row.std}</td>
+                                <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300 font-mono">{row.bt}</td>
+                                <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300">{row.sta}</td>
+                                <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300">{row.arrStn}</td>
+                                <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300">{row.domIntl}</td>
+                                <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300 font-mono">{row.gt}</td>
+                            </tr>
+                        ))}
+                        {/* Input Row */}
+                        {selectedRotation && (
+                            <tr className="bg-indigo-50/30 dark:bg-indigo-900/10">
+                                <td className="p-2 text-center text-xs font-bold text-indigo-600">{rotationDevelopmentTableData.length + 1}</td>
+                                <td className="p-1"><StyledInput ref={flightInputRef} value={flight} onChange={e => setFlight(e.target.value)} placeholder="Flight#" className="h-7 text-xs text-center" /></td>
+                                <td className="p-1"><StyledInput value={depStn} onChange={e => setDepStn(e.target.value)} placeholder="Dep" className="h-7 text-xs text-center" /></td>
+                                <td className="p-1"><StyledInput type="time" value={std} onChange={e => setStd(e.target.value)} className="h-7 text-xs text-center" /></td>
+                                <td className="p-1"><StyledInput type="time" value={bt} onChange={e => setBt(e.target.value)} className="h-7 text-xs text-center" /></td>
+                                <td className="p-1"><StyledInput type="time" value={sta} onChange={e => setSta(e.target.value)} className="h-7 text-xs text-center" /></td>
+                                <td className="p-1"><StyledInput value={arrStn} onChange={e => setArrStn(e.target.value)} placeholder="Arr" className="h-7 text-xs text-center" /></td>
+                                <td className="p-1"><StyledInput value={domIntl} onChange={e => setDomIntl(e.target.value)} placeholder="D/I" className="h-7 text-xs text-center" /></td>
+                                <td className="p-1"><StyledInput type="time" value={gt} onChange={e => setGt(e.target.value)} className="h-7 text-xs text-center" /></td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {/* BOTTOM: Unassigned Flights Table */}
+        <div className="flex-1 flex flex-col bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg overflow-hidden min-h-[300px]">
+            <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+                <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                    <Search className="text-blue-500" size={18} /> Available Flights
+                </h3>
+            </div>
+            
+            <div className="flex-1 overflow-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 z-10 bg-slate-100/95 dark:bg-slate-800/95 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider shadow-sm">
+                        <tr>
+                            <th className="p-3 text-center w-12">#</th>
+                            {['date', 'day', 'flight', 'depStn', 'std', 'bt', 'sta', 'arrStn', 'variant'].map(key => (
+                                <th key={key} className="p-2 min-w-[80px]">
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center justify-center gap-1 cursor-pointer hover:text-indigo-600" onClick={() => { setArrow({ column: key, direction: arrow.direction === 'Up' ? 'Down' : 'Up' }) }}>
+                                            {key.toUpperCase()}
+                                            {arrow.column === key && (arrow.direction === 'Up' ? <ArrowUp size={10}/> : <ArrowDown size={10}/>)}
+                                        </div>
+                                        <input 
+                                            name={key}
+                                            value={filter[key] || ""}
+                                            onChange={handleFilterChange}
+                                            placeholder="Filter"
+                                            className="w-full h-6 px-1 text-[10px] border border-slate-300 rounded bg-white focus:outline-none focus:border-indigo-500"
+                                        />
+                                    </div>
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {paginatedData?.map((row, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                <td className="p-2 text-center text-xs text-slate-500">{(currentPage - 1) * RowsPerPage + idx + 1}</td>
+                                <td className="p-2 text-center text-xs whitespace-nowrap">{moment(row.date).format("DD-MMM-YY")}</td>
+                                <td className="p-2 text-center text-xs">{row.day}</td>
+                                <td className="p-2 text-center text-xs font-medium">{row.flight}</td>
+                                <td className="p-2 text-center text-xs">{row.depStn}</td>
+                                <td className="p-2 text-center text-xs">{row.std}</td>
+                                <td className="p-2 text-center text-xs font-mono">{row.bt}</td>
+                                <td className="p-2 text-center text-xs">{row.sta}</td>
+                                <td className="p-2 text-center text-xs">{row.arrStn}</td>
+                                <td className="p-2 text-center text-xs">{row.variant}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="p-2 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2 bg-slate-50 dark:bg-slate-900">
+                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1 rounded hover:bg-slate-200 disabled:opacity-50"><ChevronLeft size={16}/></button>
+                <span className="text-xs font-medium self-center text-slate-600">Page {currentPage}</span>
+                <button onClick={() => setCurrentPage(p => p + 1)} disabled={paginatedData?.length < RowsPerPage} className="p-1 rounded hover:bg-slate-200 disabled:opacity-50"><ChevronRight size={16}/></button>
+            </div>
+        </div>
+
+      </div>
+      
+      <ToastContainer position="bottom-right" theme="colored" />
+    </div>
   );
 };
 
