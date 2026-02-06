@@ -1,227 +1,213 @@
-import * as React from 'react';
-import Button from '@mui/material/Button';
-import Dialog from '@mui/material/Dialog';
-import Link from '@mui/material/Link';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
-import Slide from '@mui/material/Slide';
-import Typography from '@mui/material/Typography';
-import { responsiveFontSizes } from '@mui/material';
-import styled from '@emotion/styled';
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, FileText, ShieldCheck, ScrollText } from "lucide-react";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
+// --- UTILITIES ---
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
 
-const Transition = React.forwardRef(function Transition(
-  props,
-  ref
-) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
+// --- COMPONENTS ---
+
+// 1. The Trigger Link/Button
+const TermsTrigger = ({ onClick }) => (
+  <button
+    onClick={onClick}
+    className="group relative inline-flex items-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200"
+  >
+    <FileText size={16} className="opacity-70 group-hover:opacity-100 transition-opacity" />
+    <span className="relative">
+      Terms & Conditions
+      <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-indigo-600 dark:bg-indigo-400 transition-all group-hover:w-full"></span>
+    </span>
+  </button>
+);
+
+// 2. Section Heading Helper
+const SectionTitle = ({ children }) => (
+  <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mt-6 mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">
+    {children}
+  </h3>
+);
+
+// 3. Paragraph Helper
+const Text = ({ children, className }) => (
+  <p className={cn("text-xs leading-relaxed text-slate-600 dark:text-slate-300 mb-3 text-justify", className)}>
+    {children}
+  </p>
+);
+
+// --- MAIN COMPONENT ---
 
 export default function TermsAndConditionsModal() {
-  const styleText = {
-    fontFamily: 'Calibri, Arial, sans-serif',
-    textTransform: 'none',
-    fontSize: '13px',
-    marginTop: '8px'
-  };
-  const [open, setOpen] = React.useState(false);
-  const [scroll, setScroll] = React.useState('paper');
+  const [isOpen, setIsOpen] = useState(false);
+  const contentRef = useRef(null);
 
+  // Close on Escape key
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
 
-  const handleClickOpen = (scrollType) => () => {
-    setOpen(true);
-    setScroll(scrollType);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
-  const descriptionElementRef = React.useRef(null);
-  React.useEffect(() => {
-    if (open) {
-      const { current: descriptionElement } = descriptionElementRef;
-      if (descriptionElement !== null) {
-        descriptionElement.focus();
-      }
+  // Prevent body scroll when open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
     }
-  }, [open]);
+  }, [isOpen]);
 
   return (
     <>
-      <Button
-        variant="text"
-        sx={{
+      <TermsTrigger onClick={() => setIsOpen(true)} />
 
-          textAlign: 'center',
-          margin: '4px auto',
-          color: "black",
-          fontFamily: 'Calibri, Arial, sans-serif',
-          textTransform: 'none',
-          textDecoration: 'underline', // Add underline
-          fontSize: '16px', // Adjust font size
-          cursor: 'pointer',
-        }}
-        onClick={handleClickOpen('paper')}>
-        Terms & Conditions
-      </Button>
-      <Dialog
-        open={open}
-        TransitionComponent={Transition}
-        keepMounted
-        scroll={scroll}
-        onClose={handleClose}
-        aria-describedby="alert-dialog-slide-description"
-      >
-        <DialogTitle>{" TERMS OF SERVICE AGREEMENT"}</DialogTitle>
-        <DialogContent>
-          <DialogContentText
-            id="alert-dialog-slide-description"
-            ref={descriptionElementRef}
-            tabIndex={-1}
-          >
-            <Typography
-              variant="body1"
-              display="block"
-              gutterBottom
-              style={styleText}>
-              LAST REVISION: 23-Aug-2023 <br /><br />
-              PLEASE READ THIS TERMS OF SERVICE AGREEMENT CAREFULLY. BY USING THIS WEBSITE OR DOWNLOADING INFORMATION FROM THIS WEBSITE YOU AGREE TO BE BOUND BY ALL OF THE TERMS AND CONDITIONS OF THIS AGREEMENT.
-            </Typography>
-            <Typography
-              variant="body1"
-              display="block"
-              gutterBottom
-              style={styleText}>
-              This Terms of Service Agreement (the &quot;Agreement&quot;) governs your use of this website, www.airlineplan.com (the &quot;Website&quot;), Aerosphere Aviation Business Solutions Private Limited (&quot;AABS&quot;) offer of business information for purchase on this Website, or your purchase of business information available on this Website. This Agreement includes, and incorporates by this reference, the policies and guidelines referenced below. AABS reserves the right to change or revise the terms and conditions of this Agreement at any time by posting any changes or a revised Agreement on this Website. AABS will alert you that changes or revisions have been made by indicating on the top of this Agreement the date it was last revised. The changed or revised Agreement will be effective immediately after it is posted on this Website. Your use of the Website following the posting any such changes or of a revised Agreement will constitute your acceptance of any such changes or revisions. AABS encourages you to review this Agreement whenever you visit the Website to make sure that you understand the terms and conditions governing use of the Website. This Agreement does not alter in any way the terms or conditions of any other written agreement you may have with AABS for other products or services. If you do not agree to this Agreement (including any referenced policies or guidelines), please immediately terminate your use of the Website.
-            </Typography> <br />
-            <Typography
-              variant="h6">
-              <strong>
-                I. Business Information
-              </strong>
-            </Typography>
-            <Typography
-              variant="body1"
-              display="block"
-              gutterBottom
-              style={styleText}>
-              <strong>Terms of Offer</strong> This Website offers for sale certain Business Information (the &quot;Products&quot;). By registering your account on this Website, you agree to the terms set forth in this Agreement.
-              <br /><br />
-              <strong>Customer Solicitation</strong> Unless you notify AABS, while being contacted, of your desire to opt out from further direct company communications and solicitations, you are agreeing to continue to receive further emails and call solicitations by AABS.
-              <br /><br />
-              <strong>Opt Out Procedure</strong> To opt out of all future solicitations you may send a written remove request to admin@airlineplan.com.
-              Proprietary Rights AABS has rights to all trademarks and copyright on specific layouts of all the web pages, including calls to action, text placement, images and other information in www.airlineplan.com.
-            </Typography>
+      <AnimatePresence>
+        {isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+            
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+              className="absolute inset-0 bg-slate-900/30 dark:bg-slate-950/50 backdrop-blur-sm"
+            />
 
-            <br />
-            <Typography variant="h6">
-              <strong>
-                II. WEBSITE
-              </strong>
-            </Typography>
-            <Typography
-              variant="body1"
-              display="block"
-              gutterBottom
-              style={styleText}>
-              <strong>Content</strong> AABS does not always create the information offered on this Website; instead the information is based on inputs from the user(s) of this Website. To the extent that AABS does create the content on this Website, such content is protected by intellectual property laws of the India, foreign nations, and international bodies.
-              <br /><br />
-              <strong>User Data</strong> All data directly entered by an user, except for account related information necessary for account registration (the &quot;Account data&quot;), as well as all data calculated from the data directly input by the user(s) are the sole property of that particular user. AABS shall not access, disseminate or use any such user related data, except for Account data, either directly input or derived from calculation steps, for any purpose, unless written authorization for access, update and transmission. All data pertaining to a user account, including the Account data, shall not be accessible or visible to any other user account.
-              <br /><br />
-              <strong>Use of Website</strong> AABS is not responsible for any damages resulting from use of this website by anyone. You will not use the Website for illegal purposes. You will (1) abide by all applicable local, state, national, and international laws and regulations in your use of the Website (including laws regarding intellectual property), (2) not interfere with or disrupt the use and enjoyment of the Website by other users, (3) not engage, directly or indirectly, in transmission of &quot;spam&quot;, chain letters, junk mail or any other type of unsolicited communication, and (4) not defame, harass, abuse, or disrupt other users of the Website.
-              <br /><br />
-              AABS does not have the oversight or the ability to control the user input and processed output in the Website. You are solely responsible for any content you input and the accuracy, suitability and fitness of purpose of the Products you extract from the Website. AABS reserves the right, but has no obligation, to monitor usage activity statistics of the Website, including total data and processing resources used by one or more user account(s). AABS reserves the right, but has no obligation, to remove any content or suspend or terminate any user account AABS deems objectionable, at AABS&apos;s sole discretion.
-              <br /><br />
-              <strong>License</strong> By using this Website, you are granted a limited, non-exclusive, non-transferable right to use the content and materials on the Website in connection with your normal use of the Website.
-            </Typography>
-            <br />
-            <Typography variant="h6">
-              <strong>
-                III. DISCLAIMER OF WARRANTIES
-              </strong>
-              <br />
-            </Typography>
-            <Typography
-              variant="body1"
-              display="block"
-              gutterBottom
-              style={styleText}>
-              Your use of this Website and/or the Products are at your sole risk. AABS expressly disclaims all warranties of any kind, whether express or implied. No advice or information, whether oral or written, obtained by you from this website, including email communications, will create any warranty not expressly stated herein.
-              Without limiting the generality of the foregoing, AABS makes no warranty:
-              <ul style={{ marginLeft: "1rem" }}>
-                <li>
-                  That the information provided on this Website is accurate, reliable, complete or timely
-                </li>
-                <li>
-                  Regarding any products obtained through this Website
-                </li>
-              </ul>
-            </Typography>
-            <br />
-            <Typography variant="h6">
-              <strong>
-                IV. LIMITATION OF LIABILITY
-              </strong>
-            </Typography>
-            <Typography
-              variant="body1"
-              display="block"
-              gutterBottom
-              style={styleText}>
-              AABS’ entire liability, and your exclusive remedy, in law, in equity, or otherwise, with respect to the website content and products and/or for any breach of this agreement is zero/nil.
-            </Typography>
-            <br />
-            <Typography variant="h6">
-              <strong>
-                V. INDEMNIFICATION
-              </strong>
-            </Typography>
-            <Typography
-              variant="body1"
-              display="block"
-              gutterBottom
-              style={styleText}>
-              You will release, indemnify, defend and hold harmless AABS, and any of its contractors, employees, officers, directors, shareholders, affiliates and assigns from all liabilities, claims, damages, costs and expenses, relating to or arising out of (1) this Agreement or the breach of your warranties, representations and obligations under this Agreement; (2) the Website content or your use of the Website content; (3) the Products or your use of the Products; (4) any intellectual property or other proprietary right of any person or entity; (5) your violation of any provision of this Agreement; or (6) any information or data you supplied to AABS. The terms of this provision will survive any termination or cancellation of this Agreement or your use of the Website or Products.
-            </Typography>
-            <br />
-            <Typography variant="h6">
-              <strong>
-                VI. AGREEMENT TO BE BOUND
-              </strong>
-            </Typography>
-            <Typography
-              variant="body1"
-              display="block"
-              gutterBottom
-              style={styleText}>
-              By using this Website or Products, you acknowledge that you have read and agree to be bound by this Agreement and all terms and conditions on this Website.
-            </Typography>
-            <br />
-            <Typography variant="h6">
-              <strong>
-                VIII. GENERAL
-              </strong>
-            </Typography>
-            <Typography
-              variant="body1"
-              display="block"
-              gutterBottom
-              style={styleText}>
-              <strong>Force Majeure</strong> AABS will not be deemed in default hereunder or held responsible for any cessation, interruption or delay in the performance of its obligations hereunder due to earthquake, flood, fire, storm, natural disaster, act of God, war, terrorism, armed conflict, labor strike, lockout, or boycott.
-              <br /><br /><strong>Cessation of Operation</strong> AABS may at any time, in its sole discretion and without advance notice to you, cease operation of the Website and availability of the Products.
-              <br /><br /><strong>Entire Agreement</strong> This Agreement comprises the entire agreement between you and AABS and supersedes any prior agreements pertaining to the subject matter contained herein.
-              <br /><br /><strong>Effect of Waiver</strong> The failure of AABS to exercise or enforce any right or provision of this Agreement will not constitute a waiver of such right or provision. If any provision of this Agreement is found by a court of competent jurisdiction to be invalid, the parties nevertheless agree that the court should endeavor to give effect to the parties' intentions as reflected in the provision, and the other provisions of this Agreement remain in full force and effect.
-              <br /><br /><strong>Governing Law & Jurisdiction</strong> This Website originates from Noida, Uttar Pradesh, India. This Agreement will be governed by the laws of India. Neither you nor AABS will commence or prosecute any suit, proceeding or claim to enforce the provisions of this Agreement, to recover damages for breach of or default of this Agreement, or otherwise arising under or by reason of this Agreement, other than in courts located in State of Uttar Pradesh. By using this Website or Products, you consent to the jurisdiction and venue of such courts in connection with any action, suit, proceeding or claim arising under or by reason of this Agreement.
-              <br /><br /><strong>Statute of Limitation</strong> You agree that regardless of any statute or law to the contrary, any claim or cause of action arising out of or related to use of the Website or Products or this Agreement must be filed within six (6) months after such claim or cause of action arose or be forever barred.
-              <br /><br /><strong>Termination</strong> AABS reserves the right to terminate your access to the Website if it reasonably believes, in its sole discretion, that you have breached any of the terms and conditions of this Agreement. Following termination, you will not be permitted to use the Website and AABS may, in its sole discretion either partially or fully, refund the remaining balance of your account. If your access to the Website is terminated, AABS reserves the right to exercise whatever means it deems necessary to prevent unauthorized access of the Website. This Agreement will survive indefinitely unless and until AABS chooses, in its sole discretion and without advance notice to you, to terminate it.
-              <br /><br />BY USING THIS WEBSITE OR ORDERING PRODUCTS FROM THIS WEBSITE YOU AGREE TO BE BOUND BY ALL OF THE TERMS AND CONDITIONS OF THIS AGREEMENT.
-            </Typography>
-          </DialogContentText>
-        </DialogContent>
-      </Dialog>
+            {/* Modal Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", bounce: 0.3, duration: 0.5 }}
+              className="relative w-full max-w-2xl max-h-[85vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+            >
+              
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md sticky top-0 z-10">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
+                    <ShieldCheck className="text-indigo-600 dark:text-indigo-400" size={20} />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white leading-none">
+                      Terms of Service
+                    </h2>
+                    <p className="text-[10px] text-slate-500 font-medium mt-1">
+                      Last Updated: August 23, 2023
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div ref={contentRef} className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar bg-slate-50/30 dark:bg-slate-950/30">
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  
+                  <div className="p-4 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 rounded-lg mb-6">
+                    <Text className="text-indigo-900 dark:text-indigo-200 font-medium mb-0">
+                      PLEASE READ THIS TERMS OF SERVICE AGREEMENT CAREFULLY. BY USING THIS WEBSITE OR DOWNLOADING INFORMATION FROM THIS WEBSITE YOU AGREE TO BE BOUND BY ALL OF THE TERMS AND CONDITIONS OF THIS AGREEMENT.
+                    </Text>
+                  </div>
+
+                  <Text>
+                    This Terms of Service Agreement (the "Agreement") governs your use of this website, <strong>www.airlineplan.com</strong> (the "Website"), Aerosphere Aviation Business Solutions Private Limited ("AABS") offer of business information for purchase on this Website, or your purchase of business information available on this Website. This Agreement includes, and incorporates by this reference, the policies and guidelines referenced below.
+                  </Text>
+                  <Text>
+                    AABS reserves the right to change or revise the terms and conditions of this Agreement at any time by posting any changes or a revised Agreement on this Website. AABS will alert you that changes or revisions have been made by indicating on the top of this Agreement the date it was last revised. The changed or revised Agreement will be effective immediately after it is posted on this Website.
+                  </Text>
+
+                  <SectionTitle>I. Business Information</SectionTitle>
+                  <Text>
+                    <strong>Terms of Offer:</strong> This Website offers for sale certain Business Information (the "Products"). By registering your account on this Website, you agree to the terms set forth in this Agreement.
+                  </Text>
+                  <Text>
+                    <strong>Customer Solicitation:</strong> Unless you notify AABS, while being contacted, of your desire to opt out from further direct company communications and solicitations, you are agreeing to continue to receive further emails and call solicitations by AABS.
+                  </Text>
+                  <Text>
+                    <strong>Opt Out Procedure:</strong> To opt out of all future solicitations you may send a written remove request to <strong>admin@airlineplan.com</strong>.
+                  </Text>
+                  <Text>
+                    <strong>Proprietary Rights:</strong> AABS has rights to all trademarks and copyright on specific layouts of all the web pages, including calls to action, text placement, images and other information in www.airlineplan.com.
+                  </Text>
+
+                  <SectionTitle>II. Website Usage</SectionTitle>
+                  <Text>
+                    <strong>Content:</strong> AABS does not always create the information offered on this Website; instead the information is based on inputs from the user(s) of this Website. To the extent that AABS does create the content on this Website, such content is protected by intellectual property laws of the India, foreign nations, and international bodies.
+                  </Text>
+                  <Text>
+                    <strong>User Data:</strong> All data directly entered by a user is the sole property of that particular user. AABS shall not access, disseminate or use any such user related data unless written authorization for access is provided.
+                  </Text>
+                  <Text>
+                    <strong>Use of Website:</strong> AABS is not responsible for any damages resulting from use of this website. You will not use the Website for illegal purposes. You will abide by all applicable laws and regulations in your use of the Website.
+                  </Text>
+                  <Text>
+                    <strong>License:</strong> By using this Website, you are granted a limited, non-exclusive, non-transferable right to use the content and materials on the Website in connection with your normal use of the Website.
+                  </Text>
+
+                  <SectionTitle>III. Disclaimer of Warranties</SectionTitle>
+                  <Text>
+                    Your use of this Website and/or the Products are at your sole risk. AABS expressly disclaims all warranties of any kind, whether express or implied. AABS makes no warranty that the information provided on this Website is accurate, reliable, complete or timely.
+                  </Text>
+
+                  <SectionTitle>IV. Limitation of Liability</SectionTitle>
+                  <Text>
+                    AABS’ entire liability, and your exclusive remedy, in law, in equity, or otherwise, with respect to the website content and products and/or for any breach of this agreement is zero/nil.
+                  </Text>
+
+                  <SectionTitle>V. Indemnification</SectionTitle>
+                  <Text>
+                    You will release, indemnify, defend and hold harmless AABS, and any of its contractors, employees, officers, directors, shareholders, affiliates and assigns from all liabilities, claims, damages, costs and expenses relating to your use of the Website content or Products.
+                  </Text>
+
+                  <SectionTitle>VI. Agreement to be Bound</SectionTitle>
+                  <Text>
+                    By using this Website or Products, you acknowledge that you have read and agree to be bound by this Agreement and all terms and conditions on this Website.
+                  </Text>
+
+                  <SectionTitle>VIII. General</SectionTitle>
+                  <ul className="list-disc pl-5 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                    <li><strong>Force Majeure:</strong> AABS will not be deemed in default hereunder due to earthquake, flood, fire, storm, natural disaster, act of God, war, terrorism, etc.</li>
+                    <li><strong>Cessation of Operation:</strong> AABS may at any time cease operation of the Website and availability of the Products.</li>
+                    <li><strong>Governing Law:</strong> This Website originates from Noida, Uttar Pradesh, India. This Agreement will be governed by the laws of India.</li>
+                    <li><strong>Statute of Limitation:</strong> Any claim or cause of action arising out of or related to use of the Website must be filed within six (6) months.</li>
+                    <li><strong>Termination:</strong> AABS reserves the right to terminate your access to the Website if it reasonably believes that you have breached any of the terms and conditions.</li>
+                  </ul>
+                  
+                  <div className="mt-8 p-4 text-center border-t border-slate-200 dark:border-slate-800">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">
+                      Aerosphere Aviation Business Solutions Pvt. Ltd.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer / Actions */}
+              <div className="p-4 md:p-6 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end gap-3">
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="px-6 py-2.5 rounded-lg text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-700 transition-colors shadow-lg hover:shadow-xl focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  I Understand & Agree
+                </button>
+              </div>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

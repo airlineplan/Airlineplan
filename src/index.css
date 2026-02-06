@@ -2,3 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* --- DELETE ANY ':root' or '@media' BLOCKS YOU SEE HERE --- */
+
+@layer base {
+  /* This forces the background to listen to the CLASS, not the OS */
+  body {
+    @apply transition-colors duration-300 ease-in-out;
+    background-color: #f8fafc; /* Light Mode Default (slate-50) */
+    color: #0f172a;            /* Light Mode Text (slate-900) */
+  }
+
+  /* Only apply dark background if the HTML tag specifically has class="dark" */
+  html.dark body {
+    background-color: #020617; /* Dark Mode (slate-950) */
+    color: #f8fafc;            /* Dark Mode Text */
+  }
+}
