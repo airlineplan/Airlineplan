@@ -1,204 +1,203 @@
 import React, { useState } from "react";
-import Avatar from "@mui/material/Avatar";
-import Button from "@mui/material/Button";
-import CssBaseline from "@mui/material/CssBaseline";
-import TextField from "@mui/material/TextField";
-import Box from "@mui/material/Box";
-import Typography from "@mui/material/Typography";
-import Container from "@mui/material/Container";
-import { createTheme, ThemeProvider } from "@mui/material/styles";
 import axios from "axios";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
-import KeyIcon from "@mui/icons-material/Key";
-import SendIcon from "@mui/icons-material/Send";
-import Stack from "@mui/material/Stack";
-import { mt } from "date-fns/locale";
-import { Password } from "@mui/icons-material";
+import { motion } from "framer-motion";
+import {
+  Key,
+  Lock,
+  CheckCircle,
+  Loader2,
+  ArrowLeft,
+  ShieldCheck,
+} from "lucide-react";
+import { toast } from "react-toastify";
 
-const defaultTheme = createTheme();
+/* ---------------- INPUT FIELD ---------------- */
+
+const InputField = ({ label, icon: Icon, type = "text", error, ...props }) => (
+  <div className="space-y-1.5 text-left">
+    <label className="text-xs font-bold text-indigo-100/80 uppercase tracking-wider ml-1 drop-shadow-sm">
+      {label}
+    </label>
+
+    <div className="relative group">
+      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-indigo-300/50 group-focus-within:text-indigo-400 transition-colors">
+        <Icon size={18} />
+      </div>
+
+      <input
+        type={type}
+        className={`block w-full pl-10 pr-3 py-3 bg-slate-950/40 border rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-slate-950/60 transition-all placeholder:text-white/20 backdrop-blur-sm shadow-inner ${
+          error
+            ? "border-red-500/50 focus:border-red-500"
+            : "border-white/10 focus:border-indigo-500/50"
+        }`}
+        {...props}
+      />
+    </div>
+
+    {error && (
+      <motion.p
+        initial={{ opacity: 0, y: -5 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-xs text-red-400 ml-1 font-medium"
+      >
+        {error}
+      </motion.p>
+    )}
+  </div>
+);
+
+/* ---------------- MAIN COMPONENT ---------------- */
+
 const ResetPassword = (props) => {
-
   const navigate = useNavigate();
-  const [inputField, setInputField]=useState({
-    otpCode:"",
-    password:"",
-    cpassword:""
-  })
- const [errField, setErrField] =useState({
-    otpCodeErr:"",
-    passwordErr:"",
-    cpasswordErr:""
+  const [loading, setLoading] = useState(false);
 
- })
+  const [inputField, setInputField] = useState({
+    otpCode: "",
+    password: "",
+    cpassword: "",
+  });
 
- const validForm =()=>{
-  let fromIsValid = true
+  const [errField, setErrField] = useState({
+    otpCodeErr: "",
+    passwordErr: "",
+    cpasswordErr: "",
+  });
 
-  setErrField({
-    otpCodeErr:"",
-    passwordErr:"",
-    cpasswordErr:""
+  const validateForm = () => {
+    let isValid = true;
+    const errors = { otpCodeErr: "", passwordErr: "", cpasswordErr: "" };
 
-  })
-  if(inputField.otpCode ==''){
-    fromIsValid =true
-    setErrField(prevState=>({
-      ...prevState, otpCodeErr:"Please Enter Otp"
-    }))
-  }
-  if(inputField.password ==''){
-    fromIsValid =false
-    setErrField(prevState=>({
-      ...prevState, passwordErr:"Please Enter Password"
-    }))
-  }
-  if(inputField.cpassword ==''){
-    fromIsValid =false
-    setErrField(prevState=>({
-      ...prevState, cpasswordErr:"Please Enter Conform Password"
-    }))
-  }
-  if(inputField.cpassword !='' && inputField.password != inputField.cpassword){
-    fromIsValid =false
-    setErrField(prevState=>({
-      ...prevState,cpasswordErr:"Password are not matched"
-    }))
-  }
-  return fromIsValid
- }
-const inpuHandler =(e)=>{
-  setInputField({...inputField,[e.target.name]:e.target.value})
-}
-
-
-const submitButton =async ()=>{
-  if(validForm()){
-    Object.assign(inputField,props)
-    console.log(inputField,props)
-    let url ='https://airlineplan.com/change-passowrd'
-    let optios ={
-      method: 'POST',
-      url:url,
-      data:inputField
+    if (!inputField.otpCode) {
+      isValid = false;
+      errors.otpCodeErr = "Please enter the OTP sent to your email";
     }
+
+    if (!inputField.password) {
+      isValid = false;
+      errors.passwordErr = "Please enter a new password";
+    }
+
+    if (!inputField.cpassword) {
+      isValid = false;
+      errors.cpasswordErr = "Please confirm your password";
+    } else if (inputField.password !== inputField.cpassword) {
+      isValid = false;
+      errors.cpasswordErr = "Passwords do not match";
+    }
+
+    setErrField(errors);
+    return isValid;
+  };
+
+  const inputHandler = (e) => {
+    setInputField({ ...inputField, [e.target.name]: e.target.value });
+    if (errField[`${e.target.name}Err`]) {
+      setErrField({ ...errField, [`${e.target.name}Err`]: "" });
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form");
+      return;
+    }
+
+    setLoading(true);
+    const payload = { ...inputField, ...props };
+
     try {
-      let response =await axios(optios)
-      if(response.data.statusText=='Success'){
+      const response = await axios.post(
+        "https://airlineplan.com/change-passowrd",
+        payload
+      );
 
-        toast.success(response.data.message)
-        setTimeout(() => {
-          navigate('/');
-        }, 1500);
-      }else{
-        toast.error(response.data.error)
+      if (response.data.statusText === "Success") {
+        toast.success(response.data.message);
+        setTimeout(() => navigate("/"), 1500);
+      } else {
+        toast.error(response.data.error || "Failed to reset password");
       }
-      
-      
     } catch (error) {
-      toast.error("Something Went Wrong")
-      
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
-  }else{
-    toast.error("Form Invalid")
-  }
-}
- 
+  };
+
   return (
-    <>
-      <ThemeProvider theme={defaultTheme}>
-        <Container component="main" maxWidth="xs">
-          <CssBaseline />
-          <form>
-          <Box
-            sx={{
-              marginTop: 8,
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-            }}
+    <div className="text-center">
+
+      {/* Header Icon */}
+      <div className="mx-auto mb-6 w-16 h-16 bg-indigo-500/20 rounded-full flex items-center justify-center border border-indigo-500/30 shadow-lg shadow-indigo-500/10">
+        <ShieldCheck className="text-indigo-300" size={32} />
+      </div>
+
+      <h2 className="text-2xl font-bold text-white mb-2 drop-shadow-md">
+        Set New Password
+      </h2>
+      <p className="text-indigo-200/70 text-sm mb-8">
+        Enter the OTP code and your new password below.
+      </p>
+
+      <div className="space-y-5">
+        <InputField
+          label="OTP Code"
+          name="otpCode"
+          icon={Key}
+          value={inputField.otpCode}
+          onChange={inputHandler}
+          error={errField.otpCodeErr}
+          autoFocus
+        />
+
+        <InputField
+          label="New Password"
+          name="password"
+          type="password"
+          icon={Lock}
+          value={inputField.password}
+          onChange={inputHandler}
+          error={errField.passwordErr}
+        />
+
+        <InputField
+          label="Confirm Password"
+          name="cpassword"
+          type="password"
+          icon={CheckCircle}
+          value={inputField.cpassword}
+          onChange={inputHandler}
+          error={errField.cpasswordErr}
+        />
+
+        <div className="pt-4 space-y-3">
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full py-3.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 shadow-lg shadow-indigo-500/20 focus:ring-2 focus:ring-indigo-500 transition-all disabled:opacity-70"
           >
-            <Avatar sx={{ m: 1, bgcolor: "secondary.main" }}>
-              <KeyIcon />
-            </Avatar>
-            <Typography component="h1" variant="h5">
-              Reset Password
-            </Typography>
-            <Box component="form" noValidate sx={{ mt: 1 }}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                label="OTP CODE"
-                name="otpCode"
-                autoComplete="otp"
-                autoFocus
-                value={inputField.otpCode}
-                onChange={inpuHandler}
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin mr-2 inline" />
+                Updating Password…
+              </>
+            ) : (
+              "Change Password"
+            )}
+          </button>
 
-              />
-              {
-                errField.otpCodeErr.length>0 && <span style={{color:"red"}}>{errField.otpCodeErr}</span>
-              }
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type="password"
-                id="password"
-                autoComplete="current-password"
-                onChange={inpuHandler}
-                value={inputField.password}
-              />
-                {
-                errField.passwordErr.length>0 && <span style={{color:"red"}}>{errField.passwordErr}</span>
-              }
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="cpassword"
-                label="Confirm Password"
-                type="password"
-                id="password"
-                autoComplete="current-password"
-                value={inputField.cpassword}
-                onChange={inpuHandler}
-              />
-              {
-                errField.cpasswordErr.length>0 && <span style={{color:"red"}}>{errField.cpasswordErr}</span>
-              }
-
-              <Button
-                variant="contained"
-                endIcon={<SendIcon />}
-                sx={{ mr: "115px", mt: 1 }}
-                onClick={submitButton}
-
-              >
-                Change Password
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => {
-                  navigate("/forget");
-                  props.setShowForm(true); 
-                }}
-                sx={{ mt: 1 }}
-                
-                // disabled={!props.email}
-              >
-                Back
-              </Button>
-            </Box>
-          </Box>
-          </form>
-        </Container>
-      </ThemeProvider>
-    </>
+          <button
+            onClick={() => navigate("/")}
+            className="w-full inline-flex justify-center items-center text-sm font-medium text-indigo-300 hover:text-white py-2"
+          >
+            <ArrowLeft size={16} className="mr-2" /> Back
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
