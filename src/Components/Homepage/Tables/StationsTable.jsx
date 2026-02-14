@@ -1,25 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import axios from "axios";
 import dayjs from 'dayjs';
-import { motion } from "framer-motion";
-import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Save, Clock, AlertCircle, RadioTower } from "lucide-react";
+import { Save, Clock, RadioTower } from "lucide-react";
+import { clsx } from "clsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
-// --- UTILITIES ---
-function cn(...inputs) {
-  return twMerge(clsx(inputs));
-}
 
 // --- CONSTANTS ---
 const TIMEZONES = [
   'UTC-12:00', 'UTC-11:45', 'UTC-11:30', 'UTC-11:15', 'UTC-11:00', 'UTC-10:45', 'UTC-10:30', 'UTC-10:15', 'UTC-10:00', 'UTC-9:45', 'UTC-9:30', 'UTC-9:15', 'UTC-9:00', 'UTC-8:45', 'UTC-8:30', 'UTC-8:15', 'UTC-8:00', 'UTC-7:45', 'UTC-7:30', 'UTC-7:15', 'UTC-7:00', 'UTC-6:45', 'UTC-6:30', 'UTC-6:15', 'UTC-6:00', 'UTC-5:45', 'UTC-5:30', 'UTC-5:15', 'UTC-5:00', 'UTC-4:45', 'UTC-4:30', 'UTC-4:15', 'UTC-4:00', 'UTC-3:45', 'UTC-3:30', 'UTC-3:15', 'UTC-3:00', 'UTC-2:45', 'UTC-2:30', 'UTC-2:15', 'UTC-2:00', 'UTC-1:45', 'UTC-1:30', 'UTC-1:15', 'UTC-1:00', 'UTC-0:45', 'UTC-0:30', 'UTC-0:15', 'UTC+0:00', 'UTC+0:15', 'UTC+0:30', 'UTC+0:45', 'UTC+1:00', 'UTC+1:15', 'UTC+1:30', 'UTC+1:45', 'UTC+2:00', 'UTC+2:15', 'UTC+2:30', 'UTC+2:45', 'UTC+3:00', 'UTC+3:15', 'UTC+3:30', 'UTC+3:45', 'UTC+4:00', 'UTC+4:15', 'UTC+4:30', 'UTC+4:45', 'UTC+5:00', 'UTC+5:15', 'UTC+5:30', 'UTC+5:45', 'UTC+6:00', 'UTC+6:15', 'UTC+6:30', 'UTC+6:45', 'UTC+7:00', 'UTC+7:15', 'UTC+7:30', 'UTC+7:45', 'UTC+8:00', 'UTC+8:15', 'UTC+8:30', 'UTC+8:45', 'UTC+9:00', 'UTC+9:15', 'UTC+9:30', 'UTC+9:45', 'UTC+10:00', 'UTC+10:15', 'UTC+10:30', 'UTC+10:45', 'UTC+11:00', 'UTC+11:15', 'UTC+11:30', 'UTC+11:45', 'UTC+12:00'
 ];
 
-// --- UI COMPONENTS ---
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
 
+// --- UI COMPONENTS ---
 const StyledInput = ({ value, onChange, error, placeholder, type = "text", ...props }) => (
   <div className="flex flex-col w-full">
     <input
@@ -27,12 +24,12 @@ const StyledInput = ({ value, onChange, error, placeholder, type = "text", ...pr
       value={value || ""}
       onChange={onChange}
       placeholder={placeholder}
-      className={cn(
+      className={twMerge(cn(
         "w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900/50 border rounded focus:outline-none focus:ring-2 transition-all",
         error 
           ? "border-red-400 focus:ring-red-400 bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-300" 
           : "border-slate-300 dark:border-slate-700 focus:border-indigo-500 focus:ring-indigo-500 text-slate-700 dark:text-slate-200"
-      )}
+      ))}
       {...props}
     />
     {error && <span className="text-[10px] text-red-500 mt-0.5 leading-tight">{error}</span>}
@@ -44,7 +41,7 @@ const StyledSelect = ({ value, onChange, options }) => (
     value={value || ""}
     onChange={onChange}
     className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 dark:text-slate-200 cursor-pointer appearance-none"
-    style={{ backgroundImage: 'none' }} // Remove default arrow if needed, or style it
+    style={{ backgroundImage: 'none' }}
   >
     {options.map((opt) => (
       <option key={opt} value={opt}>{opt}</option>
@@ -53,7 +50,6 @@ const StyledSelect = ({ value, onChange, options }) => (
 );
 
 // --- MAIN COMPONENT ---
-
 const StationsTable = () => {
   const [selectedHomeTimeZone, setSelectedHomeTimeZone] = useState('UTC+5:30');
   const [data, setData] = useState([]);
@@ -61,14 +57,11 @@ const StationsTable = () => {
   const [isFetching, setIsFetching] = useState(true);
 
   // --- LOGIC ---
-
   const handleTimeZoneChange = (e) => setSelectedHomeTimeZone(e.target.value);
 
   const handleInputChange = (e, rowIndex, columnName) => {
     let value = e.target ? e.target.value : e;
     
-    // For date inputs, standard HTML5 input returns YYYY-MM-DD strings
-    // If we receive a Date object (rare with native inputs but possible), convert it
     if (value instanceof Date) {
         value = dayjs(value).format('YYYY-MM-DD');
     }
@@ -80,7 +73,6 @@ const StationsTable = () => {
     });
   };
 
-  // Validation Helpers
   const normalizeTimeFormat = (time) => {
     if(!time) return '';
     const extractedDigits = String(time).match(/\d+/g);
@@ -93,7 +85,7 @@ const StationsTable = () => {
 
   const validateTime = (value, range) => {
     const normalized = normalizeTimeFormat(value);
-    return !normalized || isInRange(normalized, range); // Return true if valid (or empty)
+    return !normalized || isInRange(normalized, range);
   };
 
   const ranges = {
@@ -102,12 +94,11 @@ const StationsTable = () => {
     range3: ['02:00', '10:00']
   };
 
-  // API Calls
   useEffect(() => {
     const fetchData = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("https://airlineplan.com/get-stationData", {
+        const response = await axios.get("http://localhost:5001/get-stationData", {
           headers: { "x-access-token": accessToken },
         });
         if(response.data?.data) {
@@ -133,7 +124,7 @@ const StationsTable = () => {
         homeTimeZone: selectedHomeTimeZone,
       };
 
-      const response = await axios.post('https://airlineplan.com/saveStation', requestData, {
+      const response = await axios.post('http://localhost:5001/saveStation', requestData, {
         headers: {
           "x-access-token": accessToken,
           "Content-Type": "application/json",
@@ -192,7 +183,6 @@ const StationsTable = () => {
         <div className="flex-1 overflow-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-100/95 dark:bg-slate-800/95 sticky top-0 z-20 backdrop-blur-sm shadow-sm">
-              {/* Top Header Row */}
               <tr>
                 <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-12 text-xs font-bold text-slate-500 dark:text-slate-400">#</th>
                 <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[100px] text-xs font-bold text-slate-500 dark:text-slate-400">Station</th>
@@ -206,18 +196,13 @@ const StationsTable = () => {
                 <th colSpan={2} className="p-1 border-r border-b border-slate-200 dark:border-slate-700 text-center text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10">INTL - Dom</th>
                 <th colSpan={2} className="p-1 border-b border-slate-200 dark:border-slate-700 text-center text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-900/10">INTL - INTL</th>
               </tr>
-              {/* Sub Header Row */}
               <tr>
-                {/* Dom-Dom */}
                 <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-indigo-50/30">Min CT</th>
                 <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-indigo-50/30">Max CT</th>
-                {/* Dom-Intl */}
                 <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-cyan-50/30">Min CT</th>
                 <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-cyan-50/30">Max CT</th>
-                {/* Intl-Dom */}
                 <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-emerald-50/30">Min CT</th>
                 <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-emerald-50/30">Max CT</th>
-                {/* Intl-Intl */}
                 <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-purple-50/30">Min CT</th>
                 <th className="p-2 border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-purple-50/30">Max CT</th>
               </tr>
@@ -256,7 +241,6 @@ const StationsTable = () => {
                       />
                     </td>
 
-                    {/* Dom-Dom */}
                     <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-indigo-50/10">
                       <StyledInput value={row.ddMinCT} onChange={(e) => handleInputChange(e, index, 'ddMinCT')} error={!validateTime(row.ddMinCT, ranges.range1) && "00:20 - 03:00"} />
                     </td>
@@ -264,7 +248,6 @@ const StationsTable = () => {
                       <StyledInput value={row.ddMaxCT} onChange={(e) => handleInputChange(e, index, 'ddMaxCT')} error={!validateTime(row.ddMaxCT, ranges.range3) && "02:00 - 10:00"} />
                     </td>
 
-                    {/* Dom-Intl */}
                     <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-cyan-50/10">
                       <StyledInput value={row.dInMinCT} onChange={(e) => handleInputChange(e, index, 'dInMinCT')} error={!validateTime(row.dInMinCT, ranges.range2) && "00:30 - 04:00"} />
                     </td>
@@ -272,7 +255,6 @@ const StationsTable = () => {
                       <StyledInput value={row.dInMaxCT} onChange={(e) => handleInputChange(e, index, 'dInMaxCT')} error={!validateTime(row.dInMaxCT, ranges.range3) && "02:00 - 10:00"} />
                     </td>
 
-                    {/* Intl-Dom */}
                     <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-emerald-50/10">
                       <StyledInput value={row.inDMinCT} onChange={(e) => handleInputChange(e, index, 'inDMinCT')} error={!validateTime(row.inDMinCT, ranges.range1) && "00:20 - 03:00"} />
                     </td>
@@ -280,7 +262,6 @@ const StationsTable = () => {
                       <StyledInput value={row.inDMaxCT} onChange={(e) => handleInputChange(e, index, 'inDMaxCT')} error={!validateTime(row.inDMaxCT, ranges.range3) && "02:00 - 10:00"} />
                     </td>
 
-                    {/* Intl-Intl */}
                     <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-purple-50/10">
                       <StyledInput value={row.inInMinDT} onChange={(e) => handleInputChange(e, index, 'inInMinDT')} error={!validateTime(row.inInMinDT, ranges.range2) && "00:30 - 04:00"} />
                     </td>

@@ -102,7 +102,7 @@ const FlgtsTable = ({ isMaster = true }) => {
         };
 
         const response = await axios.post(
-          "https://airlineplan.com/searchflights",
+          "http://localhost:5001/searchflights",
           requestBody,
           {
             headers: {
@@ -147,7 +147,7 @@ const FlgtsTable = ({ isMaster = true }) => {
     setDownloading(true);
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.get("https://airlineplan.com/downloadFLGTs", {
+      const response = await axios.get("http://localhost:5001/downloadFLGTs", {
         responseType: "blob",
         headers: { "x-access-token": accessToken },
       });

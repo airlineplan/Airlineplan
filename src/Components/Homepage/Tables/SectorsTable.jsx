@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
@@ -6,15 +6,15 @@ import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { 
   Trash2, Plus, ArrowUp, ArrowDown, Search, 
-  Map, Calendar, RefreshCw, PenLine
+  Map, RefreshCw
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-// Note: If you have converted AddSector/UpdateSectore, import them here.
-// For now, I have added placeholder buttons for them in the UI.
-// import UpdateSectore from "./UpdateSectore"; 
-// import AddSector from "./AddSector"; 
+// --- IMPORT YOUR MODERNIZED MODAL COMPONENTS ---
+import UpdateSectore from "./UpdateSectore"; 
+import AddSector from "./AddSector";
+import CopySector from "./CopySector";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -22,7 +22,6 @@ function cn(...inputs) {
 }
 
 // --- UI COMPONENTS ---
-
 const Button = ({ children, variant = "primary", className, icon: Icon, ...props }) => {
   const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed";
   
@@ -64,12 +63,11 @@ const TableInput = ({ value, onChange, placeholder }) => (
       placeholder={placeholder}
       className="w-full h-8 px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 transition-all"
     />
-    <Search size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+    <Search size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
   </div>
 );
 
 // --- MAIN COMPONENT ---
-
 const ROWS_PER_PAGE = 8;
 
 const SectorsTable = () => {
@@ -79,20 +77,37 @@ const SectorsTable = () => {
   const [checkedRows, setCheckedRows] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   
+  // Modals & Menus
+  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
+  const [add, setAdd] = useState(true); // Passed to modals
+  
   // Sorting & Filters
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [filters, setFilters] = useState({
-    sector: "", gcd: "", acftType: "", variant: "", bt: "",
+    sector1: "", gcd: "", acftType: "", variant: "", bt: "",
     paxCapacity: "", CargoCapT: "", paxLF: "", cargoLF: "",
     fromDt: "", toDt: ""
   });
+
+  const menuRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsAddMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // --- API CALLS ---
   useEffect(() => {
     const fetchData = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("https://airlineplan.com/sectors", {
+        const response = await axios.get("http://localhost:5001/sectors", {
           headers: { "x-access-token": accessToken },
         });
         setSectorsTableData(response.data || []);
@@ -106,9 +121,9 @@ const SectorsTable = () => {
     fetchData();
   }, []);
 
-  const handleDelete = async () => {
+  const handleDeleteData = async () => {
     if (!checkedRows.length) return toast.warn("No rows selected");
-    if (!window.confirm(`Delete ${checkedRows.length} sectors?`)) return;
+    if (!window.confirm("Are you sure you want to delete this data?")) return;
 
     try {
       const accessToken = localStorage.getItem("accessToken");
@@ -117,20 +132,19 @@ const SectorsTable = () => {
         data: { ids: checkedRows },
       });
 
-      if (response.data?.message === "Data deleted successfully") {
-        toast.success("Sectors deleted");
-        setSectorsTableData(prev => prev.filter(r => !checkedRows.includes(r._id)));
-        setCheckedRows([]);
+      if (response.data && response.data.message === "Data deleted successfully") {
+        toast.success("Delete Successful");
+        setTimeout(() => { window.location.reload(); }, 2000);
       } else {
-        toast.error("Delete failed");
+        toast.error("Delete Failed");
       }
     } catch (error) {
-      toast.error("Error deleting data");
+      toast.error("An error occurred while deleting");
+      console.error(error);
     }
   };
 
   // --- FILTER & SORT LOGIC ---
-
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setCurrentPage(1);
@@ -146,12 +160,12 @@ const SectorsTable = () => {
   const processedData = useMemo(() => {
     let data = [...sectorsTableData];
 
-    // 1. Filter
+    // 1. Filter logic mirroring your original structure exactly
     data = data.filter(row => {
       const match = (val, filter) => String(val || "").toLowerCase().includes(filter.toLowerCase());
       
       return (
-        match(row.sector1, filters.sector) &&
+        match(row.sector1, filters.sector1) &&
         match(row.gcd, filters.gcd) &&
         match(row.acftType, filters.acftType) &&
         match(row.variant, filters.variant) &&
@@ -165,15 +179,15 @@ const SectorsTable = () => {
       );
     });
 
-    // 2. Sort
+    // 2. Sort logic
     if (sortConfig.key) {
       data.sort((a, b) => {
-        const valA = a[sortConfig.key];
-        const valB = b[sortConfig.key];
+        const valA = String(a[sortConfig.key] || "");
+        const valB = String(b[sortConfig.key] || "");
         
-        if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
-        return 0;
+        return sortConfig.direction === "asc" 
+          ? valA.localeCompare(valB) 
+          : valB.localeCompare(valA);
       });
     }
 
@@ -195,16 +209,16 @@ const SectorsTable = () => {
   };
 
   const handleCheckAll = () => {
-    if (checkedRows.length === paginatedData.length && paginatedData.length > 0) {
+    if (checkedRows.length === processedData.length && processedData.length > 0) {
       setCheckedRows([]);
     } else {
-      setCheckedRows(paginatedData.map(r => r._id));
+      setCheckedRows(processedData.map(r => r._id));
     }
   };
 
   // --- RENDER HELPERS ---
   const columns = [
-    { key: "sector1", label: "Sector", filterKey: "sector" }, // Filters based on sector1
+    { key: "sector1", label: "Sector", filterKey: "sector1" },
     { key: "gcd", label: "GCD", filterKey: "gcd" },
     { key: "acftType", label: "ACFT Type", filterKey: "acftType" },
     { key: "variant", label: "Variant", filterKey: "variant" },
@@ -218,10 +232,10 @@ const SectorsTable = () => {
   ];
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-4 relative">
       
       {/* --- HEADER ACTIONS --- */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1 z-30 relative">
         <div>
           <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <Map className="text-indigo-500" size={24} />
@@ -231,24 +245,51 @@ const SectorsTable = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Placeholder Buttons for Update/Add - you can hook these up to your modals */}
-          <Button variant="secondary" icon={PenLine} onClick={() => toast.info("Update Modal Triggered")}>
-            Update
-          </Button>
-          <Button variant="primary" icon={Plus} onClick={() => toast.info("Add Modal Triggered")}>
-            Add Sector
-          </Button>
+          
+          {/* Actual Update Component Mounted Here */}
+          <UpdateSectore checkedRows={checkedRows} />
+
+          {/* Add / Copy Dropdown */}
+          <div className="relative" ref={menuRef}>
+            <Button 
+              variant="primary" 
+              icon={Plus} 
+              onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
+            >
+              Add Options
+            </Button>
+
+            <AnimatePresence>
+              {isAddMenuOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-2 z-50 flex flex-col"
+                >
+                  <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                    {/* Actual Copy Sector Component */}
+                    <CopySector checkedRows={checkedRows} setAdd={setAdd} />
+                  </div>
+                  <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                    {/* Actual Add Sector Component */}
+                    <AddSector setAdd={setAdd} />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
           
           {checkedRows.length > 0 && (
-            <Button variant="danger" icon={Trash2} onClick={handleDelete}>
-              Delete ({checkedRows.length})
+            <Button variant="danger" icon={Trash2} onClick={handleDeleteData}>
+              Delete
             </Button>
           )}
         </div>
       </div>
 
       {/* --- TABLE CARD --- */}
-      <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col h-[70vh]">
+      <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col h-[70vh] relative z-20">
         
         <div className="flex-1 overflow-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
@@ -257,7 +298,7 @@ const SectorsTable = () => {
                 <th className="p-4 w-12 text-center sticky left-0 bg-slate-100/90 dark:bg-slate-800/90 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                   <div className="flex justify-center">
                     <Checkbox 
-                      checked={paginatedData.length > 0 && checkedRows.length === paginatedData.length} 
+                      checked={processedData.length > 0 && checkedRows.length === processedData.length} 
                       onChange={handleCheckAll} 
                     />
                   </div>

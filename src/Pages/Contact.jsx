@@ -79,7 +79,7 @@ export default function Contact() {
     setLoading(true);
     
     try {
-      await axios.post('https://airlineplan.com/send-contactEmail', formData);
+      await axios.post('http://localhost:5001/send-contactEmail', formData);
       toast.success('Message sent successfully!');
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {

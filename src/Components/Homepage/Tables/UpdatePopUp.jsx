@@ -1,27 +1,62 @@
 import React, { useState, useEffect } from "react";
-import {
-  Stack,
-  Typography,
-  TextField,
-  Button,
-  Dialog,
-  IconButton,
-} from "@mui/material";
-import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutline";
 import axios from "axios";
+import moment from "moment";
+import { motion, AnimatePresence } from "framer-motion";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import CloseIcon from "@mui/icons-material/Close";
-import moment from "moment";
-import dayjs from "dayjs";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { DateField } from "@mui/x-date-pickers/DateField";
-import LoadingButton from "@mui/lab/LoadingButton";
+import { X, PenLine } from "lucide-react";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
+// --- UTILITIES ---
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
 
+// --- UI COMPONENTS ---
+const Button = ({ children, variant = "primary", className, loading, icon: Icon, ...props }) => {
+  const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed";
+  
+  const variants = {
+    primary: "bg-gradient-to-r from-indigo-500 to-cyan-500 text-white hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02]",
+    secondary: "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm",
+    ghost: "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800",
+  };
+
+  return (
+    <button className={cn(baseStyles, variants[variant], className)} disabled={loading} {...props}>
+      {loading ? (
+        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+      ) : Icon && (
+        <Icon size={16} className="mr-2" />
+      )}
+      {children}
+    </button>
+  );
+};
+
+const InputGroup = ({ label, error, children }) => (
+  <div className="flex flex-col space-y-1 w-full">
+    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+      {label}
+    </label>
+    {children}
+    {error && (
+      <motion.span 
+        initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+        className="text-xs text-red-500 font-medium leading-tight"
+      >
+        {error}
+      </motion.span>
+    )}
+  </div>
+);
+
+const baseInputStyles = "w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400";
+
+// --- MAIN COMPONENT ---
 const UpdatePopUp = (props) => {
+  // --- STATE (Preserved Exactly) ---
   const [openUpdate, setOpenUpdate] = useState(false);
   const [product, setProduct] = useState("");
 
@@ -41,6 +76,9 @@ const UpdatePopUp = (props) => {
   const [remarks1, setRemarks1] = useState("");
   const [remarks2, setRemarks2] = useState("");
   const [message, setMessage] = useState("");
+  
+  const [loading, setLoading] = useState(false);
+
   const [flightError, setFlightError] = useState("");
   const [depStnError, setDepStnError] = useState("");
   const [arrStnError, seArrStnError] = useState("");
@@ -48,28 +86,26 @@ const UpdatePopUp = (props) => {
   const [dowError, setDowError] = useState("");
   const [effToDtError, setEffToDtError] = useState("");
   const [effFromDtError, setEffFromDtError] = useState("");
-  const [loading, setLoading] = useState(false);
-
   const [userTag1Error, setUserTag1Error] = useState("");
   const [userTag2Error, setUserTag2Error] = useState("");
   const [remarks1Error, setRemarks1Error] = useState("");
   const [remarks2Error, setRemarks2Error] = useState("");
 
+  const isBulkUpdate = props.checkedRows?.length > 1;
+  const DataId = props.checkedRows?.[0];
+  const productId = props.checkedRows;
 
-  const DataId = props.checkedRows[0];
+  // --- HANDLERS (Preserved Exactly) ---
   const handleUpdateOpen = () => {
     setOpenUpdate(true);
-    // setAddbutton(null);
     setFlightError(null);
     setDepStnError(null);
     seArrStnError(null);
     setVariantError(null);
     setDowError(null);
     setEffToDtError(null);
-    // setEffToDt(null);
     setEffFromDtError(null);
-    // setEffFromDt(null)
-    setUserTag1Error(null)
+    setUserTag1Error(null);
     setUserTag2Error(null);
     setRemarks1Error(null);
     setRemarks2Error(null);
@@ -91,19 +127,13 @@ const UpdatePopUp = (props) => {
       setDepStn(value);
       setDepStnError("");
     } else {
-      setDepStnError("Arr Stn must be 4 characters long");
+      setDepStnError("Dep Stn must be 4 characters long");
     }
   };
 
-  const handleSTD = (event) => {
-    setStd(event.target.value);
-  };
-  const handleBT = (event) => {
-    setBt(event.target.value);
-  };
-  const handleSTA = (event) => {
-    setSta(event.target.value);
-  };
+  const handleSTD = (event) => setStd(event.target.value);
+  const handleBT = (event) => setBt(event.target.value);
+  const handleSTA = (event) => setSta(event.target.value);
 
   const handleArrStn = (event) => {
     const value = event.target.value;
@@ -111,7 +141,7 @@ const UpdatePopUp = (props) => {
       setArrStn(value);
       seArrStnError("");
     } else {
-      seArrStnError("Det Stn must be 4 characters long");
+      seArrStnError("Arr Stn must be 4 characters long");
     }
   };
 
@@ -121,187 +151,153 @@ const UpdatePopUp = (props) => {
       setVariant(value);
       setVariantError("");
     } else {
-      setVariantError(
-        'Must be 8 characters and can only contain letters, numbers, "-", and blank spaces'
-      );
+      setVariantError('Must be 8 characters and can only contain letters, numbers, "-", and blank spaces');
     }
   };
-  const handleEffFromDt = (event) => {
-    setEffFromDt(event.target.value);
-  };
+
+  const handleEffFromDt = (event) => setEffFromDt(event.target.value);
+  const handleEffToDt = (event) => setEffToDt(event.target.value);
+
   const handleDow = (event) => {
     const value = event.target.value;
     if (/^[1-7]{0,7}$/.test(value)) {
       setDow(value);
       setDowError("");
     } else {
-      setDowError(
-        "Must be 7 digits and each digit can only be between 1 and 7."
-      );
+      setDowError("Must be 7 digits and each digit can only be between 1 and 7.");
     }
   };
-  const handleDomIntl = (event) => {
-    setDomIntl(event.target.value.toLowerCase());
-  };
+
+  const handleDomIntl = (event) => setDomIntl(event.target.value.toLowerCase());
+
   const handleUserTag1 = (event) => {
     const input = event.target.value;
-    const isValid = /^\s*.{0,12}\s*$/.test(input);
-    if (isValid) {
+    if (/^\s*.{0,12}\s*$/.test(input)) {
       setUserTag1(input);
       setUserTag1Error("");
     } else {
       setUserTag1Error("Must be 12 characters and can only contain letters");
     }
   };
+
   const handleUserTag2 = (event) => {
     const input = event.target.value;
-    const isValid = /^\s*.{0,12}\s*$/.test(input);
-    if (isValid) {
+    if (/^\s*.{0,12}\s*$/.test(input)) {
       setUserTag2(input);
       setUserTag2Error("");
     } else {
       setUserTag2Error("Must be 12 characters and can only contain letters");
     }
   };
+
   const handleRemarks1 = (event) => {
-    const isValid = /^\s*.{0,12}\s*$/.test(event.target.value);
-    if (isValid) {
+    if (/^\s*.{0,12}\s*$/.test(event.target.value)) {
       setRemarks1(event.target.value);
       setRemarks1Error("");
     } else {
       setRemarks1Error("Must be 12 characters and can only contain letters");
     }
   };
+
   const handleRemarks2 = (event) => {
-    const isValid = /^\s*.{0,12}\s*$/.test(event.target.value);
-    if (isValid) {
+    if (/^\s*.{0,12}\s*$/.test(event.target.value)) {
       setRemarks2(event.target.value);
       setRemarks2Error("");
     } else {
       setRemarks2Error("Must be 12 characters and can only contain letters");
     }
   };
+
+  // Required Field logic preserved
   useEffect(() => {
-    if (!effToDt && !props.checkedRows.length > 1) {
+    if (!effToDt && !isBulkUpdate) {
       setEffToDtError("This field is required.");
     } else {
       setEffToDtError("");
     }
-  }, [effToDt]);
+  }, [effToDt, isBulkUpdate]);
 
   useEffect(() => {
-    if (!effFromDt && !props.checkedRows.length > 1) {
+    if (!effFromDt && !isBulkUpdate) {
       setEffFromDtError("This field is required.");
     } else {
       setEffFromDtError("");
     }
-  }, [effFromDt]);
+  }, [effFromDt, isBulkUpdate]);
 
-  const productId = props.checkedRows;
-
+  // Data Fetching Logic
   const fetchData = async () => {
-    if (props.checkedRows.length > 1) {
-      return
-    }
+    if (isBulkUpdate) return;
     try {
-      const response = await axios.get(
-        `https://airlineplan.com/products/${DataId}`
-      );
+      const response = await axios.get(`http://localhost:5001/products/${DataId}`);
       const item = response.data;
 
-      const inputDate = item.effFromDt;
-      const formattedDate = moment(inputDate).format("DD/MMM/YY");
+      // Adapted for native HTML5 Date inputs (requires YYYY-MM-DD)
+      const formtEffFromDate = item.effFromDt ? moment(item.effFromDt).format("YYYY-MM-DD") : "";
+      const formtEfftoDate = item.effToDt ? moment(item.effToDt).format("YYYY-MM-DD") : "";
 
-      const inputEfftodate = item.effToDt;
-      const formtEfftoDate = moment(inputEfftodate).format("DD/MMM/YY");
-
-      setFlight(item.flight);
-      setDepStn(item.depStn);
-      setStd(item.std);
-      setBt(item.bt);
-      setSta(item.sta);
-      setArrStn(item.arrStn);
-      setVariant(item.variant);
-      setEffFromDt(formattedDate);
+      setFlight(item.flight || "");
+      setDepStn(item.depStn || "");
+      setStd(item.std || "");
+      setBt(item.bt || "");
+      setSta(item.sta || "");
+      setArrStn(item.arrStn || "");
+      setVariant(item.variant || "");
+      setEffFromDt(formtEffFromDate);
       setEffToDt(formtEfftoDate);
-      setDow(item.dow);
-      setDomIntl(item.domINTL.toLowerCase());
-      setUserTag1(item.userTag1);
-      setUserTag2(item.userTag2);
-      setRemarks1(item.remarks1);
-      setRemarks2(item.remarks2);
+      setDow(item.dow || "");
+      setDomIntl(item.domINTL ? item.domINTL.toLowerCase() : "");
+      setUserTag1(item.userTag1 || "");
+      setUserTag2(item.userTag2 || "");
+      setRemarks1(item.remarks1 || "");
+      setRemarks2(item.remarks2 || "");
     } catch (error) {
       console.error(error);
       setProduct(null);
     }
   };
 
+  // Helper Functions Preserved Exactly
   function isValidProductData(productData) {
-    // Iterate through the values of the object
     for (const key in productData) {
-      // Check if the value is not an empty string, null, or undefined
       if (productData.hasOwnProperty(key) && (productData[key] !== '' && productData[key] !== null && productData[key] !== undefined)) {
-        return true; // At least one field is valid
+        return true; 
       }
     }
-    return false; // None of the fields are valid
+    return false; 
   }
 
   function removeEmptyFields(productData) {
-    // Iterate through the keys of the object
     for (const key in productData) {
-      // Check if the value is an empty string, null, or undefined
       if (productData.hasOwnProperty(key) && (productData[key] === '' || productData[key] === null || productData[key] === undefined)) {
-        // Remove the field with empty value
         delete productData[key];
       }
     }
   }
 
+  // Submit Handler Preserved Exactly
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!effFromDt && !props.checkedRows.length > 1) {
+    if (!effFromDt && !isBulkUpdate) {
       setEffFromDtError(" This field is required.");
       return;
     }
-    if (!effToDt && !props.checkedRows.length > 1) {
+    if (!effToDt && !isBulkUpdate) {
       setEffToDtError(" This field is required.");
       return;
     }
 
     if (
-      flightError ||
-      depStnError ||
-      arrStnError ||
-      variantError ||
-      dowError ||
-      userTag1Error ||
-      userTag2Error ||
-      remarks1Error ||
-      remarks2Error ||
-      false
+      flightError || depStnError || arrStnError || variantError ||
+      dowError || userTag1Error || userTag2Error || remarks1Error || remarks2Error
     ) {
       return;
     }
 
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     const productData = {
-      flight,
-      depStn,
-      std,
-      bt,
-      sta,
-      arrStn,
-      variant,
-      effFromDt,
-      effToDt,
-      dow,
-      domINTL,
-      userTag1,
-      userTag2,
-      remarks1,
-      remarks2,
-      timeZone
+      flight, depStn, std, bt, sta, arrStn, variant, effFromDt, effToDt,
+      dow, domINTL, userTag1, userTag2, remarks1, remarks2, timeZone
     };
 
     removeEmptyFields(productData);
@@ -310,484 +306,183 @@ const UpdatePopUp = (props) => {
       console.log('At least one field is not empty, null, or undefined.');
     } else {
       toast.error("All fields are empty");
-      return 
+      return; 
     }
 
     if (productId) {
       setLoading(true);
-      axios
-        .put(`https://airlineplan.com/update-data/${productId}`, productData, {
-          headers: 
-          { 'x-access-token': `${localStorage.getItem('accessToken')}`, 'Content-Type': 'application/json' },
+      axios.put(`http://localhost:5001/update-data/${productId}`, productData, {
+          headers: { 'x-access-token': `${localStorage.getItem('accessToken')}`, 'Content-Type': 'application/json' },
         })
         .then((response) => {
-          // props.createConnections();
           const data = response.data;
           setLoading(false);
           toast.success("Updated successfully");
           setMessage(data.message);
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-          // props.onUpdate();
+          setTimeout(() => { window.location.reload(); }, 2000);
         })
         .catch((error) => {
           console.error(error);
-          if (
-            error.response &&
-            error.response.status === 400 &&
-            error.response.data.message ===
-              "Data with this combination already exists"
-          ) {
+          if (error.response && error.response.status === 400 && error.response.data.message === "Data with this combination already exists") {
             toast.error("Data with this combination already exists");
-          setLoading(false);
-
           } else {
             toast.error("An error occurred");
-          setLoading(false);
-
           }
+          setLoading(false);
         });
     }
   };
 
-  console.log(effFromDt, "this is change");
+  // Keyboard Navigation
+  const handleKeyDown = (event) => {
+    if (event.key === "Tab") {
+      event.preventDefault();
+      const inputFields = document.querySelectorAll('input:not([type="hidden"])');
+      const currentFocusedIndex = Array.from(inputFields).indexOf(document.activeElement);
+      const nextFocusedIndex = (currentFocusedIndex + 1) % inputFields.length;
+      if (inputFields[nextFocusedIndex]) inputFields[nextFocusedIndex].focus();
+    }
+  };
+
   return (
     <>
+      {/* TRIGGER BUTTON */}
       <Button
-        variant="contained"
-        startIcon={<DriveFileRenameOutlineIcon />}
+        variant="secondary"
+        icon={PenLine}
         onClick={() => {
+          if (!props.checkedRows || props.checkedRows.length === 0) {
+             toast.warning("Please select at least one row to update.");
+             return;
+          }
           handleUpdateOpen();
           fetchData();
         }}
-        sx={{ textTransform: "capitalize", width: "fit-content" }}
+        className="ml-2"
       >
-        Update
+        Update Selected
       </Button>
-      <Dialog
-        open={openUpdate}
-        onClose={() => {
-          setOpenUpdate(false);
-        }}
-        fullWidth={true}
-        maxWidth={"xl"}
-      >
-        <Stack sx={{ padding: "2%", width: "fit-content" }}>
-          <Stack
-            flexDirection="row"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{ borderBottom: "1px solid #D8D8D8" }}
-          >
-            <Typography sx={{ fontWeight: "bold" }}>Update Row</Typography>
-            <IconButton
-              sx={{ mb: "10px" }}
-              onClick={() => {
-                setOpenUpdate(false);
-                setLoading(false);
-              }}
-            >
-              <CloseIcon />
-            </IconButton>
-          </Stack>
-          <form onSubmit={handleSubmit}>
-            <Stack direction="row" spacing={2}>
-              <Stack alignItems="center" spacing={2} sx={{width: '100%'}} style={{ marginTop: '10px' }}>                
-                <Typography sx={{ width: "100px", fontSize: "14px", fontWeight: "500" }}>  
-                  Flight
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={flight}
-                    onChange={handleFlight}
-                  />
-                  {flightError && (
-                    <div style={{ color: "red" }}>{flightError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Dep Stn
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={depStn}
-                    required = {props.checkedRows.length>1 ? false : true}
-                    onChange={handleDepStn}
-                  />
-                  {depStnError && (
-                    <div style={{ color: "red" }}>{depStnError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  STD(LT)
-                </Typography>
-                <TextField
-                  sx={{ width: "88%" }}
-                  required = {props.checkedRows.length>1 ? false : true}
-                  size="small"
-                  type="time"
-                  value={std}
-                  onChange={handleSTD}
-                />
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  BT
-                </Typography>
-                <TextField
-                  sx={{ width: "88%" }}
-                  required = {props.checkedRows.length>1 ? false : true}
-                  size="small"
-                  type="time"
-                  value={bt}
-                  onChange={handleBT}
-                />
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  STA(LT)
-                </Typography>
-                <TextField
-                  sx={{ width: "88%" }}
-                  size="small"
-                  value={sta}
-                  type="time"
-                  onChange={handleSTA}
-                />
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Arr Stn
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={arrStn}
-                    onChange={handleArrStn}
-                  />
-                  {arrStnError && (
-                    <div style={{ color: "red" }}>{arrStnError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Variant
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={variant}
-                    required = {props.checkedRows.length>1 ? false : true}
-                    onChange={handleVariant}
-                  />
-                  {variantError && (
-                    <div style={{ color: "red" }}>{variantError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "50%", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Eff from Dt
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <DatePicker
-                      sx={{ width: 150 }}
-                      format="DD/MMM/YY"
-                      defaultValue={dayjs(effFromDt)}
-                      value={dayjs(effFromDt)}
-                      onChange={(date) => setEffFromDt(date)}
-                      slotProps={{ field: { shouldRespectLeadingZeros: true } }}
-                    />
-                  </LocalizationProvider>
-                  {effFromDtError && (
-                    <div style={{ color: "red" }}>{effFromDtError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "50%", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Eff to Dt
-                </Typography>
 
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <DatePicker
-                      sx={{ width: 150 }}
-                      format="DD/MMM/YY"
-                      defaultValue={dayjs(effToDt)}
-                      value={dayjs(effToDt)}
-                      onChange={(date) => setEffToDt(date)}
-                      size="small" 
-                      slotProps={{ field: { shouldRespectLeadingZeros: true } }}
-                    />
-                  </LocalizationProvider>
-                  {effToDtError && (
-                    <div style={{ color: "red" }}>{effToDtError}</div>
+      {/* MODAL / DIALOG */}
+      <AnimatePresence>
+        {openUpdate && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setOpenUpdate(false); setLoading(false); }}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              onKeyDown={handleKeyDown}
+              className="fixed inset-0 m-auto z-50 w-full max-w-5xl h-fit max-h-[90vh] overflow-y-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 custom-scrollbar"
+            >
+              
+              {/* Header */}
+              <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
+                <div>
+                  <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
+                    {isBulkUpdate ? "Bulk Update Rows" : "Update Row"}
+                  </h3>
+                  {isBulkUpdate && (
+                    <p className="text-xs text-slate-500 mt-1 font-medium">
+                      Updating {props.checkedRows.length} rows. Blank fields will be ignored.
+                    </p>
                   )}
                 </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
+                <button 
+                  onClick={() => { setOpenUpdate(false); setLoading(false); }}
+                  className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
                 >
-                  DoW
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    required = {props.checkedRows.length>1 ? false : true}
-                    value={dow}
-                    type="number"
-                    onChange={handleDow}
-                  />
-                  {dowError && <div style={{ color: "red" }}>{dowError}</div>}
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Form Grid - Fixed horizontal layout with CSS Grid */}
+              <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="Flight" error={flightError}>
+                    <input className={baseInputStyles} value={flight} onChange={handleFlight} placeholder="Flight number" />
+                  </InputGroup>
+                  <InputGroup label="Dep Stn" error={depStnError}>
+                    <input className={baseInputStyles} required={!isBulkUpdate} value={depStn} onChange={handleDepStn} placeholder="Dep Station" />
+                  </InputGroup>
+                  <InputGroup label="Arr Stn" error={arrStnError}>
+                    <input className={baseInputStyles} value={arrStn} onChange={handleArrStn} placeholder="Arr Station" />
+                  </InputGroup>
                 </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Dom / INTL
-                </Typography>
-                <TextField
-                  size="small"
-                  required = {props.checkedRows.length>1 ? false : true}
-                  value={domINTL}
-                  onChange={handleDomIntl}
-                />
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  User Tag 1
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={userTag1}
-                    onChange={handleUserTag1}
-                  />
-                  {userTag1Error && (
-                    <div style={{ color: "red" }}>{userTag1Error}</div>
-                  )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="STD (LT)">
+                    <input className={baseInputStyles} required={!isBulkUpdate} type="time" value={std} onChange={handleSTD} />
+                  </InputGroup>
+                  <InputGroup label="BT">
+                    <input className={baseInputStyles} required={!isBulkUpdate} type="time" value={bt} onChange={handleBT} />
+                  </InputGroup>
+                  <InputGroup label="STA (LT)">
+                    <input className={baseInputStyles} type="time" value={sta} onChange={handleSTA} />
+                  </InputGroup>
                 </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  User Tag 2
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={userTag2}
-                    onChange={handleUserTag2}
-                  />
-                  {userTag2Error && (
-                    <div style={{ color: "red" }}>{userTag2Error}</div>
-                  )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="Variant" error={variantError}>
+                    <input className={baseInputStyles} required={!isBulkUpdate} value={variant} onChange={handleVariant} placeholder="Variant" />
+                  </InputGroup>
+                  <InputGroup label="Eff From Dt" error={effFromDtError}>
+                    <input className={baseInputStyles} type="date" required={!isBulkUpdate} value={effFromDt} onChange={handleEffFromDt} />
+                  </InputGroup>
+                  <InputGroup label="Eff To Dt" error={effToDtError}>
+                    {/* Note: Native min restriction relies on Eff From Date being filled */}
+                    <input className={baseInputStyles} type="date" required={!isBulkUpdate} min={effFromDt} value={effToDt} onChange={handleEffToDt} />
+                  </InputGroup>
                 </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Remarks 1
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={remarks1}
-                    onChange={handleRemarks1}
-                  />
-                  {remarks1Error && (
-                    <div style={{ color: "red" }}>{remarks1Error}</div>
-                  )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="DoW" error={dowError}>
+                    <input className={baseInputStyles} required={!isBulkUpdate} type="number" value={dow} onChange={handleDow} placeholder="1234567" />
+                  </InputGroup>
+                  <InputGroup label="Dom / INTL">
+                    <input className={baseInputStyles} required={!isBulkUpdate} value={domINTL} onChange={handleDomIntl} placeholder="dom/intl" />
+                  </InputGroup>
+                  <InputGroup label="User Tag 1" error={userTag1Error}>
+                    <input className={baseInputStyles} value={userTag1} onChange={handleUserTag1} placeholder="Tag 1" />
+                  </InputGroup>
                 </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Remarks 2
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={remarks2}
-                    onChange={handleRemarks2}
-                  />
-                  {remarks2Error && (
-                    <div style={{ color: "red" }}>{remarks2Error}</div>
-                  )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="User Tag 2" error={userTag2Error}>
+                    <input className={baseInputStyles} value={userTag2} onChange={handleUserTag2} placeholder="Tag 2" />
+                  </InputGroup>
+                  <InputGroup label="Remarks 1" error={remarks1Error}>
+                    <input className={baseInputStyles} value={remarks1} onChange={handleRemarks1} placeholder="Remarks 1" />
+                  </InputGroup>
+                  <InputGroup label="Remarks 2" error={remarks2Error}>
+                    <input className={baseInputStyles} value={remarks2} onChange={handleRemarks2} placeholder="Remarks 2" />
+                  </InputGroup>
                 </div>
-              </Stack>
-            </Stack>
-            <Stack direction="row" justifyContent="end" mt="10px">
-              <LoadingButton
-               type="submit"
-                  loading={loading}
-                  variant="contained"
-                >
-                  <span>Submit</span>
-                </LoadingButton>
-            </Stack>
-          </form>
-        </Stack>
-      </Dialog>
-      <ToastContainer />
+
+                {/* Footer Actions */}
+                <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
+                  <Button type="button" variant="ghost" onClick={() => { setOpenUpdate(false); setLoading(false); }}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="primary" loading={loading}>
+                    {isBulkUpdate ? "Apply Bulk Update" : "Save Changes"}
+                  </Button>
+                </div>
+
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      <ToastContainer position="bottom-right" theme="colored" />
     </>
   );
 };

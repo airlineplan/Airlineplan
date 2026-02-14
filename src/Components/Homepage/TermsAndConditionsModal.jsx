@@ -47,6 +47,7 @@ export default function TermsAndConditionsModal() {
   const contentRef = useRef(null);
 
   // Close on Escape key
+  
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === "Escape") setIsOpen(false);

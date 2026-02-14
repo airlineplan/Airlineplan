@@ -48,7 +48,7 @@ const ForgatePassword = () => {
 
     try {
       setLoading(true);
-      const url = "https://airlineplan.com/send-email";
+      const url = "http://localhost:5001/send-email";
       const options = {
         method: "POST",
         url: url,

@@ -145,7 +145,7 @@ const AddNetwork = ({ setAdd }) => {
       };
 
       const response = await axios.post(
-        "https://airlineplan.com/add-Data",
+        "http://localhost:5001/add-Data",
         payload,
         {
           headers: {

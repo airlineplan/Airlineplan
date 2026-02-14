@@ -1,26 +1,61 @@
-import React, { useEffect, useState } from "react";
-import Dialog from "@mui/material/Dialog";
-import {
-  Stack,
-  Typography,
-  TextField,
-  MenuItem,
-  IconButton,
-} from "@mui/material";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
+import dayjs from "dayjs";
+import { motion, AnimatePresence } from "framer-motion";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import CloseIcon from "@mui/icons-material/Close";
-import dayjs from "dayjs";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import LoadingButton from "@mui/lab/LoadingButton";
+import { X } from "lucide-react";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
+// --- UTILITIES ---
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
 
+// --- UI COMPONENTS ---
+const Button = ({ children, variant = "primary", className, loading, ...props }) => {
+  const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed";
+  
+  const variants = {
+    primary: "bg-gradient-to-r from-indigo-500 to-cyan-500 text-white hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02]",
+    ghost: "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800",
+  };
+
+  return (
+    <button className={cn(baseStyles, variants[variant], className)} disabled={loading} {...props}>
+      {loading ? (
+        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+      ) : null}
+      {children}
+    </button>
+  );
+};
+
+const InputGroup = ({ label, error, children }) => (
+  <div className="flex flex-col space-y-1 w-full">
+    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+      {label}
+    </label>
+    {children}
+    {error && (
+      <motion.span 
+        initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+        className="text-xs text-red-500 font-medium leading-tight"
+      >
+        {error}
+      </motion.span>
+    )}
+  </div>
+);
+
+const baseInputStyles = "w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400";
+
+// --- MAIN COMPONENT ---
 export default function CopyRow(props) {
+  // --- STATE ---
   const [open, setOpen] = useState(false);
-  const [product, setProduct] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [flight, setFlight] = useState("");
   const [depStn, setDepStn] = useState("");
@@ -37,6 +72,7 @@ export default function CopyRow(props) {
   const [userTag2, setUserTag2] = useState("");
   const [remarks1, setRemarks1] = useState("");
   const [remarks2, setRemarks2] = useState("");
+
   const [flightError, setFlightError] = useState("");
   const [depStnError, setDepStnError] = useState("");
   const [arrStnError, seArrStnError] = useState("");
@@ -44,13 +80,12 @@ export default function CopyRow(props) {
   const [dowError, setDowError] = useState("");
   const [effToDtError, setEffToDtError] = useState("");
   const [effFromDtError, setEffFromDtError] = useState("");
-  const [loading, setLoading] = useState(false);
-
   const [userTag1Error, setUserTag1Error] = useState("");
   const [userTag2Error, setUserTag2Error] = useState("");
   const [remarks1Error, setRemarks1Error] = useState("");
   const [remarks2Error, setRemarks2Error] = useState("");
-  console.log(effToDt, "***");
+
+  // --- HANDLERS ---
   const handleClickOpen = () => {
     setOpen(true);
     setFlightError(null);
@@ -66,9 +101,7 @@ export default function CopyRow(props) {
     setRemarks2Error(null);
   };
 
-  const handleClose = () => {
-    setOpen(false);
-  };
+  const handleClose = () => setOpen(false);
 
   const handleFlight = (event) => {
     const value = event.target.value;
@@ -86,19 +119,13 @@ export default function CopyRow(props) {
       setDepStn(value);
       setDepStnError("");
     } else {
-      setDepStnError("Arr Stn must be 4 characters long");
+      setDepStnError("Dep Stn must be 4 characters long");
     }
   };
 
-  const handleSTD = (event) => {
-    setStd(event.target.value);
-  };
-  const handleBT = (event) => {
-    setBt(event.target.value);
-  };
-  const handleSTA = (event) => {
-    setSta(event.target.value);
-  };
+  const handleSTD = (event) => setStd(event.target.value);
+  const handleBT = (event) => setBt(event.target.value);
+  const handleSTA = (event) => setSta(event.target.value);
 
   const handleArrStn = (event) => {
     const value = event.target.value;
@@ -106,7 +133,7 @@ export default function CopyRow(props) {
       setArrStn(value);
       seArrStnError("");
     } else {
-      seArrStnError("Det Stn must be 4 characters long");
+      seArrStnError("Arr Stn must be 4 characters long");
     }
   };
 
@@ -116,62 +143,58 @@ export default function CopyRow(props) {
       setVariant(value);
       setVariantError("");
     } else {
-      setVariantError(
-        'Must be 8 characters and can only contain letters, numbers, "-", and blank spaces'
-      );
+      setVariantError('Must be 8 characters and can only contain letters, numbers, "-", and blank spaces');
     }
   };
-  const handleEffFromDt = (event) => {
-    setEffFromDt(event.target.value);
-  };
+
+  const handleEffFromDt = (event) => setEffFromDt(event.target.value);
+  const handleEffToDt = (event) => setEffToDt(event.target.value);
+
   const handleDow = (event) => {
     const value = event.target.value;
     if (/^[1-7]{0,7}$/.test(value)) {
       setDow(value);
       setDowError("");
     } else {
-      setDowError(
-        "Must be 7 digits and each digit can only be between 1 and 7."
-      );
+      setDowError("Must be 7 digits and each digit can only be between 1 and 7.");
     }
   };
-  const handleDomIntl = (event) => {
-    setDomIntl(event.target.value.toLowerCase());
-  };
+
+  const handleDomIntl = (event) => setDomIntl(event.target.value.toLowerCase());
+
   const handleUserTag1 = (event) => {
     const input = event.target.value;
-    const isValid = /^\s*.{0,12}\s*$/.test(input);
-    if (isValid) {
+    if (/^\s*.{0,12}\s*$/.test(input)) {
       setUserTag1(input);
       setUserTag1Error("");
     } else {
       setUserTag1Error("Must be 12 characters and can only contain letters");
     }
   };
+
   const handleUserTag2 = (event) => {
     const input = event.target.value;
-    const isValid = /^\s*.{0,12}\s*$/.test(input);
-    if (isValid) {
+    if (/^\s*.{0,12}\s*$/.test(input)) {
       setUserTag2(input);
       setUserTag2Error("");
     } else {
       setUserTag2Error("Must be 12 characters and can only contain letters");
     }
   };
+
   const handleRemarks1 = (event) => {
     const input = event.target.value;
-    const isValid = /^\s*.{0,12}\s*$/.test(input);
-    if (isValid) {
+    if (/^\s*.{0,12}\s*$/.test(input)) {
       setRemarks1(input);
       setRemarks1Error("");
     } else {
       setRemarks1Error("Must be 12 characters and can only contain letters");
     }
   };
+
   const handleRemarks2 = (event) => {
     const input = event.target.value;
-    const isValid = /^\s*.{0,12}\s*$/.test(input);
-    if (isValid) {
+    if (/^\s*.{0,12}\s*$/.test(input)) {
       setRemarks2(input);
       setRemarks2Error("");
     } else {
@@ -180,72 +203,54 @@ export default function CopyRow(props) {
   };
 
   useEffect(() => {
-    if (!effToDt) {
-      setEffToDtError("This field is required.");
-    } else {
-      setEffToDtError("");
-    }
+    if (!effToDt) setEffToDtError("This field is required.");
+    else setEffToDtError("");
   }, [effToDt]);
 
   useEffect(() => {
-    if (!effFromDt) {
-      setEffFromDtError("This field is required.");
-    } else {
-      setEffFromDtError("");
-    }
+    if (!effFromDt) setEffFromDtError("This field is required.");
+    else setEffFromDtError("");
   }, [effFromDt]);
 
-  const DataId = props?.checkedRows[0];
+  // --- API DATA LOGIC ---
+  const DataId = props?.checkedRows?.[0];
   const fetchData = async () => {
     try {
-      const response = await axios.get(
-        `https://airlineplan.com/products/${DataId}`
-      );
+      const response = await axios.get(`http://localhost:5001/products/${DataId}`);
       const item = response.data;
-      setFlight(item.flight);
-      setDepStn(item.depStn);
-      setStd(item.std);
-      setBt(item.bt);
-      setSta(item.sta);
-      setArrStn(item.arrStn);
-      setVariant(item.variant);
-      setEffFromDt(item.effFromDt);
-      setEffToDt(item.effToDt);
-      setDow(item.dow);
-      setDomIntl(item.domINTL.toLowerCase());
-      setUserTag1(item.userTag1);
-      setUserTag2(item.userTag2);
-      setRemarks1(item.remarks1);
-      setRemarks2(item.remarks2);
+      setFlight(item.flight || "");
+      setDepStn(item.depStn || "");
+      setStd(item.std || "");
+      setBt(item.bt || "");
+      setSta(item.sta || "");
+      setArrStn(item.arrStn || "");
+      setVariant(item.variant || "");
+      
+      // Formatting for native HTML5 Date inputs
+      setEffFromDt(item.effFromDt ? dayjs(item.effFromDt).format("YYYY-MM-DD") : "");
+      setEffToDt(item.effToDt ? dayjs(item.effToDt).format("YYYY-MM-DD") : "");
+      
+      setDow(item.dow || "");
+      setDomIntl(item.domINTL ? item.domINTL.toLowerCase() : "");
+      setUserTag1(item.userTag1 || "");
+      setUserTag2(item.userTag2 || "");
+      setRemarks1(item.remarks1 || "");
+      setRemarks2(item.remarks2 || "");
     } catch (error) {
       console.error(error);
-      setProduct(null);
+      toast.error("Failed to fetch row data");
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!effFromDt) {
-      setEffFromDtError(" This field is required.");
-      return;
-    }
-    if (!effToDt) {
-      setEffToDtError(" This field is required.");
-      return;
-    }
+    if (!effFromDt) { setEffFromDtError(" This field is required."); return; }
+    if (!effToDt) { setEffToDtError(" This field is required."); return; }
 
     if (
-      flightError ||
-      depStnError ||
-      arrStnError ||
-      variantError ||
-      dowError ||
-      userTag1Error ||
-      userTag2Error ||
-      remarks1Error ||
-      remarks2Error ||
-      false
+      flightError || depStnError || arrStnError || variantError ||
+      dowError || userTag1Error || userTag2Error || remarks1Error || remarks2Error
     ) {
       return;
     }
@@ -254,490 +259,167 @@ export default function CopyRow(props) {
       setLoading(true);
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const response = await axios.post(
-        "https://airlineplan.com/add-Data",
+        "http://localhost:5001/add-Data",
         {
-          flight,
-          depStn,
-          std,
-          bt,
-          sta,
-          arrStn,
-          variant,
-          effFromDt,
-          effToDt,
-          dow,
-          domINTL,
-          userTag1,
-          userTag2,
-          remarks1,
-          timeZone,
-          remarks2,
+          flight, depStn, std, bt, sta, arrStn, variant, effFromDt, effToDt,
+          dow, domINTL, userTag1, userTag2, remarks1, timeZone, remarks2,
         },
-        {
-          headers: {
-            "x-access-token": `${localStorage.getItem("accessToken")}`,
-            "Content-Type": "application/json",
-          },
-        }
+        { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
       );
 
       if (response.status === 201) {
-      setLoading(false);
+        setLoading(false);
         toast.success("Update successful!");
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+        setTimeout(() => { window.location.reload(); }, 2000);
       }
-      console.log(response.data);
     } catch (err) {
       console.error(err);
-
       if (err.response && err.response.status === 400) {
         toast.error("Already exist");
-      setLoading(false);
-
       } else {
         toast.error("An error occurred while processing your request.");
-      setLoading(false);
-
       }
+      setLoading(false);
+    }
+  };
+
+  // Keyboard navigation logic
+  const handleKeyDown = (event) => {
+    if (event.key === "Tab") {
+      event.preventDefault();
+      const inputFields = document.querySelectorAll('input:not([type="hidden"])');
+      const currentFocusedIndex = Array.from(inputFields).indexOf(document.activeElement);
+      const nextFocusedIndex = (currentFocusedIndex + 1) % inputFields.length;
+      if (inputFields[nextFocusedIndex]) inputFields[nextFocusedIndex].focus();
     }
   };
 
   return (
-    <div>
-      <MenuItem
+    <>
+      {/* TRIGGER BUTTON */}
+      <button
         onClick={() => {
           handleClickOpen();
           fetchData();
-          props.setAdd(false)
-
+          props.setAdd(false);
         }}
-        sx={{ fontWeight: "500", fontSize: "15px", paddingX: "24px" }}
+        className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
       >
-        Copy
-      </MenuItem>
+        Copy Row
+      </button>
 
-      <Dialog open={open}
-        fullWidth={true}
-        maxWidth={"xl"}
-        onClose={()=>{setOpen(false);props.setAdd(true)}}
-                      onKeyDown={(event) => {
-                        if (event.key === "Tab") {
-                          event.preventDefault();
-                          const inputFields = document.querySelectorAll(
-                            'input:not([type="hidden"]), TextField'
-                          );
-                          const currentFocusedIndex = Array.from(inputFields).indexOf(
-                            document.activeElement
-                          );
-                                const nextFocusedIndex =
-                            (currentFocusedIndex + 1) % inputFields.length;      
-                          inputFields[nextFocusedIndex].focus();
-                        }
-                      }}
-                      
-      >
-        <Stack sx={{ padding: "2%", width: "fit-content" }}>
-          <Stack
-            flexDirection="row"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{ borderBottom: "1px solid #D8D8D8" }}
-          >
-            <Typography sx={{ fontWeight: "bold" }}>Copy Row</Typography>
-            <IconButton sx={{ mb: "10px" }} onClick={()=>{handleClose();props.setAdd(true);setLoading(false);}}>
-              <CloseIcon />
-            </IconButton>
-          </Stack>
-          <form onSubmit={handleSubmit}>
-            <Stack direction="row" spacing={2}>
-              <Stack alignItems="center" spacing={2} sx={{width: '100%'}} style={{ marginTop: '10px' }}>
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500",}}
+      {/* MODAL / DIALOG */}
+      <AnimatePresence>
+        {open && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { handleClose(); props.setAdd(true); setLoading(false); }}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              onKeyDown={handleKeyDown}
+              className="fixed inset-0 m-auto z-50 w-full max-w-5xl h-fit max-h-[90vh] overflow-y-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 custom-scrollbar"
+            >
+              
+              {/* Header */}
+              <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
+                  Copy Row Data
+                </h3>
+                <button 
+                  onClick={() => { handleClose(); props.setAdd(true); setLoading(false); }}
+                  className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
                 >
-                  Flight
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={flight}
-                    onChange={handleFlight}
-                  />
-                  {flightError && (
-                    <div style={{ color: "red" }}>{flightError}</div>
-                  )}
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Form Grid - Fixed the horizontal scrolling issue with CSS Grid */}
+              <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="Flight" error={flightError}>
+                    <input className={baseInputStyles} value={flight} onChange={handleFlight} placeholder="Flight number" />
+                  </InputGroup>
+                  <InputGroup label="Dep Stn" error={depStnError}>
+                    <input className={baseInputStyles} required value={depStn} onChange={handleDepStn} placeholder="Dep Station" />
+                  </InputGroup>
+                  <InputGroup label="Arr Stn" error={arrStnError}>
+                    <input className={baseInputStyles} value={arrStn} onChange={handleArrStn} placeholder="Arr Station" />
+                  </InputGroup>
                 </div>
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Dep Stn
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={depStn}
-                    required
-                    onChange={handleDepStn}
-                  />
-                  {depStnError && (
-                    <div style={{ color: "red" }}>{depStnError}</div>
-                  )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="STD (LT)">
+                    <input className={baseInputStyles} required type="time" value={std} onChange={handleSTD} />
+                  </InputGroup>
+                  <InputGroup label="BT">
+                    <input className={baseInputStyles} required type="time" value={bt} onChange={handleBT} />
+                  </InputGroup>
+                  <InputGroup label="STA (LT)">
+                    <input className={baseInputStyles} type="time" value={sta} onChange={handleSTA} />
+                  </InputGroup>
                 </div>
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{textAlign: 'center',  width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  STD(LT)
-                </Typography>
-                <TextField
-                  sx={{ width: "88%" }}
-                  required
-                  size="small"
-                  type="time"
-                  value={std}
-                  onChange={handleSTD}
-                />
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  BT
-                </Typography>
-                <TextField
-                  sx={{ width: "88%" }}
-                  required
-                  size="small"
-                  type="time"
-                  value={bt}
-                  onChange={handleBT}
-                />
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  STA(LT)
-                </Typography>
-                <TextField
-                  sx={{ width: "88%" }}
-                  size="small"
-                  value={sta}
-                  type="time"
-                  onChange={handleSTA}
-                />
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Arr Stn
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={arrStn}
-                    onChange={handleArrStn}
-                  />
-                  {arrStnError && (
-                    <div style={{ color: "red" }}>{arrStnError}</div>
-                  )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="Variant" error={variantError}>
+                    <input className={baseInputStyles} required value={variant} onChange={handleVariant} placeholder="Variant" />
+                  </InputGroup>
+                  <InputGroup label="Eff From Dt" error={effFromDtError}>
+                    <input className={baseInputStyles} type="date" required value={effFromDt} onChange={handleEffFromDt} />
+                  </InputGroup>
+                  <InputGroup label="Eff To Dt" error={effToDtError}>
+                    <input className={baseInputStyles} type="date" required min={effFromDt} value={effToDt} onChange={handleEffToDt} />
+                  </InputGroup>
                 </div>
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{textAlign: 'center',  width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Variant
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={variant}
-                    required
-                    onChange={handleVariant}
-                  />
-                  {variantError && (
-                    <div style={{ color: "red" }}>{variantError}</div>
-                  )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="DoW" error={dowError}>
+                    <input className={baseInputStyles} required type="number" value={dow} onChange={handleDow} placeholder="1234567" />
+                  </InputGroup>
+                  <InputGroup label="Dom / INTL">
+                    <input className={baseInputStyles} required value={domINTL} onChange={handleDomIntl} placeholder="dom/intl" />
+                  </InputGroup>
+                  <InputGroup label="User Tag 1" error={userTag1Error}>
+                    <input className={baseInputStyles} value={userTag1} onChange={handleUserTag1} placeholder="Tag 1" />
+                  </InputGroup>
                 </div>
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Eff from Dt
-                </Typography>
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                  <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <DatePicker
-                      sx={{ width: "165px" }}
-                      format="DD/MMM/YY"
-                      value={dayjs(effFromDt)}
-                      onChange={(date) => {
-                        setEffFromDt(date);
-                      }}
-                      slotProps={{ field: { shouldRespectLeadingZeros: true } }}
-                    />
-                  </LocalizationProvider>
-                  {effFromDtError && (
-                    <div style={{ color: "red" }}>{effFromDtError}</div>
-                  )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="User Tag 2" error={userTag2Error}>
+                    <input className={baseInputStyles} value={userTag2} onChange={handleUserTag2} placeholder="Tag 2" />
+                  </InputGroup>
+                  <InputGroup label="Remarks 1" error={remarks1Error}>
+                    <input className={baseInputStyles} value={remarks1} onChange={handleRemarks1} placeholder="Remarks 1" />
+                  </InputGroup>
+                  <InputGroup label="Remarks 2" error={remarks2Error}>
+                    <input className={baseInputStyles} value={remarks2} onChange={handleRemarks2} placeholder="Remarks 2" />
+                  </InputGroup>
                 </div>
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Eff to Dt
-                </Typography>
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                  <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <DatePicker
-                      sx={{ width: "165px" }}
-                      format="DD/MMM/YY"
-                      value={dayjs(effToDt)}
-                      onChange={(date) => setEffToDt(date)}
-                      minDate={dayjs(effFromDt)} // Set the minDate to limit selectable dates
-                      slotProps={{ field: { shouldRespectLeadingZeros: true } }}
-                    />
-                  </LocalizationProvider>
-                  {effToDtError && (
-                    <div style={{ color: "red" }}>{effToDtError}</div>
-                  )}
+
+                {/* Footer Actions */}
+                <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-slate-200 dark:border-slate-800">
+                  <Button type="button" variant="ghost" onClick={() => { handleClose(); props.setAdd(true); setLoading(false); }}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="primary" loading={loading}>
+                    Save Copied Row
+                  </Button>
                 </div>
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  DoW
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    required
-                    value={dow}
-                    type="number"
-                    onChange={handleDow}
-                  />
-                  {dowError && <div style={{ color: "red" }}>{dowError}</div>}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Dom / INTL
-                </Typography>
-                <TextField
-                  size="small"
-                  required
-                  value={domINTL}
-                  onChange={handleDomIntl}
-                />
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  User Tag 1
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={userTag1}
-                    onChange={handleUserTag1}
-                  />
-                  {userTag1Error && (
-                    <div style={{ color: "red" }}>{userTag1Error}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  User Tag 2
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={userTag2}
-                    onChange={handleUserTag2}
-                  />
-                  {userTag2Error && (
-                    <div style={{ color: "red" }}>{userTag2Error}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Remarks 1
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={remarks1}
-                    onChange={handleRemarks1}
-                  />
-                  {remarks1Error && (
-                    <div style={{ color: "red" }}>{remarks1Error}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center" 
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Remarks 2
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    value={remarks2}
-                    onChange={handleRemarks2}
-                  />
-                  {remarks2Error && (
-                    <div style={{ color: "red" }}>{remarks2Error}</div>
-                  )}
-                </div>
-              </Stack>
-            </Stack>
-            <Stack direction="row" justifyContent="end" mt="10px">
-              <LoadingButton
-                type="submit"
-                loading={loading}
-                variant="contained"
-              >
-                <span>Submit</span>
-              </LoadingButton>
-            </Stack>
-          </form>
-        </Stack>
-      </Dialog>
-      <ToastContainer />
-    </div>
+
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      <ToastContainer position="bottom-right" theme="colored" />
+    </>
   );
 }

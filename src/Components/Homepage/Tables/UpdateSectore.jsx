@@ -1,34 +1,64 @@
-import React, { useState, useEffect } from 'react'
-import {
-  Stack,
-  Typography,
-  TextField,
-  Button,
-  Dialog,
-  IconButton,
-} from "@mui/material";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
-import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutline";
+import moment from "moment";
+import { motion, AnimatePresence } from "framer-motion";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import CloseIcon from '@mui/icons-material/Close';
-import dayjs from "dayjs";
-import moment from "moment";
-import { DemoContainer } from "@mui/x-date-pickers/internals/demo";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DateField } from "@mui/x-date-pickers/DateField";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import LoadingButton from "@mui/lab/LoadingButton";
+import { X, PenLine } from "lucide-react";
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 
+// --- UTILITIES ---
+function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
 
+// --- UI COMPONENTS ---
+const Button = ({ children, variant = "primary", className, loading, icon: Icon, ...props }) => {
+  const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed";
 
+  const variants = {
+    primary: "bg-gradient-to-r from-indigo-500 to-cyan-500 text-white hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02]",
+    secondary: "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm",
+    ghost: "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800",
+  };
+
+  return (
+    <button className={cn(baseStyles, variants[variant], className)} disabled={loading} {...props}>
+      {loading ? (
+        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+      ) : Icon && (
+        <Icon size={16} className="mr-2" />
+      )}
+      {children}
+    </button>
+  );
+};
+
+const InputGroup = ({ label, error, children }) => (
+  <div className="flex flex-col space-y-1 w-full">
+    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+      {label}
+    </label>
+    {children}
+    {error && (
+      <motion.span
+        initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+        className="text-xs text-red-500 font-medium leading-tight"
+      >
+        {error}
+      </motion.span>
+    )}
+  </div>
+);
+
+const baseInputStyles = "w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400 disabled:opacity-60 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed";
+
+// --- MAIN COMPONENT ---
 const UpdateSectore = (props) => {
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [openCopyModal, setOpenCopyModal] = useState(false);
-  const [openNewModal, setOpenNewModal] = useState(false);
+  // --- STATE ---
   const [openUpdateModal, setOpenUpdateModal] = useState(false);
-  const [sector, setSector] = useState("");
+
   const [sector1, setSector1] = useState("");
   const [sector2, setSector2] = useState("");
   const [gcd, setGCD] = useState("");
@@ -43,14 +73,12 @@ const UpdateSectore = (props) => {
   const [toDt, setToDt] = useState("");
   const [loading, setLoading] = useState(false);
 
-
-
   const [sector1Error, setSector1Error] = useState("");
   const [sector2Error, setSector2Error] = useState("");
   const [gcdError, setGCDError] = useState("");
   const [acftTypeError, setACFTTypeError] = useState("");
   const [variantError, setVariantError] = useState("");
-  const [btError, setBlockTimeError] = useState("");
+  const [btError, setBlockTimeError] = useState(""); // <-- FIX: Restored this state
   const [paxCapacityError, setPaxCapacityError] = useState("");
   const [CargoCapTError, setCargoCapTError] = useState("");
   const [paxLFPercentError, setPaxLfPercentError] = useState("");
@@ -58,27 +86,28 @@ const UpdateSectore = (props) => {
   const [fromDtError, setFromDtError] = useState("");
   const [toDtError, setToDtError] = useState("");
 
-  //  disable Network Available Fields in Sector Table
-  // const [availableFields, setAvailableFields] = useState([]);
+  const [stationsData, setStationsData] = useState([]);
 
+  const DataId = props.checkedRows?.[0];
+  const productId = props.checkedRows;
+
+
+  const isRequired = props.checkedRows?.length > 1 ? false : true;
+
+  // --- HANDLERS ---
   const handleClose = () => {
-    setAnchorEl(null);
     setSector1Error(null);
     setSector2Error(null);
-    setGCDError(null)
-    setACFTTypeError(null)
-    setVariantError(null)
-    setPaxCapacityError(null)
+    setGCDError(null);
+    setACFTTypeError(null);
+    setVariantError(null);
+    setBlockTimeError(null); // <-- FIX: Ensure this clears
+    setPaxCapacityError(null);
     setCargoCapTError(null);
     setPaxLfPercentError(null);
     setCargoLfPercentError(null);
     setFromDtError(null);
     setToDtError(null);
-    // setAvailableFields([]);
-  };
-
-  const handleSector = (event) => {
-    setSector(event.target.value);
   };
 
   const handleSector1 = (event) => {
@@ -87,9 +116,10 @@ const UpdateSectore = (props) => {
       setSector1(value);
       setSector1Error("");
     } else {
-      setSector1Error("Arr Stn must be 4 characters long");
+      setSector1Error("Dep Stn must be 4 characters long");
     }
   };
+
   const handleSector2 = (event) => {
     const value = event.target.value;
     if (/^[a-zA-Z0-9\s]{0,4}$/.test(value)) {
@@ -102,7 +132,6 @@ const UpdateSectore = (props) => {
 
   const handleGCD = (event) => {
     const inputValue = event.target.value;
-
     const parsedValue = parseInt(inputValue, 10);
     if (isNaN(parsedValue)) {
       setGCDError("Please enter a valid integer");
@@ -110,9 +139,6 @@ const UpdateSectore = (props) => {
     }
     if (parsedValue < 0 || parsedValue > 20000) {
       setGCDError("Please enter an integer between 0 and 20,000.");
-      console.error(
-        "Invalid input: Please enter an integer between 0 and 20,000."
-      );
       return;
     }
     setGCDError("");
@@ -125,27 +151,21 @@ const UpdateSectore = (props) => {
       setACFTType(value);
       setACFTTypeError("");
     } else {
-      setACFTTypeError(
-        'Must be 8 characters and can only contain letters, numbers, "-", and blank spaces'
-      );
+      setACFTTypeError('Must be 8 characters and can only contain letters, numbers, "-", and blank spaces');
     }
   };
+
   const handleVariant = (event) => {
     const value = event.target.value;
     if (/^[a-zA-Z0-9\s-]{0,8}$/.test(value)) {
       setVariant(value);
       setVariantError("");
     } else {
-      setVariantError(
-        'Must be 8 characters and can only contain letters, numbers, "-", and blank spaces'
-      );
+      setVariantError('Must be 8 characters and can only contain letters, numbers, "-", and blank spaces');
     }
   };
-  const handleBlockTime = (event) => {
-    setBlockTime(event.target.value);
-  };
 
-
+  const handleBlockTime = (event) => setBlockTime(event.target.value);
 
   const handlePaxCapacity = (event) => {
     const inputValue = event.target.value;
@@ -176,19 +196,12 @@ const UpdateSectore = (props) => {
     }
   };
 
-
   const handlePaxPercent = (event) => {
     const value = event.target.value;
     const percentage = parseFloat(value);
-    if (
-      isNaN(percentage) ||
-      percentage < 0 ||
-      percentage > 100 ||
-      value.includes(".")
-    ) {
+    if (isNaN(percentage) || percentage < 0 || percentage > 100 || value.includes(".")) {
       setPaxLfPercentError("percentage between 0% and 100% without decimals.");
       setPaxLfPercent("");
-      return;
     } else {
       setPaxLfPercent(percentage);
       setPaxLfPercentError("");
@@ -198,191 +211,99 @@ const UpdateSectore = (props) => {
   const handleCargoPercent = (event) => {
     const value = event.target.value;
     const percentage = parseFloat(value);
-    if (
-      isNaN(percentage) ||
-      percentage < 0 ||
-      percentage > 100 ||
-      value.includes(".")
-    ) {
-      setCargoLfPercentError(
-        "percentage between 0% and 100% without decimals."
-      );
-      setPaxLfPercent("");
-      return;
+    if (isNaN(percentage) || percentage < 0 || percentage > 100 || value.includes(".")) {
+      setCargoLfPercentError("percentage between 0% and 100% without decimals.");
+      setCargoLfPercent("");
     } else {
       setCargoLfPercent(percentage);
       setCargoLfPercentError("");
     }
-    event.target.value;
-  };
-  const handleFromDt = (event) => {
-    setFromDt(event.target.value);
-  };
-  const handleToDt = (event) => {
-    setToDt(event.target.value);
   };
 
-  const handleClickOpen = () => {
-    setOpen(true);
-  };
-
-
+  const handleFromDt = (event) => setFromDt(event.target.value);
+  const handleToDt = (event) => setToDt(event.target.value);
 
   useEffect(() => {
-    if (!fromDt && !props.checkedRows.length > 1) {
+    if (!fromDt && !props.checkedRows?.length > 1) {
       setFromDtError("This field is required.");
     } else {
       setFromDtError("");
     }
-  }, [fromDt]);
+  }, [fromDt, props.checkedRows]);
 
   useEffect(() => {
-    if (!toDt && !props.checkedRows.length > 1) {
+    if (!toDt && !props.checkedRows?.length > 1) {
       setToDtError("This field is required.");
     } else {
       setToDtError("");
     }
-  }, [toDt]);
-
-  const DataId = props.checkedRows[0];
-  const productId = props.checkedRows;
+  }, [toDt, props.checkedRows]);
 
   const fetchData = async () => {
-    
-    if (props.checkedRows.length > 1) {
-      setSector1("")
-      setSector2("")
-      setACFTType("")
-      setVariant("")
-      setBlockTime("")
-      setGCD("")
-      setPaxCapacity("")
-      setCargoCapT("")
-      setPaxLfPercent("")
-      setCargoLfPercent("")
-      setFromDt("")
-      setToDt("")
-      return
+    if (props.checkedRows?.length > 1) {
+      setSector1(""); setSector2(""); setACFTType(""); setVariant("");
+      setBlockTime(""); setGCD(""); setPaxCapacity(""); setCargoCapT("");
+      setPaxLfPercent(""); setCargoLfPercent(""); setFromDt(""); setToDt("");
+      return;
     }
 
     try {
-      const response = await axios.get(
-        `https://airlineplan.com/sectorsbyid/${DataId}`
-      );
+      const response = await axios.get(`http://localhost:5001/sectorsbyid/${DataId}`);
       const item = response.data;
 
-      const inputDate = item.fromDt;
-      const formattedDate = moment(inputDate).format("DD/MMM/YY");
+      const formtEffFromDate = item.fromDt ? moment(item.fromDt).format("YYYY-MM-DD") : "";
+      const formtEfftoDate = item.toDt ? moment(item.toDt).format("YYYY-MM-DD") : "";
 
-      const inputEfftodate = item.toDt;
-      const formtEfftoDate = moment(inputEfftodate).format("DD/MMM/YY");
-      setSector1(item.sector1)
-      setSector2(item.sector2)
-      setACFTType(item.acftType)
-      setVariant(item.variant)
-      setBlockTime(item.bt)
-      setGCD(item.gcd)
-      setPaxCapacity(item.paxCapacity)
-      setCargoCapT(item.CargoCapT)
-      setPaxLfPercent(item.paxLF)
-      setCargoLfPercent(item.cargoLF)
-      setFromDt(formattedDate)
-      setToDt(formtEfftoDate)
-
-      // setAvailableFields((prevFields) => {
-
-      //   const newFields = [];
-      //   if (item.fromDt) {
-      //     newFields.push("fromDt");
-      //   }
-      //   if (item.toDt) {
-      //     newFields.push("toDt");
-      //   }
-      //   if (item.sector1) {
-      //     newFields.push("sector1");
-      //   }
-      //   if (item.sector2) {
-      //     newFields.push("sector2");
-      //   }
-      //   if (item.acftType) {
-      //     newFields.push("acftType");
-      //   }
-      //   if (item.variant) {
-      //     newFields.push("variant");
-      //   }
-      //   if (item.bt) {
-      //     newFields.push("bt");
-      //   }
-      //   if (item.gcd) {
-      //     newFields.push("gcd");
-      //   }
-      //   if (item.paxCapacity) {
-      //     newFields.push("paxCapacity");
-      //   }
-      //   if (item.CargoCapT) {
-      //     newFields.push("CargoCapT");
-      //   }
-      //   if (item.paxLF) {
-      //     newFields.push("paxLF");
-      //   }
-      //   if (item.cargoLF) {
-      //     newFields.push("cargoLF");
-      //   }
-
-      //   return [...prevFields, ...newFields];
-      // });
-
+      setSector1(item.sector1 || "");
+      setSector2(item.sector2 || "");
+      setACFTType(item.acftType || "");
+      setVariant(item.variant || "");
+      setBlockTime(item.bt || "");
+      setGCD(item.gcd || "");
+      setPaxCapacity(item.paxCapacity || "");
+      setCargoCapT(item.CargoCapT || "");
+      setPaxLfPercent(item.paxLF || "");
+      setCargoLfPercent(item.cargoLF || "");
+      setFromDt(formtEffFromDate);
+      setToDt(formtEfftoDate);
     } catch (error) {
       console.error(error);
-
     }
   };
 
   function isValidProductData(productData) {
-    // Iterate through the values of the object
     for (const key in productData) {
-      // Check if the value is not an empty string, null, or undefined
       if (productData.hasOwnProperty(key) && (productData[key] !== '' && productData[key] !== null && productData[key] !== undefined)) {
-        return true; // At least one field is valid
+        return true;
       }
     }
-    return false; // None of the fields are valid
+    return false;
   }
 
   function removeEmptyFields(productData) {
-    // Iterate through the keys of the object
     for (const key in productData) {
-      // Check if the value is an empty string, null, or undefined
       if (productData.hasOwnProperty(key) && (productData[key] === '' || productData[key] === null || productData[key] === undefined)) {
-        // Remove the field with empty value
         delete productData[key];
       }
     }
   }
 
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!fromDt && !props.checkedRows.length > 1) {
+    if (!fromDt && !props.checkedRows?.length > 1) {
       setFromDtError("This field is required.");
       return;
     }
-    if (!toDt && !props.checkedRows.length > 1) {
+    if (!toDt && !props.checkedRows?.length > 1) {
       setToDtError("This field is required.");
       return;
     }
 
     if (
-      sector1Error ||
-      sector2Error ||
-      gcdError ||
-      acftTypeError ||
-      variantError ||
-      paxCapacityError ||
-      CargoCapTError ||
-      paxLFPercentError ||
-      cargoLFPercentError ||
-      false
+      sector1Error || sector2Error || gcdError || acftTypeError || variantError ||
+      paxCapacityError || CargoCapTError || paxLFPercentError || cargoLFPercentError
     ) {
       return;
     }
@@ -390,19 +311,9 @@ const UpdateSectore = (props) => {
     try {
       setLoading(true);
 
-      const productData =  {
-        sector1,
-        sector2,
-        acftType,
-        variant,
-        bt,
-        gcd,
-        paxCapacity,
-        CargoCapT,
-        paxLF,
-        cargoLF,
-        fromDt,
-        toDt,
+      const productData = {
+        sector1, sector2, acftType, variant, bt, gcd,
+        paxCapacity, CargoCapT, paxLF, cargoLF, fromDt, toDt,
       };
 
       removeEmptyFields(productData);
@@ -412,454 +323,171 @@ const UpdateSectore = (props) => {
       } else {
         toast.error("All fields are empty");
         setLoading(false);
-        return 
+        return;
       }
 
       const response = await axios.put(
-        `https://airlineplan.com/update-sectore/${productId}`,
+        `http://localhost:5001/update-sectore/${productId}`,
         productData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "x-access-token": `${localStorage.getItem("accessToken")}`,
-          },
-        }
+        { headers: { "Content-Type": "application/json", "x-access-token": `${localStorage.getItem("accessToken")}` } }
       );
 
       if (response.status === 200) {
-        // props.createConnections();
         setLoading(false);
         toast.success("Update successful!");
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+        setTimeout(() => { window.location.reload(); }, 2000);
       }
-      console.log(response.data);
     } catch (err) {
       console.error(err);
-
       if (err.response && err.response.status === 400) {
         toast.error("Already exist");
-        setLoading(false);
-
       } else {
         toast.error("An error occurred while processing your request.");
-        setLoading(false);
-
       }
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === "Tab") {
+      event.preventDefault();
+      const inputFields = document.querySelectorAll('input:not([type="hidden"])');
+      const currentFocusedIndex = Array.from(inputFields).indexOf(document.activeElement);
+      const nextFocusedIndex = (currentFocusedIndex + 1) % inputFields.length;
+      if (inputFields[nextFocusedIndex]) inputFields[nextFocusedIndex].focus();
     }
   };
 
   return (
     <>
       <Button
-        variant="contained"
-        startIcon={<DriveFileRenameOutlineIcon />}
+        variant="secondary"
+        icon={PenLine}
         onClick={() => {
+          if (!props.checkedRows || props.checkedRows.length === 0) {
+            toast.warning("Please select at least one row to update.");
+            return;
+          }
           setOpenUpdateModal(true);
           fetchData();
         }}
-        sx={{ textTransform: "capitalize", width: "fit-content" }}
       >
         Update
       </Button>
 
-      <Dialog
-        open={openUpdateModal}
-        onClose={() => {
-          handleClose()
-          setOpenUpdateModal(false);
-        }}
-        fullWidth={true}
-        maxWidth={"xl"}
-      >
-        <Stack sx={{ padding: "2%", width: "fit-content" }}>
-          <Stack flexDirection='row' justifyContent='space-between'  sx={{ borderBottom: "1px solid #D8D8D8" }}>
-            <Typography sx={{ fontWeight: "bold" }}>Update Row</Typography>
-            <IconButton sx={{ mb: '10px' }} onClick={() => { setOpenUpdateModal(false); setLoading(false); }}>
-              <CloseIcon />
-            </IconButton>
-          </Stack>
-          <form onSubmit={handleSubmit}>
-            <Stack direction="row" spacing={2}>
-              <Stack alignItems="center" spacing={2} sx={{width: '100%'}} style={{ marginTop: '10px' }}>
-                <Typography
-                  sx={{ textAlign: 'center', width: "70%", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Dep Stn
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    name="sector1"
-                    required = {props.checkedRows.length>1 ? false : true}
-                    value={sector1}
-                    onChange={handleSector1}
-                    placeholder="VI89,"
-                    disabled
-                    />
-                  {sector1Error && (
-                    <div style={{ color: "red" }}>{sector1Error}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "70%", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Arr Stn
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    name="sector2"
-                    required = {props.checkedRows.length>1 ? false : true}
-                    placeholder="VIDP"
-                    value={sector2}
-                    onChange={handleSector2}
-                    disabled={true}
-                    />
-                  {sector2Error && (
-                    <div style={{ color: "red" }}>{sector2Error}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "50%", fontSize: "14px", fontWeight: "500" }}
-                >
-                  GCD
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField size="small" type="number" onChange={handleGCD} value={gcd} required = {props.checkedRows.length>1 ? false : true} />
-                  {gcdError && <div style={{ color: "red" }}>{gcdError}</div>}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100%", fontSize: "14px", fontWeight: "500" }}
-                >
-                  ACFT Type
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    name="acftType"
-                    onChange={handleACFT}
-                    required = {props.checkedRows.length>1 ? false : true}
-                    value={acftType}
-                    placeholder="A330-200"
-                    />
-                  {acftTypeError && (
-                    <div style={{ color: "red" }}>{acftTypeError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "50%", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Variant
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    name="variant"
-                    onChange={handleVariant}
-                    value={variant}
-                    required = {props.checkedRows.length>1 ? false : true}
-                    placeholder="777300ER"
-                    disabled={true}
-                    />
-                  {variantError && (
-                    <div style={{ color: "red" }}>{variantError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100%", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Block Time
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    sx={{ width: "100px" }}
-                    size="small"
-                    name="bt"
-                    type="time"
-                    value={bt}
-                    onChange={handleBlockTime}
-                    required = {props.checkedRows.length>1 ? false : true}
-                    disabled={true}
-                    />
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100px", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Pax Capacity
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    type="number"
-                    name="paxCapacity"
-                    onChange={handlePaxCapacity}
-                    required = {props.checkedRows.length>1 ? false : true}
-                    value={paxCapacity}
-                    placeholder="0-600"
-                    />
-                  {paxCapacityError && (
-                    <div style={{ color: "red" }}>{paxCapacityError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "110%", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Cargo Cap T
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    type="number"
-                    name="CargoCapT"
-                    value={CargoCapT}
-                    onChange={handleCargoCapT}
-                    required = {props.checkedRows.length>1 ? false : true}
-                    placeholder="150.0"
-                    />
-                  {CargoCapTError && (
-                    <div style={{ color: "red" }}>{CargoCapTError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100%", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Pax LF%
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    name="paxLF"
-                    onChange={handlePaxPercent}
-                    required = {props.checkedRows.length>1 ? false : true}
-                    type='number'
-                    placeholder="100%"
-                    value={paxLF}
-                    />
-                  {paxLFPercentError && (
-                    <div style={{ color: "red" }}>{paxLFPercentError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "100%", fontSize: "14px", fontWeight: "500" }}
-                >
-                  Cargo LF%
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <TextField
-                    size="small"
-                    type="number"
-                    name="cargoLF"
-                    required = {props.checkedRows.length>1 ? false : true}
-                    value={cargoLF}
-                    onChange={handleCargoPercent}
-                    placeholder="100%"
-                    />
-                  {cargoLFPercentError && (
-                    <div style={{ color: "red" }}>{cargoLFPercentError}</div>
-                  )}
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "50%", fontSize: "14px", fontWeight: "500" }}
-                >
-                  From Dt
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
-                  <LocalizationProvider dateAdapter={AdapterDayjs} required = {props.checkedRows.length>1 ? false : true}>
-                    <DatePicker
-                      format="DD/MMM/YY"
-                      defaultValue={dayjs(fromDt)}
-                      value={dayjs(fromDt)}
-                      disabled={true}
-                      sx={{width:"105px"}}
-                      onChange={(date) => setFromDt(date)}
-                      slotProps={{ field: { shouldRespectLeadingZeros: true } }}
-                    />
-                  </LocalizationProvider>
-                  {fromDtError && <div style={{ color: "red" }}>{fromDtError}</div>}
+      <AnimatePresence>
+        {openUpdateModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { handleClose(); setOpenUpdateModal(false); }}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
+            />
 
-                </div>
-              </Stack>
-              <Stack
-                alignItems="center"
-                spacing={2} 
-                sx={{width: '100%'}} 
-                style={{ marginTop: '10px' }}
-              >
-                <Typography
-                  sx={{ textAlign: 'center', width: "50%", fontSize: "14px", fontWeight: "500" }}
-                >
-                  To Dt
-                </Typography>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              onKeyDown={handleKeyDown}
+              className="fixed inset-0 m-auto z-50 w-full max-w-4xl h-fit max-h-[90vh] overflow-y-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 custom-scrollbar"
+            >
 
-                  <LocalizationProvider dateAdapter={AdapterDayjs} required = {props.checkedRows.length>1 ? false : true}>
-                    <DatePicker
-                      format="DD/MMM/YY"
-                      defaultValue={dayjs(toDt)}
-                      value={dayjs(toDt)}
-                      onChange={(date) => setToDt(date)}
-                      disabled={true}
-                      sx={{width:"105px"}}  
-                      slotProps={{ field: { shouldRespectLeadingZeros: true } }}
-                    />
-                  </LocalizationProvider>
-                  {toDtError && <div style={{ color: "red" }}>{toDtError}</div>}
+              <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
+                <div>
+                  <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
+                    Update Sector
+                  </h3>
+                  {props.checkedRows?.length > 1 && (
+                    <p className="text-xs text-slate-500 mt-1 font-medium">
+                      Updating {props.checkedRows.length} sectors. Disabled fields cannot be bulk-edited.
+                    </p>
+                  )}
                 </div>
-              </Stack>
-            </Stack>  
-            <Stack
-              direction="row"
-              justifyContent="end"
-              alignItems="center"
-              spacing={5}
-              mt={2}
-              >
-              <LoadingButton
-                type="submit"
-                loading={loading}
-                variant="contained"
-              >
-                <span>Submit</span>
-              </LoadingButton>
-            </Stack>     
-          </form>
-        </Stack>
-      </Dialog>
-      <ToastContainer />
+                <button
+                  onClick={() => { handleClose(); setOpenUpdateModal(false); setLoading(false); }}
+                  className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="Dep Stn" error={sector1Error}>
+                    <input className={baseInputStyles} name="sector1" disabled required={isRequired} value={sector1} onChange={handleSector1} placeholder="VI89" />
+                  </InputGroup>
+
+                  <InputGroup label="Arr Stn" error={sector2Error}>
+                    <input className={baseInputStyles} name="sector2" disabled required={isRequired} value={sector2} onChange={handleSector2} placeholder="VIDP" />
+                  </InputGroup>
+
+                  <InputGroup label="GCD" error={gcdError}>
+                    <input className={baseInputStyles} type="number" required={isRequired} value={gcd} onChange={handleGCD} placeholder="0 - 20000" />
+                  </InputGroup>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="ACFT Type" error={acftTypeError}>
+                    <input className={baseInputStyles} name="acftType" required={isRequired} value={acftType} onChange={handleACFT} placeholder="A330-200" />
+                  </InputGroup>
+
+                  <InputGroup label="Variant" error={variantError}>
+                    <input className={baseInputStyles} name="variant" disabled required={isRequired} value={variant} onChange={handleVariant} placeholder="777300ER" />
+                  </InputGroup>
+
+                  <InputGroup label="Block Time" error={btError}>
+                    <input className={baseInputStyles} type="time" name="bt" disabled required={isRequired} value={bt} onChange={handleBlockTime} />
+                  </InputGroup>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="Pax Capacity" error={paxCapacityError}>
+                    <input className={baseInputStyles} type="number" name="paxCapacity" required={isRequired} value={paxCapacity} onChange={handlePaxCapacity} placeholder="0-600" />
+                  </InputGroup>
+
+                  <InputGroup label="Cargo Cap T" error={CargoCapTError}>
+                    <input className={baseInputStyles} type="number" step="0.1" name="CargoCapT" required={isRequired} value={CargoCapT} onChange={handleCargoCapT} placeholder="150.0" />
+                  </InputGroup>
+
+                  <InputGroup label="Pax LF%" error={paxLFPercentError}>
+                    <input className={baseInputStyles} type="number" name="paxLF" required={isRequired} value={paxLF} onChange={handlePaxPercent} placeholder="100" />
+                  </InputGroup>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="Cargo LF%" error={cargoLFPercentError}>
+                    <input className={baseInputStyles} type="number" name="cargoLF" required={isRequired} value={cargoLF} onChange={handleCargoPercent} placeholder="100" />
+                  </InputGroup>
+
+                  <InputGroup label="From Dt" error={fromDtError}>
+                    <input className={baseInputStyles} type="date" disabled required={isRequired} value={fromDt} onChange={handleFromDt} />
+                  </InputGroup>
+
+                  <InputGroup label="To Dt" error={toDtError}>
+                    <input className={baseInputStyles} type="date" disabled required={isRequired} value={toDt} onChange={handleToDt} min={fromDt} />
+                  </InputGroup>
+                </div>
+
+                <div className="flex justify-end gap-4 mt-4 pt-6 border-t border-slate-200 dark:border-slate-800">
+                  <Button type="button" variant="ghost" onClick={() => { handleClose(); setOpenUpdateModal(false); }}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="primary" loading={loading}>
+                    Save Changes
+                  </Button>
+                </div>
+
+              </form>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      <ToastContainer position="bottom-right" theme="colored" />
     </>
-  )
-}
+  );
+};
 
-export default UpdateSectore
+export default UpdateSectore;
