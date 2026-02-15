@@ -242,10 +242,10 @@ const AddNetwork = ({ setAdd }) => {
       {/* Trigger Button (Menu Item Style) */}
       <button
         onClick={handleOpen}
-        className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
+        className="w-full text-left py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
       >
         <Plus size={16} />
-        <span>Add New</span>
+        <span>Add</span>
       </button>
 
       {/* Modal Overlay */}
@@ -270,7 +270,7 @@ const AddNetwork = ({ setAdd }) => {
               <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
                 <div>
                   <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
-                    Add Network Record
+                    New
                   </h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Enter flight details and schedule information.</p>
                 </div>

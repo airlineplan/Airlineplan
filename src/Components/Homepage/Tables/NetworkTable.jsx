@@ -4,9 +4,9 @@ import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { 
-  Upload, Plus, Trash2, ArrowUp, ArrowDown, 
-  Search, FileSpreadsheet, X, Check, ChevronLeft, ChevronRight
+import {
+  Upload, Plus, Trash2, ArrowUp, ArrowDown,
+  Search, FileSpreadsheet, X, Check, ChevronLeft, ChevronRight, Network
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -25,7 +25,7 @@ function cn(...inputs) {
 // --- UI COMPONENTS ---
 const Button = ({ children, variant = "primary", className, icon: Icon, loading, ...props }) => {
   const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed";
-  
+
   const variants = {
     primary: "bg-gradient-to-r from-indigo-500 to-cyan-500 text-white hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02]",
     secondary: "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm",
@@ -59,12 +59,12 @@ const TableInput = ({ value, onChange, placeholder }) => (
 );
 
 const Checkbox = ({ checked, onChange }) => (
-  <div 
+  <div
     onClick={onChange}
     className={cn(
       "w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-all duration-200 shrink-0",
-      checked 
-        ? "bg-indigo-500 border-indigo-500" 
+      checked
+        ? "bg-indigo-500 border-indigo-500"
         : "bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-indigo-400"
     )}
   >
@@ -110,12 +110,12 @@ export default function NetworkTable() {
   const [networkTableData, setNetworkTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
-  
+
   // Modals & Menus
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [add, setAdd] = useState(true); // Preserved your state for AddNetwork/CopyRow
-  
+
   // Pagination & Sorting
   const [currentPage, setCurrentPage] = useState(1);
   const [arrow, setArrow] = useState({ column: "", direction: "Up" });
@@ -124,7 +124,7 @@ export default function NetworkTable() {
   // Filters State (Cleaned up your individual states into an object)
   const [filters, setFilters] = useState({
     flight: "", depStn: "", std: "", bt: "", sta: "", arrStn: "", variant: "",
-    effFromDt: "", effToDt: "", dow: "", domINTL: "", userTag1: "", userTag2: "", 
+    effFromDt: "", effToDt: "", dow: "", domINTL: "", userTag1: "", userTag2: "",
     remarks1: "", remarks2: ""
   });
 
@@ -200,8 +200,8 @@ export default function NetworkTable() {
       data.sort((a, b) => {
         const valA = String(a[arrow.column] || "");
         const valB = String(b[arrow.column] || "");
-        return arrow.direction === "Up" 
-          ? valA.localeCompare(valB) 
+        return arrow.direction === "Up"
+          ? valA.localeCompare(valB)
           : valB.localeCompare(valA);
       });
     }
@@ -227,15 +227,15 @@ export default function NetworkTable() {
   };
 
   const handleCheckRow = (id) => {
-    setCheckedRows(prev => 
+    setCheckedRows(prev =>
       prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
     );
   };
 
   // Data Actions
   const handleDeleteData = async () => {
-    if(!checkedRows.length) return toast.warning("Select rows to delete");
-    
+    if (!checkedRows.length) return toast.warning("Select rows to delete");
+
     const isConfirmed = window.confirm("Are you sure you want to delete this data?");
     if (!isConfirmed) return;
 
@@ -259,8 +259,8 @@ export default function NetworkTable() {
   };
 
   const handleFileUpload = async () => {
-    if(!selectedFile) return toast.warning("Please select a file");
-    
+    if (!selectedFile) return toast.warning("Please select a file");
+
     const formData = new FormData();
     formData.append("file", selectedFile);
     setLoading(true);
@@ -268,12 +268,12 @@ export default function NetworkTable() {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.post("ttp://localhost:5001/importUser", formData, {
-        headers: { 
+        headers: {
           "Content-Type": "multipart/form-data",
-          "x-access-token": accessToken 
+          "x-access-token": accessToken
         },
       });
-      
+
       setLoading(false);
 
       if (response.data.skippedRows && response.data.skippedRows.length > 0) {
@@ -296,7 +296,7 @@ export default function NetworkTable() {
         setTimeout(() => { window.location.reload(); }, 3000);
       }
 
-    } catch(error) {
+    } catch (error) {
       console.error(error);
       setLoading(false);
       const errorMessage = error.response?.data?.msg || "An error occurred";
@@ -325,107 +325,111 @@ export default function NetworkTable() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-6 md:p-8 font-sans transition-colors duration-300 relative overflow-hidden">
-      
+
       {/* Background Ambience */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
       <div className="absolute top-0 right-0 -z-10 m-auto h-[300px] w-[300px] rounded-full bg-cyan-500 opacity-10 blur-[100px]"></div>
       <div className="absolute bottom-0 left-0 -z-10 m-auto h-[300px] w-[300px] rounded-full bg-indigo-500 opacity-10 blur-[100px]"></div>
 
       <div className="max-w-[1600px] mx-auto relative z-10 space-y-6">
-        
+
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
+            <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <Network className="text-indigo-500" size={24} />
               Network Schedule
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Manage flight schedules and network data.</p>
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Flights, schedule and network.</p>
           </div>
-          
+
           <div className="flex flex-wrap items-center gap-3">
-             <Button 
-               variant="secondary" 
-               icon={Upload} 
-               onClick={() => setIsUploadOpen(true)}
-             >
-               Upload Schedule
-             </Button>
-             
-             {/* Actual Component Integrations */}
-             <div className="relative" ref={menuRef}>
-               <div className="flex items-center gap-2">
-                 <Button 
-                   variant="primary" 
-                   icon={Plus} 
-                   onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
-                 >
-                   Add
-                 </Button>
+            <Button
+              variant="secondary"
+              icon={Upload}
+              onClick={() => setIsUploadOpen(true)}
+            >
+              Upload Schedule
+            </Button>
 
-                 {/* Render Your Custom Update Component */}
-                 <UpdatePopUp checkedRows={checkedRows} />
-               </div>
+            {/* Actual Component Integrations */}
+            <div className="relative" ref={menuRef}>
+              <div className="flex items-center gap-2 mr-2">
 
-               {/* Add Menu Dropdown containing your native components */}
-               <AnimatePresence>
-                 {isAddMenuOpen && (
-                   <motion.div 
-                     initial={{ opacity: 0, y: 10 }}
-                     animate={{ opacity: 1, y: 0 }}
-                     exit={{ opacity: 0, y: 10 }}
-                     className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-2 z-50 flex flex-col"
-                   >
-                     {/* Note: Ensure these components render without MUI background/border issues. 
+
+                {/* Render Your Custom Update Component */}
+                <UpdatePopUp checkedRows={checkedRows} />
+                
+                <Button
+                  variant="primary"
+                  icon={Plus}
+                  onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
+                >
+                  Add
+                </Button>
+
+              </div>
+
+              {/* Add Menu Dropdown containing your native components */}
+              <AnimatePresence>
+                {isAddMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute right-0 ml-2 top-full mt-2 w-24 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-2 z-50 flex flex-col"
+                  >
+                    {/* Note: Ensure these components render without MUI background/border issues. 
                          If they are just buttons/text, they will fit perfectly here! */}
-                     <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                       <CopyRow checkedRows={checkedRows} setAdd={setAdd} />
-                     </div>
-                     <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                       <AddNetwork setAdd={setAdd} />
-                     </div>
-                   </motion.div>
-                 )}
-               </AnimatePresence>
-             </div>
+                    <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                      <CopyRow checkedRows={checkedRows} setAdd={setAdd} />
+                    </div>
+                    <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                      <AddNetwork setAdd={setAdd} />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
-             {checkedRows.length > 0 && (
-               <Button variant="danger" icon={Trash2} onClick={handleDeleteData}>
-                 Delete ({checkedRows.length})
-               </Button>
-             )}
+            {checkedRows.length > 0 && (
+              <Button variant="danger" icon={Trash2} onClick={handleDeleteData}>
+                Delete ({checkedRows.length})
+              </Button>
+            )}
           </div>
         </div>
 
         {/* Table Card */}
         <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col h-[75vh]">
-          
+
           {/* Table Container - Scrollable */}
           <div className="flex-1 overflow-auto custom-scrollbar relative">
             <table className="w-full text-left border-collapse">
               <thead className="bg-slate-100/80 dark:bg-slate-800/80 sticky top-0 z-20 backdrop-blur-md">
                 <tr>
                   <th className="p-4 w-12 text-center sticky left-0 bg-slate-100/80 dark:bg-slate-800/80 z-30">
-                     <Checkbox 
-                       checked={checkedRows.length === filteredData.length && filteredData.length > 0} 
-                       onChange={handleCheckAll} 
-                     />
+                    <Checkbox
+                      checked={checkedRows.length === filteredData.length && filteredData.length > 0}
+                      onChange={handleCheckAll}
+                    />
                   </th>
                   {columns.map((col) => (
                     <th key={col.id} className="p-3 min-w-[120px] font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       <div className="flex flex-col gap-2">
-                        <div 
+                        <div
                           className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                           onClick={() => handleSort(col.id)}
                         >
                           {col.label}
                           {arrow.column === col.id ? (
-                             arrow.direction === "Up" ? <ArrowUp size={12}/> : <ArrowDown size={12}/> 
+                            arrow.direction === "Up" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
                           ) : (
-                             <ArrowUp size={12} className="opacity-0 group-hover:opacity-30"/>
+                            <ArrowUp size={12} className="opacity-0 group-hover:opacity-30" />
                           )}
                         </div>
-                        <TableInput 
-                          value={filters[col.id]} 
+                        <TableInput
+                          value={filters[col.id]}
                           onChange={(e) => handleFilterChange(col.id, e.target.value)}
                           placeholder={`Filter ${col.label}...`}
                         />
@@ -434,10 +438,10 @@ export default function NetworkTable() {
                   ))}
                 </tr>
               </thead>
-              
+
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {paginatedData.length === 0 ? (
-                   <tr><td colSpan="16" className="p-8 text-center text-slate-500">No records found matching filters.</td></tr>
+                  <tr><td colSpan="16" className="p-8 text-center text-slate-500">No records found matching filters.</td></tr>
                 ) : (
                   <AnimatePresence>
                     {paginatedData.map((row) => (
@@ -454,9 +458,9 @@ export default function NetworkTable() {
                       >
                         <td className="p-4 sticky left-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 z-10 text-center">
                           <div className="flex justify-center">
-                            <Checkbox 
-                              checked={checkedRows.includes(row._id)} 
-                              onChange={() => handleCheckRow(row._id)} 
+                            <Checkbox
+                              checked={checkedRows.includes(row._id)}
+                              onChange={() => handleCheckRow(row._id)}
                             />
                           </div>
                         </td>
@@ -477,8 +481,8 @@ export default function NetworkTable() {
                         <td className="p-3 text-sm text-slate-600 dark:text-slate-400">
                           <span className={cn(
                             "px-2 py-0.5 rounded-full text-xs font-medium",
-                            row.domINTL?.toLowerCase() === 'intl' 
-                              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" 
+                            row.domINTL?.toLowerCase() === 'intl'
+                              ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
                               : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
                           )}>
                             {row.domINTL}
@@ -498,64 +502,64 @@ export default function NetworkTable() {
 
           {/* Footer / Pagination */}
           <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-white/50 dark:bg-slate-900/50 flex flex-col md:flex-row items-center justify-between gap-4">
-             <div className="text-sm text-slate-500">
-                Showing {paginatedData.length > 0 ? (currentPage - 1) * RowsPerPage + 1 : 0} to {Math.min(currentPage * RowsPerPage, filteredData.length)} of {filteredData.length} entries
-             </div>
-             
-             <div className="flex items-center gap-2">
-               <button 
-                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                 disabled={currentPage === 1}
-                 className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
-               >
-                 <ChevronLeft size={16} />
-               </button>
-               
-               {Array.from({ length: totalPages }, (_, i) => {
-                 let pNum = i + 1;
-                 // Visual windowing for pagination if you get too many pages
-                 if (totalPages > 5 && (pNum < currentPage - 2 || pNum > currentPage + 2)) {
-                    if (pNum === 1 || pNum === totalPages) return <span key={pNum} className="text-slate-400 px-1">...</span>;
-                    return null;
-                 }
-                 
-                 return (
-                   <button
-                     key={pNum}
-                     onClick={() => setCurrentPage(pNum)}
-                     className={cn(
-                       "w-8 h-8 rounded-lg text-sm font-medium transition-all",
-                       currentPage === pNum 
-                         ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" 
-                         : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                     )}
-                   >
-                     {pNum}
-                   </button>
-                 );
-               })}
-               
-               <button 
-                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                 disabled={currentPage === totalPages || totalPages === 0}
-                 className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
-               >
-                 <ChevronRight size={16} />
-               </button>
-             </div>
+            <div className="text-sm text-slate-500">
+              Showing {paginatedData.length > 0 ? (currentPage - 1) * RowsPerPage + 1 : 0} to {Math.min(currentPage * RowsPerPage, filteredData.length)} of {filteredData.length} entries
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
+              >
+                <ChevronLeft size={16} />
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => {
+                let pNum = i + 1;
+                // Visual windowing for pagination if you get too many pages
+                if (totalPages > 5 && (pNum < currentPage - 2 || pNum > currentPage + 2)) {
+                  if (pNum === 1 || pNum === totalPages) return <span key={pNum} className="text-slate-400 px-1">...</span>;
+                  return null;
+                }
+
+                return (
+                  <button
+                    key={pNum}
+                    onClick={() => setCurrentPage(pNum)}
+                    className={cn(
+                      "w-8 h-8 rounded-lg text-sm font-medium transition-all",
+                      currentPage === pNum
+                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    )}
+                  >
+                    {pNum}
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         </div>
 
       </div>
 
       {/* --- MODALS --- */}
-      
+
       {/* Upload Modal mapped to your Exact Needs */}
       <Modal isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} title="Upload Schedule">
         <div className="space-y-6">
           <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer relative">
-            <input 
-              type="file" 
+            <input
+              type="file"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               onChange={(e) => setSelectedFile(e.target.files[0])}
             />
@@ -566,7 +570,7 @@ export default function NetworkTable() {
               {selectedFile ? selectedFile.name : "Click to browse or drag file here"}
             </p>
           </div>
-          
+
           <div className="flex justify-end gap-3">
             <Button variant="ghost" onClick={() => setIsUploadOpen(false)}>Cancel</Button>
             <Button variant="primary" loading={loading} onClick={handleFileUpload} disabled={loading || !selectedFile}>

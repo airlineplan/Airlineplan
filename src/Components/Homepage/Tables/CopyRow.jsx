@@ -370,7 +370,7 @@ export default function CopyRow(props) {
         }}
         className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
       >
-        Copy Row
+        Copy
       </button>
 
       {/* MODAL / DIALOG */}

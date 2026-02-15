@@ -256,7 +256,7 @@ const SectorsTable = () => {
               icon={Plus} 
               onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
             >
-              Add Options
+              Add
             </Button>
 
             <AnimatePresence>
@@ -265,7 +265,7 @@ const SectorsTable = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-2 z-50 flex flex-col"
+                  className="absolute right-0 top-full mt-2 w-24 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-2 z-50 flex flex-col"
                 >
                   <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                     {/* Actual Copy Sector Component */}

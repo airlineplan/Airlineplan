@@ -180,7 +180,7 @@ export default function Loginpage() {
 
         {/* RIGHT PANEL: Login Form */}
         {/* Added a very subtle background tint just to group the form elements visually */}
-        <div className="p-8 lg:p-12 flex flex-col justify-center bg-black/20 lg:bg-transparent rounded-3xl lg:rounded-none backdrop-blur-sm lg:backdrop-blur-none border border-white/10 lg:border-none m-4 lg:m-0">
+        <div className="p-8 lg:p-12 flex flex-col justify-center bg-black/20 lg:bg-transparent rounded-3xl lg:backdrop-blur-none border border-white/10 lg:border-none m-4 lg:m-0">
           
           <div className="max-w-md mx-auto w-full">
             <div className="mb-8 text-center lg:text-left">
@@ -249,10 +249,8 @@ export default function Loginpage() {
               </p>
             </div>
 
-            {/* Footer Links */}
+            {/* Footer Links - Route Economics has been removed from here */}
             <div className="mt-8 pt-6 border-t border-white/20 flex flex-wrap justify-center gap-4 lg:gap-6">
-               <Link to="/aircraft-route-economic" className="text-xs text-indigo-200 hover:text-white transition-colors drop-shadow-sm">Route Economics</Link>
-               <div className="text-indigo-200/50 text-xs">•</div>
                <div className="text-xs text-indigo-200 hover:text-white transition-colors cursor-pointer drop-shadow-sm">
                  <TermsAndConditionsModal />
                </div>
@@ -268,4 +266,4 @@ export default function Loginpage() {
       <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
-}
+} 

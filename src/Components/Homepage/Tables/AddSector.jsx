@@ -315,7 +315,7 @@ const AddSector = (props) => {
         }}
         className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
       >
-        New Sector
+        New
       </button>
 
       {/* MODAL / DIALOG */}
@@ -341,7 +341,7 @@ const AddSector = (props) => {
               {/* Header */}
               <div className="flex justify-between items-center mb-8 pb-4 border-b border-slate-200 dark:border-slate-800">
                 <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
-                  Add New Sector
+                  Add
                 </h3>
                 <button
                   onClick={() => { setOpenNewModal(false); setLoading(false); props.setAdd(true); }}

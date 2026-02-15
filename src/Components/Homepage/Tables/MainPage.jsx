@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge";
 import { 
   LogOut, Plane, Network, Map, 
   RotateCw, LayoutDashboard, Link2, 
-  RadioTower, Globe
+  RadioTower, Globe, TrendingUp
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -21,12 +21,16 @@ import ConnectionTable from "./ConnectionTable";
 import StationsTable from "./StationsTable";
 import Rotations from "./Rotations";
 
+// TODO: Make sure this import matches your actual Route Economics component path/name
+import AircraftRoute from "../../../Pages/AircraftRoute"; 
+
 // --- UTILITIES ---
 function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
 // --- CONSTANTS ---
+// Added Route Economics as the last tab
 const TABS = [
   { id: 0, label: "Network", icon: Network, component: NetworkTable },
   { id: 1, label: "Sectors", icon: Map, component: SectorsTable },
@@ -35,6 +39,7 @@ const TABS = [
   { id: 4, label: "FLGTs", icon: Plane, component: FlgtsTable },
   { id: 5, label: "Dashboard", icon: LayoutDashboard, component: DashboardTable },
   { id: 6, label: "Connections", icon: Link2, component: ConnectionTable },
+  { id: 7, label: "Route Economics", icon: TrendingUp, component: AircraftRoute },
 ];
 
 // --- COMPONENTS ---
@@ -43,7 +48,7 @@ const NavItem = ({ tab, isActive, onClick }) => (
   <button
     onClick={onClick}
     className={cn(
-      "relative px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2 z-10",
+      "relative px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2 z-10 whitespace-nowrap",
       isActive 
         ? "text-white" 
         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-800/50"
@@ -140,7 +145,7 @@ const MainPage = () => {
             </div>
             <div>
               <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
-                Airline Planner
+                Airlineplan
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Operations Dashboard</p>
             </div>
