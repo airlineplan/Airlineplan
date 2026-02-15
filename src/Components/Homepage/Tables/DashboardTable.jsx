@@ -43,6 +43,9 @@ const MultiSelectDropdown = ({ placeholder, options = [], onChange }) => {
     if (onChange) onChange(newSelected);
   };
 
+  // Safe fallback if options isn't an array
+  const safeOptions = Array.isArray(options) ? options : [];
+
   return (
     <div className="relative w-full" ref={containerRef}>
       <button
@@ -66,7 +69,7 @@ const MultiSelectDropdown = ({ placeholder, options = [], onChange }) => {
             exit={{ opacity: 0, y: 5 }}
             className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
           >
-            {options.map((opt) => {
+            {safeOptions.map((opt) => {
               const isSelected = selectedOptions.some(s => s.value === opt.value);
               return (
                 <div
@@ -84,7 +87,7 @@ const MultiSelectDropdown = ({ placeholder, options = [], onChange }) => {
                 </div>
               );
             })}
-            {options.length === 0 && <div className="p-3 text-sm text-slate-400 text-center">No options</div>}
+            {safeOptions.length === 0 && <div className="p-3 text-sm text-slate-400 text-center">No options</div>}
           </motion.div>
         )}
       </AnimatePresence>
@@ -112,6 +115,8 @@ const SingleSelectDropdown = ({ placeholder, options = [], onChange, selected })
     if (onChange) onChange(opt);
   };
 
+  const safeOptions = Array.isArray(options) ? options : [];
+
   return (
     <div className="relative w-48 lg:w-64" ref={containerRef}>
       <button
@@ -135,7 +140,7 @@ const SingleSelectDropdown = ({ placeholder, options = [], onChange, selected })
             exit={{ opacity: 0, y: 5 }}
             className="absolute z-50 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
           >
-            {options.map((opt) => (
+            {safeOptions.map((opt) => (
               <div
                 key={opt.value}
                 onClick={() => handleSelect(opt)}
@@ -168,11 +173,10 @@ const DashboardTable = (props) => {
     { label: "Daily", value: "daily" },
   ];
 
-  // --- STATE (Preserved Exactly) ---
+  // --- STATE ---
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Important: Initialized with objects, just like the old code!
   const [selectedValues, setSelectedValues] = useState({ 
     label: singleSelectLabelOptions[2], 
     periodicity: singleSelectPeriodicityOptions[3] 
@@ -182,7 +186,7 @@ const DashboardTable = (props) => {
     from: [], to: [], sector: [], variant: [], userTag1: [], userTag2: [],
   });
 
-  // --- API CALLS (Preserved Exactly) ---
+  // --- API CALLS ---
   useEffect(() => {
     const getDropdownData = async () => {
       try {
@@ -190,9 +194,21 @@ const DashboardTable = (props) => {
           `https://airlinebackend-zfsg.onrender.com/dashboard/populateDropDowns`,
           { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
         );
-        setMultiSelectValues(response.data);
+        
+        // Safety check to ensure we are setting valid arrays even if backend sends malformed data
+        if (response.data && typeof response.data === 'object') {
+          setMultiSelectValues({
+            from: Array.isArray(response.data.from) ? response.data.from : [],
+            to: Array.isArray(response.data.to) ? response.data.to : [],
+            sector: Array.isArray(response.data.sector) ? response.data.sector : [],
+            variant: Array.isArray(response.data.variant) ? response.data.variant : [],
+            userTag1: Array.isArray(response.data.userTag1) ? response.data.userTag1 : [],
+            userTag2: Array.isArray(response.data.userTag2) ? response.data.userTag2 : [],
+          });
+        }
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching dropdowns:", error);
+        // Leave the default empty arrays if this call fails
       }
     };
     getDropdownData();
@@ -214,10 +230,19 @@ const DashboardTable = (props) => {
         headers: { 'x-access-token': accessToken },
       });
   
-      setData(response.data);
+      // Strictly enforce that 'data' is always an array to prevent .map() crashes
+      if (Array.isArray(response.data)) {
+        setData(response.data);
+      } else {
+        setData([]);
+      }
+
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load dashboard data');
+      
+      // CRITICAL FIX: Reset data to empty array on 401/500 errors to prevent React crash
+      setData([]); 
     } finally {
       setLoading(false);
     }
@@ -227,7 +252,7 @@ const DashboardTable = (props) => {
     fetchData();
   }, []); // Initial load
 
-  // --- DOWNLOAD LOGIC (Preserved Exactly) ---
+  // --- DOWNLOAD LOGIC ---
   const transformData = () => {
     const propertyMappings = {
       destinations: 'Destinations', departures: 'Departures', seats: 'Seats', pax: 'Pax',
@@ -311,7 +336,6 @@ const DashboardTable = (props) => {
     return `${day} ${month} ${year}`;
   };
 
-  // Structured the exact row logic from your old code to map automatically and keep JSX super clean
   const TABLE_ROWS = [
     { label: "Destinations", render: (item) => item?.destinations ? item.destinations : " " },
     { label: "Departures", render: (item) => item?.departures ? item.departures : " " },
@@ -347,8 +371,6 @@ const DashboardTable = (props) => {
       <div className="flex flex-col gap-6">
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          
-          
           <div className="flex gap-4">
             <SingleSelectDropdown
               placeholder="Label"
