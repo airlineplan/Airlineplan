@@ -341,7 +341,7 @@ const DashboardTable = (props) => {
   ];
 
   return (
-    <div className="w-full space-y-6 relative pb-10">
+    <div className="w-full p-6 space-y-6 relative pb-10">
       
       {/* HEADER & FILTERS */}
       <div className="flex flex-col gap-6">

@@ -176,7 +176,7 @@ const FlgtsTable = ({ isMaster = true }) => {
   const totalPages = Math.ceil(totalFlights / rowsPerPage);
 
   return (
-    <div className="w-full space-y-4 font-sans">
+    <div className="w-full p-6 space-y-4 font-sans">
       {isMaster && (
         <div className="flex justify-end p-1">
           <button

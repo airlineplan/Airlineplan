@@ -143,7 +143,7 @@ const StationsTable = () => {
   };
 
   return (
-    <div className="w-full h-[calc(100vh-140px)] flex flex-col gap-4">
+    <div className="w-full p-6 h-[calc(100vh-140px)] flex flex-col gap-4">
       
       {/* --- HEADER --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1">

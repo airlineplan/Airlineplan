@@ -232,16 +232,16 @@ const SectorsTable = () => {
   ];
 
   return (
-    <div className="w-full space-y-4 relative">
+    <div className="w-full p-6 space-y-4 relative">
       
       {/* --- HEADER ACTIONS --- */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1 z-30 relative">
+      <div className="flex  flex-col md:flex-row md:items-center justify-between gap-4 p-1 z-30 relative">
         <div>
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+          {/* <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <Map className="text-indigo-500" size={24} />
             Sector Management
-          </h2>
-          <p className="text-xs text-slate-500">Manage aircraft sectors and capacities.</p>
+          </h2> */}
+          <h4 className=" text-slate-500">Flight capacities, loads and sector information</h4>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

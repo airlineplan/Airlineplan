@@ -532,7 +532,7 @@ const Rotations = () => {
         <div className="flex-1 flex flex-col bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg overflow-hidden min-h-[300px]">
             <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
                 <h3 className="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
-                    <Search className="text-blue-500" size={18} /> Available Flights
+                    <Search className="text-blue-500" size={18} /> Flights not assigned to a roation
                 </h3>
             </div>
             

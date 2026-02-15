@@ -324,14 +324,14 @@ export default function NetworkTable() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-6 md:p-8 font-sans transition-colors duration-300 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 relative overflow-hidden">
 
       {/* Background Ambience */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
       <div className="absolute top-0 right-0 -z-10 m-auto h-[300px] w-[300px] rounded-full bg-cyan-500 opacity-10 blur-[100px]"></div>
       <div className="absolute bottom-0 left-0 -z-10 m-auto h-[300px] w-[300px] rounded-full bg-indigo-500 opacity-10 blur-[100px]"></div>
 
-      <div className="max-w-[1600px] mx-auto relative z-10 space-y-6">
+      <div className="p-6 mx-auto relative z-10 space-y-6">
 
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
