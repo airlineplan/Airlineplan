@@ -107,7 +107,7 @@ const SectorsTable = () => {
     const fetchData = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("http://localhost:5001/sectors", {
+        const response = await axios.get("https://airlinebackend-zfsg.onrender.com/sectors", {
           headers: { "x-access-token": accessToken },
         });
         setSectorsTableData(response.data || []);

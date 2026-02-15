@@ -166,8 +166,8 @@ const Rotations = () => {
       try {
         const token = localStorage.getItem("accessToken");
         const [varRes, rotRes] = await Promise.all([
-          axios.get("http://localhost:5001/listVariants", { headers: { "x-access-token": token } }),
-          axios.get("http://localhost:5001/listRotations", { headers: { "x-access-token": token } })
+          axios.get("https://airlinebackend-zfsg.onrender.com/listVariants", { headers: { "x-access-token": token } }),
+          axios.get("https://airlinebackend-zfsg.onrender.com/listRotations", { headers: { "x-access-token": token } })
         ]);
         setListOfVariant(varRes.data);
         setListOfRotations(rotRes.data);
@@ -205,7 +205,7 @@ const Rotations = () => {
     };
 
     try {
-      const res = await axios.post("http://localhost:5001/flightsWoRotations", requestData, {
+      const res = await axios.post("https://airlinebackend-zfsg.onrender.com/flightsWoRotations", requestData, {
         headers: { "x-access-token": localStorage.getItem("accessToken") }
       });
       setFlgtsTableData(res.data.data);
@@ -222,7 +222,7 @@ const Rotations = () => {
   const handleRotationChange = async (val) => {
     if (val === "new") {
       try {
-        const res = await axios.get("http://localhost:5001/getNextRotationNumber", {
+        const res = await axios.get("https://airlinebackend-zfsg.onrender.com/getNextRotationNumber", {
           headers: { "x-access-token": localStorage.getItem("accessToken") }
         });
         setSelectedRotation(res.data.nextRotationNumber);
@@ -232,7 +232,7 @@ const Rotations = () => {
       } catch (e) { console.error(e); }
     } else {
       try {
-        const res = await axios.get(`http://localhost:5001/rotationbyid/${val}`, {
+        const res = await axios.get(`https://airlinebackend-zfsg.onrender.com/rotationbyid/${val}`, {
           headers: { "x-access-token": localStorage.getItem("accessToken") }
         });
         const { rotationDetails, rotationSummary } = res.data;
@@ -252,7 +252,7 @@ const Rotations = () => {
       return;
     }
     try {
-      await axios.post("http://localhost:5001/updateRotationSummary", {
+      await axios.post("https://airlinebackend-zfsg.onrender.com/updateRotationSummary", {
         rotationNumber: selectedRotation,
         rotationTag, effFromDate, effToDate, dow, selectedVariant
       }, { headers: { "x-access-token": localStorage.getItem("accessToken") } });
@@ -268,7 +268,7 @@ const Rotations = () => {
     }
     setIsLoading(true);
     try {
-      const res = await axios.post("http://localhost:5001/addRotationDetailsFlgtChange", {
+      const res = await axios.post("https://airlinebackend-zfsg.onrender.com/addRotationDetailsFlgtChange", {
         rotationNumber: selectedRotation,
         depNumber: rotationDevelopmentTableData.length + 1,
         flightNumber: flight,
@@ -304,7 +304,7 @@ const Rotations = () => {
   const handleDeleteRotation = async () => {
     setIsRotationDeleting(true);
     try {
-      await axios.post("http://localhost:5001/deleteCompleteRotation", {
+      await axios.post("https://airlinebackend-zfsg.onrender.com/deleteCompleteRotation", {
         rotationNumber: selectedRotation,
         selectedVariant,
         totalDepNumber: rotationDevelopmentTableData.length
@@ -322,12 +322,12 @@ const Rotations = () => {
         let res;
         
         if(!lastObject) {
-             res = await axios.post("http://localhost:5001/deleteRotation", {
+             res = await axios.post("https://airlinebackend-zfsg.onrender.com/deleteRotation", {
                 rotationNumber: selectedRotation, selectedVariant
              }, { headers: { "x-access-token": localStorage.getItem("accessToken") } });
              if(res.status === 200) window.location.reload();
         } else {
-            res = await axios.post("http://localhost:5001/deletePrevInRotation", {
+            res = await axios.post("https://airlinebackend-zfsg.onrender.com/deletePrevInRotation", {
                 rotationNumber: selectedRotation, selectedVariant,
                 depNumber: rotationDevelopmentTableData.length,
                 _id: lastObject._id

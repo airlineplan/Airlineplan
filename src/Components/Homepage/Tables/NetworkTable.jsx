@@ -146,7 +146,7 @@ export default function NetworkTable() {
     const fetchData = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("http://localhost:5001/get-data", {
+        const response = await axios.get("https://airlinebackend-zfsg.onrender.com/get-data", {
           headers: { "x-access-token": accessToken },
         });
         setNetworkTableData(response.data || []);
@@ -264,7 +264,7 @@ export default function NetworkTable() {
 
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.post("http://localhost:5001/importUser", formData, {
+      const response = await axios.post("https://airlinebackend-zfsg.onrender.com/importUser", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           "x-access-token": accessToken
@@ -327,7 +327,8 @@ export default function NetworkTable() {
 
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1">
-          
+          <div>
+          </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <Button
@@ -362,12 +363,13 @@ export default function NetworkTable() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 top-full mt-2 w-36 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-2 z-50 flex flex-col"
+                    className="absolute right-0 top-full mt-2 w-20 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-2 z-50 flex flex-col"
                   >
                     <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                       <CopyRow checkedRows={checkedRows} setAdd={setAdd} />
                     </div>
                     <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                      
                       <AddNetwork setAdd={setAdd} />
                     </div>
                   </motion.div>

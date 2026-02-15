@@ -98,7 +98,7 @@ const StationsTable = () => {
     const fetchData = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("http://localhost:5001/get-stationData", {
+        const response = await axios.get("https://airlinebackend-zfsg.onrender.com/get-stationData", {
           headers: { "x-access-token": accessToken },
         });
         if(response.data?.data) {
@@ -124,7 +124,7 @@ const StationsTable = () => {
         homeTimeZone: selectedHomeTimeZone,
       };
 
-      const response = await axios.post('http://localhost:5001/saveStation', requestData, {
+      const response = await axios.post('https://airlinebackend-zfsg.onrender.com/saveStation', requestData, {
         headers: {
           "x-access-token": accessToken,
           "Content-Type": "application/json",

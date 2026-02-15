@@ -95,7 +95,7 @@ const CopySector = (props) => {
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const response = await axios.get("http://localhost:5001/get-stationData", {
+        const response = await axios.get("https://airlinebackend-zfsg.onrender.com/get-stationData", {
           headers: { "x-access-token": localStorage.getItem("accessToken") },
         });
         if (response.data && response.data.data) {
@@ -159,7 +159,7 @@ const CopySector = (props) => {
       return;
     }
     try {
-      const response = await axios.get(`http://localhost:5001/sectorsbyid/${DataId}`);
+      const response = await axios.get(`https://airlinebackend-zfsg.onrender.com/sectorsbyid/${DataId}`);
       const item = response.data;
       
       setFromDt(item?.fromDt ? moment(item.fromDt).format("YYYY-MM-DD") : "");
@@ -306,7 +306,7 @@ const CopySector = (props) => {
     try {
       setLoading(true);
       const response = await axios.post(
-        "http://localhost:5001/add-sector",
+        "https://airlinebackend-zfsg.onrender.com/add-sector",
         // Included std and sta in the payload to match AddSector & UpdateSectore
         { sector1, sector2, acftType, variant, std, bt, sta, gcd, paxCapacity, CargoCapT, paxLF, cargoLF, fromDt, toDt },
         { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
@@ -353,7 +353,7 @@ const CopySector = (props) => {
           setOpenCopyModal(true);
           props.setAdd(false);
         }}
-        className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
+        className="wmanage air-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
       >
          Copy
       </button>

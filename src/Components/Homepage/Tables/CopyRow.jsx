@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import { motion, AnimatePresence } from "framer-motion";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { X } from "lucide-react";
+import { X, Copy, Search } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -16,7 +16,7 @@ function cn(...inputs) {
 // --- UI COMPONENTS ---
 const Button = ({ children, variant = "primary", className, loading, ...props }) => {
   const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed";
-  
+
   const variants = {
     primary: "bg-gradient-to-r from-indigo-500 to-cyan-500 text-white hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02]",
     ghost: "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800",
@@ -39,7 +39,7 @@ const InputGroup = ({ label, error, children }) => (
     </label>
     {children}
     {error && (
-      <motion.span 
+      <motion.span
         initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
         className="text-xs text-red-500 font-medium leading-tight"
       >
@@ -51,12 +51,76 @@ const InputGroup = ({ label, error, children }) => (
 
 const baseInputStyles = "w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400 disabled:opacity-60 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed";
 
+// --- NEW COMBOBOX COMPONENT ---
+// Allows typing a custom value OR selecting an existing value from the dropdown
+const ComboboxInput = ({ value, onChange, placeholder, options = [], disabled = false, className }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef(null);
+
+  const filteredOptions = options.filter(opt =>
+    opt.label.toLowerCase().includes((value || "").toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative group w-full" ref={wrapperRef}>
+      <input
+        type="text"
+        value={value}
+        disabled={disabled}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        placeholder={placeholder}
+        className={cn(baseInputStyles, className, disabled && "font-bold bg-slate-100 dark:bg-slate-800")}
+      />
+      {!disabled && (
+        <Search size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+      )}
+
+      <AnimatePresence>
+        {isOpen && filteredOptions.length > 0 && !disabled && (
+          <motion.div
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 5 }}
+            className="absolute z-50 left-0 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto custom-scrollbar"
+          >
+            {filteredOptions.map((opt, idx) => (
+              <div
+                key={idx}
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className="px-4 py-2.5 text-sm font-medium cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+              >
+                {opt.label}
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 // --- MAIN COMPONENT ---
 export default function CopyRow(props) {
   // --- STATE ---
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [stationsList, setStationsList] = useState([]); // Needed for STA calculation
+  const [stationsList, setStationsList] = useState([]);
+  const [dropdownData, setDropdownData] = useState({ from: [], to: [] }); // Stations Dropdown
 
   const [flight, setFlight] = useState("");
   const [depStn, setDepStn] = useState("");
@@ -86,11 +150,24 @@ export default function CopyRow(props) {
   const [remarks1Error, setRemarks1Error] = useState("");
   const [remarks2Error, setRemarks2Error] = useState("");
 
-  // --- API: Fetch Stations for Timezone Logic ---
+  // --- GENERATE TIME OPTIONS FOR STD/STA COMBOBOX ---
+  const timeOptions = useMemo(() => {
+    const times = [];
+    for (let h = 0; h < 24; h++) {
+      for (let m = 0; m < 60; m += 15) {
+        const hh = String(h).padStart(2, '0');
+        const mm = String(m).padStart(2, '0');
+        times.push({ label: `${hh}:${mm}`, value: `${hh}:${mm}` });
+      }
+    }
+    return times;
+  }, []);
+
+  // --- API: Fetch Stations for TZ Logic & Dropdowns ---
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const response = await axios.get("http://localhost:5001/get-stationData", {
+        const response = await axios.get("https://airlinebackend-zfsg.onrender.com/get-stationData", {
           headers: { "x-access-token": localStorage.getItem("accessToken") },
         });
         if (response.data && response.data.data) {
@@ -100,20 +177,29 @@ export default function CopyRow(props) {
         console.error("Failed to fetch stations list for TZ calculation", error);
       }
     };
+
+    const fetchDropdowns = async () => {
+      try {
+        const response = await axios.get("https://airlinebackend-zfsg.onrender.com/dashboard/populateDropDowns", {
+          headers: { "x-access-token": localStorage.getItem("accessToken") },
+        });
+        if (response.data) setDropdownData(response.data);
+      } catch (error) {
+        console.error("Error fetching dropdowns:", error);
+      }
+    };
+
     fetchStations();
+    fetchDropdowns();
   }, []);
 
   // --- ENGINE: Auto-Calculate STA ---
   useEffect(() => {
-    // Only calculate if all required variables and stations are present
     if (std && bt && depStn && arrStn && stationsList.length > 0) {
-      
       const depStation = stationsList.find(s => s.stationName === depStn);
       const arrStation = stationsList.find(s => s.stationName === arrStn);
 
       if (depStation?.stdtz && arrStation?.stdtz) {
-        
-        // Helper to convert "UTC+5:30" or "UTC-4:00" to total minutes
         const parseTZ = (tzString) => {
           if (!tzString || !tzString.startsWith('UTC')) return 0;
           const sign = tzString.includes('-') ? -1 : 1;
@@ -129,18 +215,16 @@ export default function CopyRow(props) {
         const [stdH, stdM] = std.split(':').map(Number);
         const [btH, btM] = bt.split(':').map(Number);
 
-        // Formula: STA = STD + BT + (ArrTZ - DepTZ)
         let totalMins = (stdH * 60 + stdM) + (btH * 60 + btM) + (arrTzMins - depTzMins);
-
-        // Wrap around 24 hours (1440 minutes) to handle next day / previous day overlaps
-        totalMins = ((totalMins % 1440) + 1440) % 1440; 
+        totalMins = ((totalMins % 1440) + 1440) % 1440;
 
         const staH = Math.floor(totalMins / 60);
         const staM = totalMins % 60;
-        
-        // Format to HH:MM and set state
+
         const calculatedSTA = `${String(staH).padStart(2, '0')}:${String(staM).padStart(2, '0')}`;
-        setSta(calculatedSTA);
+
+        // Only override if it actually changed to allow user to manually type in STA box
+        setSta(prev => prev !== calculatedSTA ? calculatedSTA : prev);
       }
     }
   }, [std, bt, depStn, arrStn, stationsList]);
@@ -149,63 +233,43 @@ export default function CopyRow(props) {
   // --- HANDLERS ---
   const handleClickOpen = () => {
     setOpen(true);
-    setFlightError(null);
-    setDepStnError(null);
-    seArrStnError(null);
-    setVariantError(null);
-    setDowError(null);
-    setEffToDtError(null);
-    setEffFromDtError(null);
-    setUserTag1Error(null);
-    setUserTag2Error(null);
-    setRemarks1Error(null);
-    setRemarks2Error(null);
+    setFlightError(""); setDepStnError(""); seArrStnError(""); setVariantError("");
+    setDowError(""); setEffToDtError(""); setEffFromDtError(""); setUserTag1Error("");
+    setUserTag2Error(""); setRemarks1Error(""); setRemarks2Error("");
   };
 
   const handleClose = () => setOpen(false);
 
   const handleFlight = (event) => {
     const value = event.target.value;
-    if (/^[a-zA-Z0-9\s]{0,8}$/.test(value)) {
-      setFlight(value);
-      setFlightError("");
-    } else {
-      setFlightError("Flight must be 8 characters long");
-    }
+    setFlight(value);
+    if (/^[a-zA-Z0-9\s]{0,8}$/.test(value)) setFlightError("");
+    else setFlightError("Flight must be 8 characters long");
   };
 
-  const handleDepStn = (event) => {
-    const value = event.target.value;
-    if (/^[a-zA-Z0-9\s]{0,4}$/.test(value)) {
-      setDepStn(value);
-      setDepStnError("");
-    } else {
-      setDepStnError("Dep Stn must be 4 characters long");
-    }
+  // Dep Stn - Combobox uses direct string value
+  const handleDepStn = (value) => {
+    setDepStn(value);
+    if (/^[a-zA-Z0-9\s]{0,4}$/.test(value)) setDepStnError("");
+    else setDepStnError("Dep Stn must be 4 characters long");
   };
 
-  const handleSTD = (event) => setStd(event.target.value);
+  // Arr Stn - Combobox uses direct string value
+  const handleArrStn = (value) => {
+    setArrStn(value);
+    if (/^[a-zA-Z0-9\s]{0,4}$/.test(value)) seArrStnError("");
+    else seArrStnError("Arr Stn must be 4 characters long");
+  };
+
+  const handleSTD = (value) => setStd(value);
+  const handleSTA = (value) => setSta(value);
   const handleBT = (event) => setBt(event.target.value);
-  const handleSTA = (event) => setSta(event.target.value); // Keep manual override if needed
-
-  const handleArrStn = (event) => {
-    const value = event.target.value;
-    if (/^[a-zA-Z0-9\s]{0,4}$/.test(value)) {
-      setArrStn(value);
-      seArrStnError("");
-    } else {
-      seArrStnError("Arr Stn must be 4 characters long");
-    }
-  };
 
   const handleVariant = (event) => {
     const value = event.target.value;
-    if (/^[a-zA-Z0-9\s-]{0,8}$/.test(value)) {
-      setVariant(value);
-      setVariantError("");
-    } else {
-      setVariantError('Must be 8 characters and can only contain letters, numbers, "-", and blank spaces');
-    }
+    setVariant(value);
+    if (/^[a-zA-Z0-9\s-]{0,8}$/.test(value)) setVariantError("");
+    else setVariantError('Must be 8 chars (letters, numbers, "-", spaces)');
   };
 
   const handleEffFromDt = (event) => setEffFromDt(event.target.value);
@@ -213,54 +277,39 @@ export default function CopyRow(props) {
 
   const handleDow = (event) => {
     const value = event.target.value;
-    if (/^[1-7]{0,7}$/.test(value)) {
-      setDow(value);
-      setDowError("");
-    } else {
-      setDowError("Must be 7 digits and each digit can only be between 1 and 7.");
-    }
+    setDow(value);
+    if (/^[1-7]{0,7}$/.test(value)) setDowError("");
+    else setDowError("Must be 7 digits (1-7)");
   };
 
   const handleDomIntl = (event) => setDomIntl(event.target.value.toLowerCase());
 
   const handleUserTag1 = (event) => {
     const input = event.target.value;
-    if (/^\s*.{0,12}\s*$/.test(input)) {
-      setUserTag1(input);
-      setUserTag1Error("");
-    } else {
-      setUserTag1Error("Must be 12 characters and can only contain letters");
-    }
+    setUserTag1(input);
+    if (/^\s*.{0,12}\s*$/.test(input)) setUserTag1Error("");
+    else setUserTag1Error("Max 12 characters");
   };
 
   const handleUserTag2 = (event) => {
     const input = event.target.value;
-    if (/^\s*.{0,12}\s*$/.test(input)) {
-      setUserTag2(input);
-      setUserTag2Error("");
-    } else {
-      setUserTag2Error("Must be 12 characters and can only contain letters");
-    }
+    setUserTag2(input);
+    if (/^\s*.{0,12}\s*$/.test(input)) setUserTag2Error("");
+    else setUserTag2Error("Max 12 characters");
   };
 
   const handleRemarks1 = (event) => {
     const input = event.target.value;
-    if (/^\s*.{0,12}\s*$/.test(input)) {
-      setRemarks1(input);
-      setRemarks1Error("");
-    } else {
-      setRemarks1Error("Must be 12 characters and can only contain letters");
-    }
+    setRemarks1(input);
+    if (/^\s*.{0,12}\s*$/.test(input)) setRemarks1Error("");
+    else setRemarks1Error("Max 12 characters");
   };
 
   const handleRemarks2 = (event) => {
     const input = event.target.value;
-    if (/^\s*.{0,12}\s*$/.test(input)) {
-      setRemarks2(input);
-      setRemarks2Error("");
-    } else {
-      setRemarks2Error("Must be 12 characters and can only contain letters");
-    }
+    setRemarks2(input);
+    if (/^\s*.{0,12}\s*$/.test(input)) setRemarks2Error("");
+    else setRemarks2Error("Max 12 characters");
   };
 
   useEffect(() => {
@@ -277,7 +326,7 @@ export default function CopyRow(props) {
   const DataId = props?.checkedRows?.[0];
   const fetchData = async () => {
     try {
-      const response = await axios.get(`http://localhost:5001/products/${DataId}`);
+      const response = await axios.get(`https://airlinebackend-zfsg.onrender.com/products/${DataId}`);
       const item = response.data;
       setFlight(item.flight || "");
       setDepStn(item.depStn || "");
@@ -286,11 +335,10 @@ export default function CopyRow(props) {
       setSta(item.sta || "");
       setArrStn(item.arrStn || "");
       setVariant(item.variant || "");
-      
-      // Formatting for native HTML5 Date inputs
+
       setEffFromDt(item.effFromDt ? dayjs(item.effFromDt).format("YYYY-MM-DD") : "");
       setEffToDt(item.effToDt ? dayjs(item.effToDt).format("YYYY-MM-DD") : "");
-      
+
       setDow(item.dow || "");
       setDomIntl(item.domINTL ? item.domINTL.toLowerCase() : "");
       setUserTag1(item.userTag1 || "");
@@ -320,7 +368,7 @@ export default function CopyRow(props) {
       setLoading(true);
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const response = await axios.post(
-        "http://localhost:5001/add-Data",
+        "https://airlinebackend-zfsg.onrender.com/add-Data",
         {
           flight, depStn, std, bt, sta, arrStn, variant, effFromDt, effToDt,
           dow, domINTL, userTag1, userTag2, remarks1, timeZone, remarks2,
@@ -344,7 +392,6 @@ export default function CopyRow(props) {
     }
   };
 
-  // Keyboard navigation logic
   const handleKeyDown = (event) => {
     if (event.key === "Tab") {
       event.preventDefault();
@@ -357,7 +404,6 @@ export default function CopyRow(props) {
 
   return (
     <>
-      {/* TRIGGER BUTTON */}
       <button
         onClick={() => {
           if (!props.checkedRows || props.checkedRows.length !== 1) {
@@ -373,7 +419,6 @@ export default function CopyRow(props) {
         Copy
       </button>
 
-      {/* MODAL / DIALOG */}
       <AnimatePresence>
         {open && (
           <>
@@ -384,7 +429,7 @@ export default function CopyRow(props) {
               onClick={() => { handleClose(); props.setAdd(true); setLoading(false); }}
               className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
             />
-            
+
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -392,13 +437,12 @@ export default function CopyRow(props) {
               onKeyDown={handleKeyDown}
               className="fixed inset-0 m-auto z-50 w-full max-w-5xl h-fit max-h-[90vh] overflow-y-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 custom-scrollbar"
             >
-              
-              {/* Header */}
+
               <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
                 <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
                   Copy Row Data
                 </h3>
-                <button 
+                <button
                   onClick={() => { handleClose(); props.setAdd(true); setLoading(false); }}
                   className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
                 >
@@ -406,30 +450,50 @@ export default function CopyRow(props) {
                 </button>
               </div>
 
-              {/* Form Grid */}
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="Flight" error={flightError}>
                     <input className={baseInputStyles} value={flight} onChange={handleFlight} placeholder="Flight number" />
                   </InputGroup>
                   <InputGroup label="Dep Stn" error={depStnError}>
-                    <input className={baseInputStyles} required value={depStn} onChange={handleDepStn} placeholder="Dep Station" />
+                    <ComboboxInput
+                      value={depStn}
+                      onChange={handleDepStn}
+                      placeholder="Select or Type Dep Station"
+                      options={dropdownData.from || []}
+                    />
                   </InputGroup>
                   <InputGroup label="Arr Stn" error={arrStnError}>
-                    <input className={baseInputStyles} value={arrStn} onChange={handleArrStn} placeholder="Arr Station" />
+                    <ComboboxInput
+                      value={arrStn}
+                      onChange={handleArrStn}
+                      placeholder="Select or Type Arr Station"
+                      options={dropdownData.to || []}
+                    />
                   </InputGroup>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="STD (LT)">
-                    <input className={baseInputStyles} required type="time" value={std} onChange={handleSTD} />
+                    <ComboboxInput
+                      value={std}
+                      onChange={handleSTD}
+                      placeholder="HH:MM"
+                      options={timeOptions}
+                    />
                   </InputGroup>
                   <InputGroup label="BT">
                     <input className={baseInputStyles} required type="time" value={bt} onChange={handleBT} />
                   </InputGroup>
                   <InputGroup label="STA (LT) - Auto Calculated">
-                    <input className={cn(baseInputStyles, "bg-indigo-50/50 dark:bg-indigo-900/20 font-bold")} type="time" value={sta} onChange={handleSTA} disabled />
+                    <ComboboxInput
+                      value={sta}
+                      onChange={handleSTA}
+                      placeholder="HH:MM"
+                      options={timeOptions}
+                      className="bg-indigo-50/50 dark:bg-indigo-900/20"
+                    />
                   </InputGroup>
                 </div>
 

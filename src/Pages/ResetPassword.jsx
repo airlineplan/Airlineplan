@@ -110,7 +110,7 @@ const ResetPassword = (props) => {
 
     try {
       const response = await axios.post(
-        "http://localhost:5001/change-passowrd",
+        "https://airlinebackend-zfsg.onrender.com/change-passowrd",
         payload
       );
 

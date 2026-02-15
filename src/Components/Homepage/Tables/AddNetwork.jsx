@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { X, Save, AlertCircle, Calendar, Plus } from "lucide-react";
+import { X, Save, AlertCircle, Calendar, Plus, Search } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -13,6 +13,8 @@ function cn(...inputs) {
 }
 
 // --- REUSABLE COMPONENTS ---
+
+// Standard Input
 const InputField = ({ label, error, icon: Icon, ...props }) => (
   <div className="flex flex-col space-y-1.5 w-full">
     <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -28,8 +30,8 @@ const InputField = ({ label, error, icon: Icon, ...props }) => (
         className={cn(
           "flex h-10 w-full rounded-lg border bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 disabled:opacity-60 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed",
           Icon ? "pl-9" : "",
-          error 
-            ? "border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-900/10" 
+          error
+            ? "border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-900/10"
             : "border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600"
         )}
         {...props}
@@ -44,30 +46,124 @@ const InputField = ({ label, error, icon: Icon, ...props }) => (
   </div>
 );
 
+// New: Combobox Field for Stations and Times
+const ComboboxField = ({ label, name, value, onChange, error, options = [], disabled = false, required, placeholder, className }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef(null);
+
+  const filteredOptions = options.filter(opt =>
+    opt.label.toLowerCase().includes((value || "").toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="flex flex-col space-y-1.5 w-full" ref={wrapperRef}>
+      <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative group">
+        <input
+          type="text"
+          name={name}
+          value={value}
+          disabled={disabled}
+          onChange={(e) => {
+            onChange(e); // standard synthetic event passed up
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder={placeholder}
+          className={cn(
+            "flex h-10 w-full rounded-lg border bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed",
+            className,
+            error
+              ? "border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-900/10"
+              : "border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600"
+          )}
+        />
+        {!disabled && (
+          <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+        )}
+
+        <AnimatePresence>
+          {isOpen && filteredOptions.length > 0 && !disabled && (
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 5 }}
+              className="absolute z-50 left-0 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto custom-scrollbar"
+            >
+              {filteredOptions.map((opt, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => {
+                    onChange({ target: { name, value: opt.value } });
+                    setIsOpen(false);
+                  }}
+                  className="px-4 py-2.5 text-sm font-medium cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+                >
+                  {opt.label}
+                </div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      {error && (
+        <div className="flex items-center gap-1 text-xs text-red-500 mt-1 animate-in slide-in-from-top-1">
+          <AlertCircle size={12} />
+          <span>{error}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- MAIN COMPONENT ---
 const AddNetwork = ({ setAdd }) => {
   // --- STATE ---
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  
-  // Stations Data for STA Calculation
+
+  // Stations Data
   const [stationsData, setStationsData] = useState([]);
-  
+  const [dropdownData, setDropdownData] = useState({ from: [], to: [] });
+
   // Form Fields
   const [formData, setFormData] = useState({
     flight: "", depStn: "", std: "", bt: "", sta: "", arrStn: "", variant: "",
-    effFromDt: "", effToDt: "", dow: "", domINTL: "", 
+    effFromDt: "", effToDt: "", dow: "", domINTL: "",
     userTag1: "", userTag2: "", remarks1: "", remarks2: ""
   });
 
   // Errors
   const [errors, setErrors] = useState({});
 
-  // --- API: Fetch Stations for Timezone Logic ---
+  // --- GENERATE TIME OPTIONS FOR STD/STA COMBOBOX ---
+  const timeOptions = useMemo(() => {
+    const times = [];
+    for (let h = 0; h < 24; h++) {
+      for (let m = 0; m < 60; m += 15) {
+        const hh = String(h).padStart(2, '0');
+        const mm = String(m).padStart(2, '0');
+        times.push({ label: `${hh}:${mm}`, value: `${hh}:${mm}` });
+      }
+    }
+    return times;
+  }, []);
+
+  // --- API: Fetch Stations Data & Dropdowns ---
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const response = await axios.get("http://localhost:5001/get-stationData", {
+        const response = await axios.get("https://airlinebackend-zfsg.onrender.com/get-stationData", {
           headers: { "x-access-token": localStorage.getItem("accessToken") },
         });
         if (response.data && response.data.data) {
@@ -77,21 +173,34 @@ const AddNetwork = ({ setAdd }) => {
         console.error("Failed to fetch stations list for STA calculation", error);
       }
     };
+
+    const fetchDropdowns = async () => {
+      try {
+        const response = await axios.get("https://airlinebackend-zfsg.onrender.com/dashboard/populateDropDowns", {
+          headers: { "x-access-token": localStorage.getItem("accessToken") },
+        });
+        if (response.data) setDropdownData(response.data);
+      } catch (error) {
+        console.error("Error fetching dropdowns:", error);
+      }
+    };
+
     fetchStations();
+    fetchDropdowns();
   }, []);
 
   // --- ENGINE: Auto-Calculate STA ---
   useEffect(() => {
     const { std, bt, depStn, arrStn } = formData;
-    
+
     // Only calculate if all required variables and stations are present
     if (std && bt && depStn && arrStn && stationsData.length > 0) {
-      
+
       const depStationConfig = stationsData.find(s => s.stationName === depStn);
       const arrStationConfig = stationsData.find(s => s.stationName === arrStn);
 
       if (depStationConfig?.stdtz && arrStationConfig?.stdtz) {
-        
+
         // Helper to convert "UTC+5:30" or "UTC-4:00" to total minutes
         const parseTZ = (tzString) => {
           if (!tzString || !tzString.startsWith('UTC')) return 0;
@@ -112,16 +221,17 @@ const AddNetwork = ({ setAdd }) => {
         let totalMins = (stdH * 60 + stdM) + (btH * 60 + btM) + (arrTzMins - depTzMins);
 
         // Wrap around 24 hours (1440 minutes) to handle next day / previous day overlaps
-        totalMins = ((totalMins % 1440) + 1440) % 1440; 
+        totalMins = ((totalMins % 1440) + 1440) % 1440;
 
         const staH = Math.floor(totalMins / 60);
         const staM = totalMins % 60;
-        
+
         // Format to HH:MM and update formData
         const calculatedSTA = `${String(staH).padStart(2, '0')}:${String(staM).padStart(2, '0')}`;
-        
+
         setFormData(prev => {
-          // Only update if it actually changed to prevent infinite loops
+          // Only update if it actually changed to prevent infinite loops, 
+          // allowing the user to manually override it without it constantly reverting.
           if (prev.sta !== calculatedSTA) {
             return { ...prev, sta: calculatedSTA };
           }
@@ -135,19 +245,19 @@ const AddNetwork = ({ setAdd }) => {
 
   const handleOpen = () => {
     setIsOpen(true);
-    if(setAdd) setAdd(false); 
+    if (setAdd) setAdd(false);
   };
 
   const handleClose = () => {
     setIsOpen(false);
-    if(setAdd) setAdd(true);
+    if (setAdd) setAdd(true);
     setErrors({});
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     // Clear error when user types
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: "" }));
@@ -189,11 +299,11 @@ const AddNetwork = ({ setAdd }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Final Validation Check
-    const hasErrors = Object.values(errors).some(x => x !== "") || 
-                      !formData.effFromDt || !formData.effToDt;
-    
+    const hasErrors = Object.values(errors).some(x => x !== "") ||
+      !formData.effFromDt || !formData.effToDt;
+
     if (!formData.effFromDt) setErrors(prev => ({ ...prev, effFromDt: "Required" }));
     if (!formData.effToDt) setErrors(prev => ({ ...prev, effToDt: "Required" }));
 
@@ -205,7 +315,7 @@ const AddNetwork = ({ setAdd }) => {
     setLoading(true);
     try {
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      
+
       const payload = {
         ...formData,
         domINTL: formData.domINTL.toLowerCase(),
@@ -213,7 +323,7 @@ const AddNetwork = ({ setAdd }) => {
       };
 
       const response = await axios.post(
-        "http://localhost:5001/add-Data",
+        "https://airlinebackend-zfsg.onrender.com/add-Data",
         payload,
         {
           headers: {
@@ -242,10 +352,9 @@ const AddNetwork = ({ setAdd }) => {
       {/* Trigger Button (Menu Item Style) */}
       <button
         onClick={handleOpen}
-        className="w-full text-left py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
+        className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
       >
-        <Plus size={16} />
-        <span>Add</span>
+        Add
       </button>
 
       {/* Modal Overlay */}
@@ -259,7 +368,7 @@ const AddNetwork = ({ setAdd }) => {
               onClick={handleClose}
               className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50"
             />
-            
+
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -274,7 +383,7 @@ const AddNetwork = ({ setAdd }) => {
                   </h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400">Enter flight details and schedule information.</p>
                 </div>
-                <button 
+                <button
                   onClick={handleClose}
                   className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
                 >
@@ -286,163 +395,166 @@ const AddNetwork = ({ setAdd }) => {
               <div className="overflow-y-auto p-6 md:p-8 custom-scrollbar">
                 <form onSubmit={handleSubmit} id="add-network-form">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    
+
                     {/* --- FLIGHT INFO --- */}
                     <div className="lg:col-span-3 pb-2 border-b border-slate-100 dark:border-slate-800 mb-2">
-                       <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">Flight Details</h3>
+                      <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">Flight Details</h3>
                     </div>
 
-                    <InputField 
-                      label="Flight No" 
-                      name="flight" 
-                      placeholder="e.g. AZ 90980" 
-                      value={formData.flight} 
-                      onChange={handleChange} 
+                    <InputField
+                      label="Flight No"
+                      name="flight"
+                      placeholder="e.g. AZ 90980"
+                      value={formData.flight}
+                      onChange={handleChange}
                       error={errors.flight}
-                      required 
+                      required
                     />
-                    
-                    <InputField 
-                      label="Departure Stn" 
-                      name="depStn" 
-                      placeholder="e.g. VIDP" 
-                      value={formData.depStn} 
-                      onChange={handleChange} 
+
+                    <ComboboxField
+                      label="Departure Stn"
+                      name="depStn"
+                      placeholder="Select or Type Dep Station"
+                      value={formData.depStn}
+                      onChange={handleChange}
+                      options={dropdownData.from || []}
                       error={errors.depStn}
-                      required 
+                      required
                     />
-                    
-                    <InputField 
-                      label="Arrival Stn" 
-                      name="arrStn" 
-                      placeholder="e.g. VI89" 
-                      value={formData.arrStn} 
-                      onChange={handleChange} 
+
+                    <ComboboxField
+                      label="Arrival Stn"
+                      name="arrStn"
+                      placeholder="Select or Type Arr Station"
+                      value={formData.arrStn}
+                      onChange={handleChange}
+                      options={dropdownData.to || []}
                       error={errors.arrStn}
-                      required 
+                      required
                     />
 
-                    <InputField 
-                      label="Variant" 
-                      name="variant" 
-                      placeholder="e.g. A330-200" 
-                      value={formData.variant} 
-                      onChange={handleChange} 
+                    <InputField
+                      label="Variant"
+                      name="variant"
+                      placeholder="e.g. A330-200"
+                      value={formData.variant}
+                      onChange={handleChange}
                       error={errors.variant}
-                      required 
+                      required
                     />
 
-                    <InputField 
-                      label="Dom / Intl" 
-                      name="domINTL" 
-                      placeholder="DOM or INTL" 
-                      value={formData.domINTL} 
-                      onChange={handleChange} 
-                      required 
+                    <InputField
+                      label="Dom / Intl"
+                      name="domINTL"
+                      placeholder="DOM or INTL"
+                      value={formData.domINTL}
+                      onChange={handleChange}
+                      required
                     />
-                    
+
                     <div className="hidden lg:block"></div> {/* Spacer */}
 
                     {/* --- TIMING --- */}
                     <div className="lg:col-span-3 pb-2 border-b border-slate-100 dark:border-slate-800 mb-2 mt-2">
-                       <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">Schedule & Timing</h3>
+                      <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">Schedule & Timing</h3>
                     </div>
 
-                    <InputField 
-                      label="STD (Local)" 
-                      name="std" 
-                      type="time" 
-                      value={formData.std} 
-                      onChange={handleChange} 
-                      required 
-                    />
-
-                    <InputField 
-                      label="BT" 
-                      name="bt" 
-                      type="time" 
-                      value={formData.bt} 
-                      onChange={handleChange} 
-                      required 
-                    />
-
-                    <InputField 
-                      label="STA (Local) - Auto Calculated" 
-                      name="sta" 
-                      type="time" 
-                      value={formData.sta} 
+                    <ComboboxField
+                      label="STD (Local)"
+                      name="std"
+                      placeholder="HH:MM"
+                      value={formData.std}
                       onChange={handleChange}
-                      className="flex h-10 w-full rounded-lg border bg-indigo-50/50 dark:bg-indigo-900/20 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 font-bold disabled:opacity-80"
-                      disabled
+                      options={timeOptions}
+                      required
                     />
 
-                    <InputField 
-                      label="Effective From" 
-                      name="effFromDt" 
-                      type="date" 
+                    <InputField
+                      label="BT"
+                      name="bt"
+                      type="time"
+                      value={formData.bt}
+                      onChange={handleChange}
+                      required
+                    />
+
+                    <ComboboxField
+                      label="STA (Local) - Auto Calculated"
+                      name="sta"
+                      placeholder="HH:MM"
+                      value={formData.sta}
+                      onChange={handleChange}
+                      options={timeOptions}
+                      className="font-bold bg-indigo-50/50 dark:bg-indigo-900/20"
+                    />
+
+                    <InputField
+                      label="Effective From"
+                      name="effFromDt"
+                      type="date"
                       icon={Calendar}
-                      value={formData.effFromDt} 
-                      onChange={handleChange} 
+                      value={formData.effFromDt}
+                      onChange={handleChange}
                       error={errors.effFromDt}
-                      required 
+                      required
                     />
 
-                    <InputField 
-                      label="Effective To" 
-                      name="effToDt" 
-                      type="date" 
+                    <InputField
+                      label="Effective To"
+                      name="effToDt"
+                      type="date"
                       icon={Calendar}
-                      value={formData.effToDt} 
-                      onChange={handleChange} 
+                      value={formData.effToDt}
+                      onChange={handleChange}
                       error={errors.effToDt}
-                      required 
+                      required
                       min={formData.effFromDt}
                     />
 
-                    <InputField 
-                      label="Days of Week" 
-                      name="dow" 
+                    <InputField
+                      label="Days of Week"
+                      name="dow"
                       type="number"
-                      placeholder="e.g. 1234567" 
-                      value={formData.dow} 
-                      onChange={handleChange} 
+                      placeholder="e.g. 1234567"
+                      value={formData.dow}
+                      onChange={handleChange}
                       error={errors.dow}
-                      required 
+                      required
                     />
 
                     {/* --- TAGS & REMARKS --- */}
                     <div className="lg:col-span-3 pb-2 border-b border-slate-100 dark:border-slate-800 mb-2 mt-2">
-                       <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">Additional Info</h3>
+                      <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">Additional Info</h3>
                     </div>
 
-                    <InputField 
-                      label="User Tag 1" 
-                      name="userTag1" 
-                      value={formData.userTag1} 
-                      onChange={handleChange} 
+                    <InputField
+                      label="User Tag 1"
+                      name="userTag1"
+                      value={formData.userTag1}
+                      onChange={handleChange}
                       error={errors.userTag1}
                     />
-                    <InputField 
-                      label="User Tag 2" 
-                      name="userTag2" 
-                      value={formData.userTag2} 
-                      onChange={handleChange} 
+                    <InputField
+                      label="User Tag 2"
+                      name="userTag2"
+                      value={formData.userTag2}
+                      onChange={handleChange}
                       error={errors.userTag2}
                     />
                     <div className="hidden lg:block"></div>
 
-                    <InputField 
-                      label="Remarks 1" 
-                      name="remarks1" 
-                      value={formData.remarks1} 
-                      onChange={handleChange} 
+                    <InputField
+                      label="Remarks 1"
+                      name="remarks1"
+                      value={formData.remarks1}
+                      onChange={handleChange}
                       error={errors.remarks1}
                     />
-                    <InputField 
-                      label="Remarks 2" 
-                      name="remarks2" 
-                      value={formData.remarks2} 
-                      onChange={handleChange} 
+                    <InputField
+                      label="Remarks 2"
+                      name="remarks2"
+                      value={formData.remarks2}
+                      onChange={handleChange}
                       error={errors.remarks2}
                     />
 
@@ -452,14 +564,14 @@ const AddNetwork = ({ setAdd }) => {
 
               {/* Footer / Actions */}
               <div className="p-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-3 rounded-b-2xl">
-                <button 
+                <button
                   type="button"
                   onClick={handleClose}
                   className="px-5 py-2.5 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   form="add-network-form"
                   disabled={loading}

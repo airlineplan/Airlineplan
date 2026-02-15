@@ -93,7 +93,7 @@ const FlgtsTable = ({ isMaster = true }) => {
         const requestBody = { ...activeFilters, page, limit };
 
         const response = await axios.post(
-          "http://localhost:5001/searchflights",
+          "https://airlinebackend-zfsg.onrender.com/searchflights",
           requestBody,
           { headers: { "x-access-token": accessToken, "Content-Type": "application/json" } }
         );
@@ -130,7 +130,7 @@ const FlgtsTable = ({ isMaster = true }) => {
     setDownloading(true);
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.get("http://localhost:5001/downloadFLGTs", {
+      const response = await axios.get("https://airlinebackend-zfsg.onrender.com/downloadFLGTs", {
         responseType: "blob",
         headers: { "x-access-token": accessToken },
       });

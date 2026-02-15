@@ -229,7 +229,7 @@ const UpdatePopUp = (props) => {
   const fetchData = async () => {
     if (isBulkUpdate) return;
     try {
-      const response = await axios.get(`http://localhost:5001/products/${DataId}`);
+      const response = await axios.get(`https://airlinebackend-zfsg.onrender.com/products/${DataId}`);
       const item = response.data;
 
       // Adapted for native HTML5 Date inputs (requires YYYY-MM-DD)
@@ -311,7 +311,7 @@ const UpdatePopUp = (props) => {
 
     if (productId) {
       setLoading(true);
-      axios.put(`http://localhost:5001/update-data/${productId}`, productData, {
+      axios.put(`https://airlinebackend-zfsg.onrender.com/update-data/${productId}`, productData, {
           headers: { 'x-access-token': `${localStorage.getItem('accessToken')}`, 'Content-Type': 'application/json' },
         })
         .then((response) => {

@@ -186,7 +186,7 @@ const ConnectionTable = () => {
     const getDropdownData = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:5001/dashboard/populateDropDowns`,
+          `https://airlinebackend-zfsg.onrender.com/dashboard/populateDropDowns`,
           { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
         );
         setDropdownOptions(response.data);
@@ -214,7 +214,7 @@ const ConnectionTable = () => {
         userTag2: filters.userTag2
       };
   
-      const response = await axios.get('http://localhost:5001/dashboard', {
+      const response = await axios.get('https://airlinebackend-zfsg.onrender.com/dashboard', {
         params,
         headers: { 'x-access-token': accessToken },
       });

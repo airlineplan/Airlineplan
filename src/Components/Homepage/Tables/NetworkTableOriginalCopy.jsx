@@ -207,7 +207,7 @@ const NetworkTable = () => {
     formData.append("file", selectedFile);
 
     axios
-      .post("http://localhost:5001/importUser", formData, {
+      .post("https://airlinebackend-zfsg.onrender.com/importUser", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -228,7 +228,7 @@ const NetworkTable = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("http://localhost:5001/get-data");
+        const response = await axios.get("https://airlinebackend-zfsg.onrender.com/get-data");
         setNetworkTableData(response.data);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -249,7 +249,7 @@ const NetworkTable = () => {
 
     try {
       const response = await axios.delete(
-        "http://localhost:5001/delete",
+        "https://airlinebackend-zfsg.onrender.com/delete",
         {
           data: { ids: checkedRows },       
           headers: { "x-access-token": accessToken }

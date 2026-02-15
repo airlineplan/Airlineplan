@@ -44,7 +44,7 @@ export default function Signup() {
   const handleSignup = async (event) => {
     event.preventDefault()
     try {
-      const response = await fetch('http://localhost:5001/user-signup', {
+      const response = await fetch('https://airlinebackend-zfsg.onrender.com/user-signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -94,7 +94,7 @@ const AddSector = (props) => {
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const response = await axios.get("http://localhost:5001/get-stationData", {
+        const response = await axios.get("https://airlinebackend-zfsg.onrender.com/get-stationData", {
           headers: { "x-access-token": localStorage.getItem("accessToken") },
         });
         if (response.data && response.data.data) {
@@ -271,7 +271,7 @@ const AddSector = (props) => {
     try {
       setLoading(true);
       const response = await axios.post(
-        "http://localhost:5001/add-sector",
+        "https://airlinebackend-zfsg.onrender.com/add-sector",
         // Included std and sta in the payload
         { sector1, sector2, acftType, variant, std, bt, sta, gcd, paxCapacity, CargoCapT, paxLF, cargoLF, fromDt, toDt },
         { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }

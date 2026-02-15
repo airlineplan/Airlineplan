@@ -48,7 +48,7 @@ const ForgatePassword = () => {
 
     try {
       setLoading(true);
-      const url = "http://localhost:5001/send-email";
+      const url = "https://airlinebackend-zfsg.onrender.com/send-email";
       const options = {
         method: "POST",
         url: url,

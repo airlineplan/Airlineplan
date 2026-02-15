@@ -79,7 +79,7 @@ export default function Contact() {
     setLoading(true);
     
     try {
-      await axios.post('http://localhost:5001/send-contactEmail', formData);
+      await axios.post('https://airlinebackend-zfsg.onrender.com/send-contactEmail', formData);
       toast.success('Message sent successfully!');
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
