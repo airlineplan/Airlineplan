@@ -42,7 +42,7 @@ export default function Header() {
               {isActive && (
                 <motion.div
                   layoutId="headerActiveTab"
-                  className="absolute inset-0 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-full -z-10"
+                  className="absolute inset-0  border border-indigo-100 dark:border-indigo-500/20 rounded-full -z-10"
                   initial={false}
                   transition={{
                     type: "spring",

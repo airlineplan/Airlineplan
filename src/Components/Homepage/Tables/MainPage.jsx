@@ -129,7 +129,7 @@ const MainPage = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 relative overflow-x-hidden">
       
       {/* Background Ambience */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] pointer-events-none"></div>
       <div className="absolute top-0 left-0 -z-10 w-full h-96 bg-gradient-to-b from-indigo-50/80 to-transparent dark:from-slate-900/80 dark:to-transparent pointer-events-none" />
 
       {/* Main Container */}

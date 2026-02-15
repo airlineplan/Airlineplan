@@ -338,10 +338,10 @@ export default function AircraftRoute() {
   return (
 <div className="min-h-screen w-full transition-colors duration-300 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-6 md:p-12 font-sans relative overflow-hidden">      
       {/* Background Ambience - Light Mode */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none opacity-100 dark:opacity-0 transition-opacity duration-300"></div>
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] pointer-events-none opacity-100 dark:opacity-0 transition-opacity duration-300"></div>
       
       {/* Background Ambience - Dark Mode */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none opacity-0 dark:opacity-100 transition-opacity duration-300"></div>
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] pointer-events-none opacity-0 dark:opacity-100 transition-opacity duration-300"></div>
 
       <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-indigo-500/20 dark:bg-cyan-500/20 blur-[100px] transition-colors duration-300"></div>
 
