@@ -26,6 +26,10 @@ const COLUMNS_CONFIG = [
   { key: 'sta', label: 'STA (LT)', minWidth: '80px' },
   { key: 'arrStn', label: 'Arr Stn', minWidth: '80px' },
   { key: 'sector', label: 'Sector', minWidth: '100px', masterOnly: true },
+  // ADDED NEW COLUMNS HERE
+  { key: 'acftType', label: 'ACFT', minWidth: '90px', masterOnly: true }, 
+  { key: 'fh', label: 'FH', minWidth: '80px', masterOnly: true, isFloat: true },
+  // ----------------------
   { key: 'variant', label: 'Variant', minWidth: '100px' },
   { key: 'seats', label: 'Seats', minWidth: '80px', masterOnly: true },
   { key: 'CargoCapT', label: 'Cargo Cap', minWidth: '100px', masterOnly: true, isFloat: true },
@@ -45,7 +49,6 @@ const COLUMNS_CONFIG = [
 ];
 
 // --- COMPONENTS ---
-
 const TableInput = ({ name, value, onChange, placeholder }) => (
   <div className="relative group mt-1">
     <input
@@ -61,28 +64,21 @@ const TableInput = ({ name, value, onChange, placeholder }) => (
 );
 
 const FlgtsTable = ({ isMaster = true }) => {
-  // --- STATE ---
   const [flgtsTableData, setFlgtsTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
   const [totalFlights, setTotalFlights] = useState(0);
 
-  // Sorting & Filtering
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "Up" });
   const [filters, setFilters] = useState({});
 
-  // Filter columns based on isMaster prop
   const visibleColumns = useMemo(() => {
     return COLUMNS_CONFIG.filter(col => isMaster || !col.masterOnly);
   }, [isMaster]);
 
-  // --- API LOGIC ---
-
-  // Debounced Fetch
   const fetchResults = useCallback(
     debounce(async (page, limit, currentFilters) => {
       setLoading(true);
@@ -90,26 +86,16 @@ const FlgtsTable = ({ isMaster = true }) => {
         const accessToken = localStorage.getItem("accessToken");
         if (!accessToken) throw new Error("No access token");
 
-        // Clean empty filters
         const activeFilters = Object.fromEntries(
           Object.entries(currentFilters).filter(([_, v]) => v !== "")
         );
 
-        const requestBody = {
-          ...activeFilters,
-          page,
-          limit,
-        };
+        const requestBody = { ...activeFilters, page, limit };
 
         const response = await axios.post(
           "http://localhost:5001/searchflights",
           requestBody,
-          {
-            headers: {
-              "x-access-token": accessToken,
-              "Content-Type": "application/json",
-            },
-          }
+          { headers: { "x-access-token": accessToken, "Content-Type": "application/json" } }
         );
 
         setFlgtsTableData(response.data.data || []);
@@ -123,17 +109,14 @@ const FlgtsTable = ({ isMaster = true }) => {
     []
   );
 
-  // Trigger fetch on changes
   useEffect(() => {
     fetchResults(currentPage, rowsPerPage, filters);
   }, [currentPage, filters, fetchResults]);
 
-  // --- HANDLERS ---
-
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
-    setCurrentPage(1); // Reset to page 1 on filter change
+    setCurrentPage(1); 
   };
 
   const handleSort = (key) => {
@@ -166,7 +149,6 @@ const FlgtsTable = ({ isMaster = true }) => {
     }
   };
 
-  // Client-side sorting of the *current page* (based on original logic)
   const sortedData = useMemo(() => {
     if (!sortConfig.key) return flgtsTableData;
 
@@ -182,22 +164,19 @@ const FlgtsTable = ({ isMaster = true }) => {
     });
   }, [flgtsTableData, sortConfig]);
 
-  // Formatters
   const renderCell = (row, col) => {
     const val = row[col.key];
     if (col.isDate) return moment(val).format("DD-MMM-YY");
-    if (col.isFloat) return val ? parseFloat(val).toFixed(1) : "";
+    // Changed to toFixed(2) to correctly display block/flight hours (e.g., 2.25)
+    if (col.isFloat) return val ? parseFloat(val).toFixed(2) : ""; 
     if (col.isInt) return val ? parseInt(val) : "";
     return val;
   };
 
   const totalPages = Math.ceil(totalFlights / rowsPerPage);
 
-  // --- RENDER ---
   return (
     <div className="w-full space-y-4 font-sans">
-      
-      {/* Header Actions */}
       {isMaster && (
         <div className="flex justify-end p-1">
           <button
@@ -211,19 +190,14 @@ const FlgtsTable = ({ isMaster = true }) => {
         </div>
       )}
 
-      {/* Table Container */}
       <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col h-[70vh]">
-        
         <div className="flex-1 overflow-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-100/90 dark:bg-slate-800/90 sticky top-0 z-20 backdrop-blur-sm shadow-sm">
               <tr>
-                {/* S.No Column */}
                 <th className="p-3 w-16 text-center text-xs font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 sticky left-0 z-30">
                   #
                 </th>
-                
-                {/* Dynamic Columns */}
                 {visibleColumns.map((col) => (
                   <th 
                     key={col.key} 
@@ -296,7 +270,6 @@ const FlgtsTable = ({ isMaster = true }) => {
           </table>
         </div>
 
-        {/* Footer / Pagination */}
         <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/80 dark:bg-slate-900/80 flex items-center justify-between">
           <div className="text-xs text-slate-500 dark:text-slate-400">
             Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, totalFlights)} of {totalFlights} flights

@@ -13,7 +13,6 @@ function cn(...inputs) {
 }
 
 // --- REUSABLE COMPONENTS ---
-
 const InputField = ({ label, error, icon: Icon, ...props }) => (
   <div className="flex flex-col space-y-1.5 w-full">
     <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -27,7 +26,7 @@ const InputField = ({ label, error, icon: Icon, ...props }) => (
       )}
       <input
         className={cn(
-          "flex h-10 w-full rounded-lg border bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200",
+          "flex h-10 w-full rounded-lg border bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 disabled:opacity-60 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed",
           Icon ? "pl-9" : "",
           error 
             ? "border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-900/10" 
@@ -45,10 +44,14 @@ const InputField = ({ label, error, icon: Icon, ...props }) => (
   </div>
 );
 
+// --- MAIN COMPONENT ---
 const AddNetwork = ({ setAdd }) => {
   // --- STATE ---
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Stations Data for STA Calculation
+  const [stationsData, setStationsData] = useState([]);
   
   // Form Fields
   const [formData, setFormData] = useState({
@@ -60,18 +63,84 @@ const AddNetwork = ({ setAdd }) => {
   // Errors
   const [errors, setErrors] = useState({});
 
+  // --- API: Fetch Stations for Timezone Logic ---
+  useEffect(() => {
+    const fetchStations = async () => {
+      try {
+        const response = await axios.get("http://localhost:5001/get-stationData", {
+          headers: { "x-access-token": localStorage.getItem("accessToken") },
+        });
+        if (response.data && response.data.data) {
+          setStationsData(response.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch stations list for STA calculation", error);
+      }
+    };
+    fetchStations();
+  }, []);
+
+  // --- ENGINE: Auto-Calculate STA ---
+  useEffect(() => {
+    const { std, bt, depStn, arrStn } = formData;
+    
+    // Only calculate if all required variables and stations are present
+    if (std && bt && depStn && arrStn && stationsData.length > 0) {
+      
+      const depStationConfig = stationsData.find(s => s.stationName === depStn);
+      const arrStationConfig = stationsData.find(s => s.stationName === arrStn);
+
+      if (depStationConfig?.stdtz && arrStationConfig?.stdtz) {
+        
+        // Helper to convert "UTC+5:30" or "UTC-4:00" to total minutes
+        const parseTZ = (tzString) => {
+          if (!tzString || !tzString.startsWith('UTC')) return 0;
+          const sign = tzString.includes('-') ? -1 : 1;
+          const timePart = tzString.replace(/UTC[+-]/, '');
+          if (!timePart) return 0;
+          const [hours, minutes] = timePart.split(':').map(Number);
+          return sign * ((hours * 60) + (minutes || 0));
+        };
+
+        const depTzMins = parseTZ(depStationConfig.stdtz);
+        const arrTzMins = parseTZ(arrStationConfig.stdtz);
+
+        const [stdH, stdM] = std.split(':').map(Number);
+        const [btH, btM] = bt.split(':').map(Number);
+
+        // Formula: STA = STD + BT + (ArrTZ - DepTZ)
+        let totalMins = (stdH * 60 + stdM) + (btH * 60 + btM) + (arrTzMins - depTzMins);
+
+        // Wrap around 24 hours (1440 minutes) to handle next day / previous day overlaps
+        totalMins = ((totalMins % 1440) + 1440) % 1440; 
+
+        const staH = Math.floor(totalMins / 60);
+        const staM = totalMins % 60;
+        
+        // Format to HH:MM and update formData
+        const calculatedSTA = `${String(staH).padStart(2, '0')}:${String(staM).padStart(2, '0')}`;
+        
+        setFormData(prev => {
+          // Only update if it actually changed to prevent infinite loops
+          if (prev.sta !== calculatedSTA) {
+            return { ...prev, sta: calculatedSTA };
+          }
+          return prev;
+        });
+      }
+    }
+  }, [formData.std, formData.bt, formData.depStn, formData.arrStn, stationsData]);
+
   // --- HANDLERS ---
 
   const handleOpen = () => {
     setIsOpen(true);
-    if(setAdd) setAdd(false); // Notify parent menu to close if needed
+    if(setAdd) setAdd(false); 
   };
 
   const handleClose = () => {
     setIsOpen(false);
     if(setAdd) setAdd(true);
-    // Optional: Reset form on close
-    // setFormData({ ...initialState });
     setErrors({});
   };
 
@@ -84,7 +153,7 @@ const AddNetwork = ({ setAdd }) => {
       setErrors(prev => ({ ...prev, [name]: "" }));
     }
 
-    // Live Validation Logic (Ported from original)
+    // Live Validation Logic
     validateField(name, value);
   };
 
@@ -137,7 +206,6 @@ const AddNetwork = ({ setAdd }) => {
     try {
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       
-      // Formatting payload
       const payload = {
         ...formData,
         domINTL: formData.domINTL.toLowerCase(),
@@ -299,12 +367,13 @@ const AddNetwork = ({ setAdd }) => {
                     />
 
                     <InputField 
-                      label="STA (Local)" 
+                      label="STA (Local) - Auto Calculated" 
                       name="sta" 
                       type="time" 
                       value={formData.sta} 
-                      onChange={handleChange} 
-                      required 
+                      onChange={handleChange}
+                      className="flex h-10 w-full rounded-lg border bg-indigo-50/50 dark:bg-indigo-900/20 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 font-bold disabled:opacity-80"
+                      disabled
                     />
 
                     <InputField 

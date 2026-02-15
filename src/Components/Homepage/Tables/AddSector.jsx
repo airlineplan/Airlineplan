@@ -32,7 +32,7 @@ const Button = ({ children, variant = "primary", className, loading, ...props })
 };
 
 const InputGroup = ({ label, error, children }) => (
-  <div className="flex flex-col space-y-1">
+  <div className="flex flex-col space-y-1 w-full">
     <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
       {label}
     </label>
@@ -40,7 +40,7 @@ const InputGroup = ({ label, error, children }) => (
     {error && (
       <motion.span
         initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
-        className="text-xs text-red-500 font-medium"
+        className="text-xs text-red-500 font-medium leading-tight"
       >
         {error}
       </motion.span>
@@ -48,19 +48,23 @@ const InputGroup = ({ label, error, children }) => (
   </div>
 );
 
-const baseInputStyles = "w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400";
+const baseInputStyles = "w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400 disabled:opacity-60 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed";
 
 // --- MAIN COMPONENT ---
 const AddSector = (props) => {
-  // --- STATE (Preserved Exactly) ---
+  // --- STATE ---
   const [openNewModal, setOpenNewModal] = useState(false);
-  const [open, setOpen] = useState(false);
   const [sector1, setSector1] = useState("");
   const [sector2, setSector2] = useState("");
   const [gcd, setGCD] = useState("");
   const [acftType, setACFTType] = useState("");
   const [variant, setVariant] = useState("");
+  
+  // Added STD & STA states required for calculation
+  const [std, setStd] = useState(""); 
   const [bt, setBlockTime] = useState("");
+  const [sta, setSta] = useState(""); 
+  
   const [paxCapacity, setPaxCapacity] = useState("");
   const [CargoCapT, setCargoCapT] = useState("");
   const [paxLF, setPaxLfPercent] = useState("");
@@ -68,6 +72,8 @@ const AddSector = (props) => {
   const [fromDt, setFromDt] = useState("");
   const [toDt, setToDt] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  // Stations Data for TZ Calculation
   const [stationsData, setStationsData] = useState([]);
 
   // Errors
@@ -84,36 +90,79 @@ const AddSector = (props) => {
   const [fromDtError, setFromDtError] = useState("");
   const [toDtError, setToDtError] = useState("");
 
-  // --- HANDLERS (Preserved Exactly) ---
+  // --- API: Fetch Stations for Timezone Logic ---
+  useEffect(() => {
+    const fetchStations = async () => {
+      try {
+        const response = await axios.get("http://localhost:5001/get-stationData", {
+          headers: { "x-access-token": localStorage.getItem("accessToken") },
+        });
+        if (response.data && response.data.data) {
+          setStationsData(response.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch stations list", error);
+      }
+    };
+    fetchStations();
+  }, []);
+
+  // --- ENGINE: Auto-Calculate STA ---
+  useEffect(() => {
+    if (std && bt && sector1 && sector2 && stationsData.length > 0) {
+      const depStation = stationsData.find(s => s.stationName === sector1);
+      const arrStation = stationsData.find(s => s.stationName === sector2);
+
+      if (depStation?.stdtz && arrStation?.stdtz) {
+        const parseTZ = (tzString) => {
+          if (!tzString || !tzString.startsWith('UTC')) return 0;
+          const sign = tzString.includes('-') ? -1 : 1;
+          const timePart = tzString.replace(/UTC[+-]/, '');
+          if (!timePart) return 0;
+          const [hours, minutes] = timePart.split(':').map(Number);
+          return sign * ((hours * 60) + (minutes || 0));
+        };
+
+        const depTzMins = parseTZ(depStation.stdtz);
+        const arrTzMins = parseTZ(arrStation.stdtz);
+
+        const [stdH, stdM] = std.split(':').map(Number);
+        const [btH, btM] = bt.split(':').map(Number);
+
+        // Formula: STA = STD + BT + (ArrTZ - DepTZ)
+        let totalMins = (stdH * 60 + stdM) + (btH * 60 + btM) + (arrTzMins - depTzMins);
+
+        // Wrap around 24 hours (1440 minutes)
+        totalMins = ((totalMins % 1440) + 1440) % 1440; 
+
+        const staH = Math.floor(totalMins / 60);
+        const staM = totalMins % 60;
+        
+        setSta(`${String(staH).padStart(2, '0')}:${String(staM).padStart(2, '0')}`);
+      }
+    }
+  }, [std, bt, sector1, sector2, stationsData]);
+
+  // --- HANDLERS ---
   const handleClose = () => {
-    setSector1Error(null);
-    setSector2Error(null);
-    setGCDError(null);
-    setACFTTypeError(null);
-    setVariantError(null);
-    setPaxCapacityError(null);
-    setCargoCapTError(null);
-    setPaxLfPercentError(null);
-    setCargoLfPercentError(null);
-    setFromDtError(null);
-    setToDtError(null);
+    setSector1Error(null); setSector2Error(null); setGCDError(null); setACFTTypeError(null);
+    setVariantError(null); setBlockTimeError(null); setPaxCapacityError(null); setCargoCapTError(null);
+    setPaxLfPercentError(null); setCargoLfPercentError(null); setFromDtError(null); setToDtError(null);
   };
 
   const handleSector1 = (event) => {
     const value = event.target.value;
     if (/^[a-zA-Z0-9\s]{0,4}$/.test(value)) {
-      setSector1(value);
-      setSector1Error("");
+      setSector1(value); setSector1Error("");
     } else {
-      setSector1Error("Arr Stn must be 4 characters long");
+      setSector1Error("Dep Stn must be 4 characters long");
     }
   };
 
   const handleSector2 = (event) => {
     const value = event.target.value;
     if (/^[a-zA-Z0-9\s]{0,4}$/.test(value)) {
-      setSector2(value);
-      setSector2Error("");
+      setSector2(value); setSector2Error("");
     } else {
       setSector2Error("Arr Stn must be 4 characters long");
     }
@@ -122,23 +171,15 @@ const AddSector = (props) => {
   const handleGCD = (event) => {
     const inputValue = event.target.value;
     const parsedValue = parseInt(inputValue, 10);
-    if (isNaN(parsedValue)) {
-      setGCDError("Please enter a valid integer");
-      return;
-    }
-    if (parsedValue < 0 || parsedValue > 20000) {
-      setGCDError("Please enter an integer between 0 and 20,000.");
-      return;
-    }
-    setGCDError("");
-    setGCD(parsedValue);
+    if (isNaN(parsedValue)) return setGCDError("Please enter a valid integer");
+    if (parsedValue < 0 || parsedValue > 20000) return setGCDError("Please enter an integer between 0 and 20,000.");
+    setGCDError(""); setGCD(parsedValue);
   };
 
   const handleACFT = (event) => {
     const value = event.target.value;
     if (/^[a-zA-Z0-9\s-]{0,8}$/.test(value)) {
-      setACFTType(value);
-      setACFTTypeError("");
+      setACFTType(value); setACFTTypeError("");
     } else {
       setACFTTypeError('Must be 8 characters and can only contain letters, numbers, "-", and blank spaces');
     }
@@ -147,29 +188,25 @@ const AddSector = (props) => {
   const handleVariant = (event) => {
     const value = event.target.value;
     if (/^[a-zA-Z0-9\s-]{0,8}$/.test(value)) {
-      setVariant(value);
-      setVariantError("");
+      setVariant(value); setVariantError("");
     } else {
       setVariantError('Must be 8 characters and can only contain letters, numbers, "-", and blank spaces');
     }
   };
 
-  const handleBlockTime = (event) => {
-    setBlockTime(event.target.value);
-  };
+  const handleSTD = (event) => setStd(event.target.value);
+  const handleBlockTime = (event) => setBlockTime(event.target.value);
+  const handleSTA = (event) => setSta(event.target.value);
 
   const handlePaxCapacity = (event) => {
     const inputValue = event.target.value;
     const parsedValue = parseInt(inputValue, 10);
     if (isNaN(parsedValue) || !Number.isInteger(parsedValue)) {
-      setPaxCapacityError("Please enter an integer between 0 and 600");
-      setPaxCapacity("");
+      setPaxCapacityError("Please enter an integer between 0 and 600"); setPaxCapacity("");
     } else if (parsedValue < 0 || parsedValue > 600) {
-      setPaxCapacityError("Please enter an integer between 0 and 600.");
-      setPaxCapacity("");
+      setPaxCapacityError("Please enter an integer between 0 and 600."); setPaxCapacity("");
     } else {
-      setPaxCapacityError("");
-      setPaxCapacity(parsedValue);
+      setPaxCapacityError(""); setPaxCapacity(parsedValue);
     }
   };
 
@@ -177,11 +214,9 @@ const AddSector = (props) => {
     const inputValue = event.target.value;
     const parsedValue = parseFloat(inputValue);
     if (isNaN(parsedValue) || parsedValue <= 0 || parsedValue > 150) {
-      setCargoCapTError("Please enter a number between 0.1 and 150");
-      setCargoCapT("");
+      setCargoCapTError("Please enter a number between 0.1 and 150"); setCargoCapT("");
     } else {
-      setCargoCapTError("");
-      setCargoCapT(parsedValue);
+      setCargoCapTError(""); setCargoCapT(parsedValue);
     }
   };
 
@@ -189,12 +224,9 @@ const AddSector = (props) => {
     const value = event.target.value;
     const percentage = parseFloat(value);
     if (isNaN(percentage) || percentage < 0 || percentage > 100 || value.includes(".")) {
-      setPaxLfPercentError("percentage between 0% and 100% without decimals.");
-      setPaxLfPercent("");
-      return;
+      setPaxLfPercentError("percentage between 0% and 100% without decimals."); setPaxLfPercent("");
     } else {
-      setPaxLfPercent(percentage);
-      setPaxLfPercentError("");
+      setPaxLfPercent(percentage); setPaxLfPercentError("");
     }
   };
 
@@ -202,15 +234,24 @@ const AddSector = (props) => {
     const value = event.target.value;
     const percentage = parseFloat(value);
     if (isNaN(percentage) || percentage < 0 || percentage > 100 || value.includes(".")) {
-      setCargoLfPercentError("percentage between 0% and 100% without decimals.");
-      setPaxLfPercent("");
-      return;
+      setCargoLfPercentError("percentage between 0% and 100% without decimals."); setCargoLfPercent("");
     } else {
-      setCargoLfPercent(percentage);
-      setCargoLfPercentError("");
+      setCargoLfPercent(percentage); setCargoLfPercentError("");
     }
   };
 
+  const handleFromDt = (event) => setFromDt(event.target.value);
+  const handleToDt = (event) => setToDt(event.target.value);
+
+  useEffect(() => {
+    if (!fromDt) setFromDtError("This field is required.");
+    else setFromDtError("");
+  }, [fromDt]);
+
+  useEffect(() => {
+    if (!toDt) setToDtError("This field is required.");
+    else setToDtError("");
+  }, [toDt]);
 
   // Submit Form
   const handleSubmit = async (e) => {
@@ -222,7 +263,7 @@ const AddSector = (props) => {
     if (
       sector1Error || sector2Error || gcdError || acftTypeError ||
       variantError || paxCapacityError || CargoCapTError ||
-      paxLFPercentError || cargoLFPercentError
+      paxLFPercentError || cargoLFPercentError || btError
     ) {
       return;
     }
@@ -231,12 +272,13 @@ const AddSector = (props) => {
       setLoading(true);
       const response = await axios.post(
         "http://localhost:5001/add-sector",
-        { sector1, sector2, acftType, variant, bt, gcd, paxCapacity, CargoCapT, paxLF, cargoLF, fromDt, toDt },
+        // Included std and sta in the payload
+        { sector1, sector2, acftType, variant, std, bt, sta, gcd, paxCapacity, CargoCapT, paxLF, cargoLF, fromDt, toDt },
         { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
       );
 
       if (response.status === 201) {
-        toast.success("Update successful!");
+        toast.success("Sector added successfully!");
         setLoading(false);
         setTimeout(() => { window.location.reload(); }, 2000);
       }
@@ -251,7 +293,7 @@ const AddSector = (props) => {
     }
   };
 
-  // Keyboard navigation logic adapted for native elements
+  // Keyboard navigation logic
   const handleKeyDown = (event) => {
     if (event.key === "Tab") {
       event.preventDefault();
@@ -264,7 +306,7 @@ const AddSector = (props) => {
 
   return (
     <>
-      {/* TRIGGER BUTTON: Matches the Aceternity Dropdown style we set up in NetworkTable */}
+      {/* TRIGGER BUTTON */}
       <button
         onClick={() => {
           setOpenNewModal(true);
@@ -293,7 +335,7 @@ const AddSector = (props) => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               onKeyDown={handleKeyDown}
-              className="fixed inset-0 m-auto z-50 w-full max-w-3xl h-fit max-h-[90vh] overflow-y-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-8 custom-scrollbar"
+              className="fixed inset-0 m-auto z-50 w-full max-w-4xl h-fit max-h-[90vh] overflow-y-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 custom-scrollbar"
             >
 
               {/* Header */}
@@ -312,58 +354,59 @@ const AddSector = (props) => {
               {/* Form Grid */}
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="Dep Stn" error={sector1Error}>
                     <input className={baseInputStyles} name="sector1" required placeholder="VI89" onChange={handleSector1} />
                   </InputGroup>
                   <InputGroup label="Arr Stn" error={sector2Error}>
                     <input className={baseInputStyles} name="sector2" required placeholder="VIDP" onChange={handleSector2} />
                   </InputGroup>
+                  <InputGroup label="GCD" error={gcdError}>
+                    <input className={baseInputStyles} type="number" name="gcd" required placeholder="0 - 20000" onChange={handleGCD} />
+                  </InputGroup>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <InputGroup label="STD (LT)">
+                    <input className={baseInputStyles} type="time" required value={std} onChange={handleSTD} />
+                  </InputGroup>
+                  <InputGroup label="Block Time (BT)" error={btError}>
+                    <input className={baseInputStyles} type="time" name="bt" required onChange={handleBlockTime} />
+                  </InputGroup>
+                  <InputGroup label="STA (LT) - Auto Calculated">
+                    <input className={cn(baseInputStyles, "bg-indigo-50/50 dark:bg-indigo-900/20 font-bold")} type="time" value={sta} onChange={handleSTA} disabled />
+                  </InputGroup>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="ACFT Type" error={acftTypeError}>
                     <input className={baseInputStyles} name="acftType" required placeholder="A330-200" onChange={handleACFT} />
                   </InputGroup>
                   <InputGroup label="Variant" error={variantError}>
                     <input className={baseInputStyles} name="variant" required placeholder="777300ER" onChange={handleVariant} />
                   </InputGroup>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <InputGroup label="Block Time" error={btError}>
-                    <input className={baseInputStyles} type="time" name="bt" required onChange={handleBlockTime} />
-                  </InputGroup>
                   <InputGroup label="Pax Capacity" error={paxCapacityError}>
                     <input className={baseInputStyles} type="number" name="paxCapacity" required placeholder="1-600" onChange={handlePaxCapacity} />
                   </InputGroup>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="Cargo Cap T" error={CargoCapTError}>
                     <input className={baseInputStyles} type="number" step="0.1" name="CargoCapT" required placeholder="150.0" onChange={handleCargoCapT} />
                   </InputGroup>
                   <InputGroup label="Pax LF%" error={paxLFPercentError}>
                     <input className={baseInputStyles} type="number" name="paxLF" required placeholder="100" onChange={handlePaxPercent} />
                   </InputGroup>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <InputGroup label="Cargo LF%" error={cargoLFPercentError}>
                     <input className={baseInputStyles} type="number" name="cargoLF" required placeholder="100" onChange={handleCargoPercent} />
                   </InputGroup>
-                  <InputGroup label="GCD" error={gcdError}>
-                    <input className={baseInputStyles} type="number" name="gcd" required placeholder="0 - 20000" onChange={handleGCD} />
-                  </InputGroup>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Replaced complex MUI Date Pickers with sleek, native HTML5 Tailwind Date Inputs */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="From Dt" error={fromDtError}>
                     <input className={baseInputStyles} type="date" required value={fromDt} onChange={handleFromDt} />
                   </InputGroup>
                   <InputGroup label="To Dt" error={toDtError}>
-                    {/* Native min constraint automatically applied via state */}
                     <input className={baseInputStyles} type="date" min={fromDt} required value={toDt} onChange={handleToDt} />
                   </InputGroup>
                 </div>

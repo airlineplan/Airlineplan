@@ -144,7 +144,7 @@ export default function Loginpage() {
               <div className="h-10 w-10 bg-indigo-600/80 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg border border-indigo-400/30">
                 <Plane className="text-white" size={20} />
               </div>
-              <span className="text-xl font-bold tracking-wide drop-shadow-md">AirlinePlan</span>
+              <span className="text-xl font-bold tracking-wide drop-shadow-md">Airlineplan</span>
             </motion.div>
 
             <motion.div 
@@ -154,13 +154,13 @@ export default function Loginpage() {
               className="mb-8"
             >
               <h1 className="text-3xl font-bold mb-3 text-white drop-shadow-lg">
-                Streamline your <br/>
+                Plan and Operationalize with complete visibility of all commercial, operational and financial factors. <br/>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 to-cyan-200 drop-shadow-sm">
-                  Network Planning
+                  Review and analyze historical data for insights.
                 </span>
               </h1>
               <p className="text-indigo-100 text-sm drop-shadow-md">
-                A complete suite for flight scheduling, rotation building, and connection analysis.
+                Network planning, Scheduling, Aircraft rotations, Commercial planning and more
               </p>
             </motion.div>
 
@@ -173,7 +173,7 @@ export default function Loginpage() {
 
           <div className="relative z-10 mt-8 pt-6 border-t border-white/20">
             <p className="text-[10px] text-white/60 uppercase tracking-widest font-semibold drop-shadow-sm">
-              © 2024 Aerosphere Aviation Solutions
+              © 2024 Aerosphere Aviation Business Solutions
             </p>
           </div>
         </div>
@@ -188,9 +188,6 @@ export default function Loginpage() {
                 <Globe className="text-indigo-300 hidden lg:block" size={24} /> 
                 Welcome Back
               </h2>
-              <p className="text-indigo-100/80 mt-2 text-sm drop-shadow-md">
-                Enter your credentials to access the dashboard.
-              </p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-6">

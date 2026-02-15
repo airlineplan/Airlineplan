@@ -167,7 +167,7 @@ export default function Contact() {
           {/* Bottom Content */}
           <div className="relative z-10 mt-12 pt-8 border-t border-white/20">
             <p className="text-[10px] text-indigo-200 uppercase tracking-widest font-semibold drop-shadow-sm">
-              © 2024 Aerosphere Aviation Solutions
+              © 2024 Aerosphere Aviation Business Solutions
             </p>
           </div>
         </div>

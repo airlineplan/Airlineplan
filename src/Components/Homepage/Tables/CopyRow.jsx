@@ -49,13 +49,14 @@ const InputGroup = ({ label, error, children }) => (
   </div>
 );
 
-const baseInputStyles = "w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400";
+const baseInputStyles = "w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400 disabled:opacity-60 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed";
 
 // --- MAIN COMPONENT ---
 export default function CopyRow(props) {
   // --- STATE ---
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [stationsList, setStationsList] = useState([]); // Needed for STA calculation
 
   const [flight, setFlight] = useState("");
   const [depStn, setDepStn] = useState("");
@@ -84,6 +85,66 @@ export default function CopyRow(props) {
   const [userTag2Error, setUserTag2Error] = useState("");
   const [remarks1Error, setRemarks1Error] = useState("");
   const [remarks2Error, setRemarks2Error] = useState("");
+
+  // --- API: Fetch Stations for Timezone Logic ---
+  useEffect(() => {
+    const fetchStations = async () => {
+      try {
+        const response = await axios.get("http://localhost:5001/get-stationData", {
+          headers: { "x-access-token": localStorage.getItem("accessToken") },
+        });
+        if (response.data && response.data.data) {
+          setStationsList(response.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch stations list for TZ calculation", error);
+      }
+    };
+    fetchStations();
+  }, []);
+
+  // --- ENGINE: Auto-Calculate STA ---
+  useEffect(() => {
+    // Only calculate if all required variables and stations are present
+    if (std && bt && depStn && arrStn && stationsList.length > 0) {
+      
+      const depStation = stationsList.find(s => s.stationName === depStn);
+      const arrStation = stationsList.find(s => s.stationName === arrStn);
+
+      if (depStation?.stdtz && arrStation?.stdtz) {
+        
+        // Helper to convert "UTC+5:30" or "UTC-4:00" to total minutes
+        const parseTZ = (tzString) => {
+          if (!tzString || !tzString.startsWith('UTC')) return 0;
+          const sign = tzString.includes('-') ? -1 : 1;
+          const timePart = tzString.replace(/UTC[+-]/, '');
+          if (!timePart) return 0;
+          const [hours, minutes] = timePart.split(':').map(Number);
+          return sign * ((hours * 60) + (minutes || 0));
+        };
+
+        const depTzMins = parseTZ(depStation.stdtz);
+        const arrTzMins = parseTZ(arrStation.stdtz);
+
+        const [stdH, stdM] = std.split(':').map(Number);
+        const [btH, btM] = bt.split(':').map(Number);
+
+        // Formula: STA = STD + BT + (ArrTZ - DepTZ)
+        let totalMins = (stdH * 60 + stdM) + (btH * 60 + btM) + (arrTzMins - depTzMins);
+
+        // Wrap around 24 hours (1440 minutes) to handle next day / previous day overlaps
+        totalMins = ((totalMins % 1440) + 1440) % 1440; 
+
+        const staH = Math.floor(totalMins / 60);
+        const staM = totalMins % 60;
+        
+        // Format to HH:MM and set state
+        const calculatedSTA = `${String(staH).padStart(2, '0')}:${String(staM).padStart(2, '0')}`;
+        setSta(calculatedSTA);
+      }
+    }
+  }, [std, bt, depStn, arrStn, stationsList]);
+
 
   // --- HANDLERS ---
   const handleClickOpen = () => {
@@ -125,7 +186,7 @@ export default function CopyRow(props) {
 
   const handleSTD = (event) => setStd(event.target.value);
   const handleBT = (event) => setBt(event.target.value);
-  const handleSTA = (event) => setSta(event.target.value);
+  const handleSTA = (event) => setSta(event.target.value); // Keep manual override if needed
 
   const handleArrStn = (event) => {
     const value = event.target.value;
@@ -269,7 +330,7 @@ export default function CopyRow(props) {
 
       if (response.status === 201) {
         setLoading(false);
-        toast.success("Update successful!");
+        toast.success("Copy successful!");
         setTimeout(() => { window.location.reload(); }, 2000);
       }
     } catch (err) {
@@ -299,6 +360,10 @@ export default function CopyRow(props) {
       {/* TRIGGER BUTTON */}
       <button
         onClick={() => {
+          if (!props.checkedRows || props.checkedRows.length !== 1) {
+            toast.warning("Please select exactly one row to copy.");
+            return;
+          }
           handleClickOpen();
           fetchData();
           props.setAdd(false);
@@ -341,7 +406,7 @@ export default function CopyRow(props) {
                 </button>
               </div>
 
-              {/* Form Grid - Fixed the horizontal scrolling issue with CSS Grid */}
+              {/* Form Grid */}
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -363,8 +428,8 @@ export default function CopyRow(props) {
                   <InputGroup label="BT">
                     <input className={baseInputStyles} required type="time" value={bt} onChange={handleBT} />
                   </InputGroup>
-                  <InputGroup label="STA (LT)">
-                    <input className={baseInputStyles} type="time" value={sta} onChange={handleSTA} />
+                  <InputGroup label="STA (LT) - Auto Calculated">
+                    <input className={cn(baseInputStyles, "bg-indigo-50/50 dark:bg-indigo-900/20 font-bold")} type="time" value={sta} onChange={handleSTA} disabled />
                   </InputGroup>
                 </div>
 

@@ -186,6 +186,12 @@ const StationsTable = () => {
               <tr>
                 <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-12 text-xs font-bold text-slate-500 dark:text-slate-400">#</th>
                 <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[100px] text-xs font-bold text-slate-500 dark:text-slate-400">Station</th>
+                
+                {/* --- NEW HEADERS --- */}
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[90px] text-xs font-bold text-slate-500 dark:text-slate-400">Avg Taxi-Out</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[90px] text-xs font-bold text-slate-500 dark:text-slate-400">Avg Taxi-In</th>
+                {/* ------------------- */}
+
                 <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[110px] text-xs font-bold text-slate-500 dark:text-slate-400">STD TZ</th>
                 <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[110px] text-xs font-bold text-slate-500 dark:text-slate-400">DST TZ</th>
                 <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[130px] text-xs font-bold text-slate-500 dark:text-slate-400">Next DST Start</th>
@@ -211,7 +217,7 @@ const StationsTable = () => {
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {isFetching ? (
                 <tr>
-                  <td colSpan={14} className="p-10 text-center text-slate-500 text-sm">Loading station data...</td>
+                  <td colSpan={16} className="p-10 text-center text-slate-500 text-sm">Loading station data...</td>
                 </tr>
               ) : (
                 data.map((row, index) => (
@@ -219,6 +225,23 @@ const StationsTable = () => {
                     <td className="p-2 text-center text-xs font-medium text-slate-500 border-r border-slate-100 dark:border-slate-800">{index + 1}</td>
                     <td className="p-2 text-center text-xs font-medium text-slate-800 dark:text-slate-200 border-r border-slate-100 dark:border-slate-800">{row.stationName}</td>
                     
+                    {/* --- NEW CELLS --- */}
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-orange-50/10">
+                      <StyledInput 
+                        value={row.avgTaxiOutTime} 
+                        onChange={(e) => handleInputChange(e, index, 'avgTaxiOutTime')} 
+                        placeholder="00:00"
+                      />
+                    </td>
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-orange-50/10">
+                      <StyledInput 
+                        value={row.avgTaxiInTime} 
+                        onChange={(e) => handleInputChange(e, index, 'avgTaxiInTime')} 
+                        placeholder="00:00"
+                      />
+                    </td>
+                    {/* ----------------- */}
+
                     <td className="p-1 border-r border-slate-100 dark:border-slate-800">
                       <StyledSelect value={row.stdtz} options={TIMEZONES} onChange={(e) => handleInputChange(e, index, 'stdtz')} />
                     </td>
