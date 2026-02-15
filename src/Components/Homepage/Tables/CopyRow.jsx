@@ -379,7 +379,7 @@ export default function CopyRow(props) {
       if (response.status === 201) {
         setLoading(false);
         toast.success("Copy successful!");
-        setTimeout(() => { window.location.reload(); }, 2000);
+        setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
       }
     } catch (err) {
       console.error(err);

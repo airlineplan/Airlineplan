@@ -311,7 +311,7 @@ const Rotations = () => {
       }, { headers: { "x-access-token": localStorage.getItem("accessToken") } });
       
       toast.success("Rotation deleted");
-      setTimeout(() => window.location.reload(), 1000);
+      setTimeout(() => window.dispatchEvent(new Event("refreshData")), 1500);
     } catch (e) { console.error(e); } finally { setIsRotationDeleting(false); }
   };
 
@@ -325,7 +325,7 @@ const Rotations = () => {
              res = await axios.post("https://airlinebackend-zfsg.onrender.com/deleteRotation", {
                 rotationNumber: selectedRotation, selectedVariant
              }, { headers: { "x-access-token": localStorage.getItem("accessToken") } });
-             if(res.status === 200) window.location.reload();
+             if(res.status === 200) setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
         } else {
             res = await axios.post("https://airlinebackend-zfsg.onrender.com/deletePrevInRotation", {
                 rotationNumber: selectedRotation, selectedVariant,

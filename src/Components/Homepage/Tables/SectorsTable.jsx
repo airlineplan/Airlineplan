@@ -4,15 +4,15 @@ import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { 
-  Trash2, Plus, ArrowUp, ArrowDown, Search, 
-  Map, RefreshCw, ChevronLeft, ChevronRight 
+import {
+  Trash2, Plus, ArrowUp, ArrowDown, Search,
+  Map, RefreshCw, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // --- IMPORT YOUR MODERNIZED MODAL COMPONENTS ---
-import UpdateSectore from "./UpdateSectore"; 
+import UpdateSectore from "./UpdateSectore";
 import AddSector from "./AddSector";
 import CopySector from "./CopySector";
 
@@ -24,7 +24,7 @@ function cn(...inputs) {
 // --- UI COMPONENTS ---
 const Button = ({ children, variant = "primary", className, icon: Icon, ...props }) => {
   const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed";
-  
+
   const variants = {
     primary: "bg-gradient-to-r from-indigo-500 to-cyan-500 text-white hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02]",
     secondary: "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm",
@@ -41,12 +41,12 @@ const Button = ({ children, variant = "primary", className, icon: Icon, ...props
 };
 
 const Checkbox = ({ checked, onChange }) => (
-  <div 
+  <div
     onClick={onChange}
     className={cn(
       "w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-all duration-200",
-      checked 
-        ? "bg-indigo-500 border-indigo-500" 
+      checked
+        ? "bg-indigo-500 border-indigo-500"
         : "bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 hover:border-indigo-400"
     )}
   >
@@ -76,11 +76,11 @@ const SectorsTable = () => {
   const [loading, setLoading] = useState(true);
   const [checkedRows, setCheckedRows] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  
+
   // Modals & Menus
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [add, setAdd] = useState(true); // Passed to modals
-  
+
   // Sorting & Filters
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [filters, setFilters] = useState({
@@ -134,7 +134,7 @@ const SectorsTable = () => {
 
       if (response.data && response.data.message === "Data deleted successfully") {
         toast.success("Delete Successful");
-        setTimeout(() => { window.location.reload(); }, 2000);
+        setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
       } else {
         toast.error("Delete Failed");
       }
@@ -163,7 +163,7 @@ const SectorsTable = () => {
     // 1. Filter logic mirroring your original structure exactly
     data = data.filter(row => {
       const match = (val, filter) => String(val || "").toLowerCase().includes(filter.toLowerCase());
-      
+
       return (
         match(row.sector1, filters.sector1) &&
         match(row.gcd, filters.gcd) &&
@@ -184,9 +184,9 @@ const SectorsTable = () => {
       data.sort((a, b) => {
         const valA = String(a[sortConfig.key] || "");
         const valB = String(b[sortConfig.key] || "");
-        
-        return sortConfig.direction === "asc" 
-          ? valA.localeCompare(valB) 
+
+        return sortConfig.direction === "asc"
+          ? valA.localeCompare(valB)
           : valB.localeCompare(valA);
       });
     }
@@ -197,13 +197,13 @@ const SectorsTable = () => {
   // --- PAGINATION ---
   const totalPages = Math.ceil(processedData.length / ROWS_PER_PAGE);
   const paginatedData = processedData.slice(
-    (currentPage - 1) * ROWS_PER_PAGE, 
+    (currentPage - 1) * ROWS_PER_PAGE,
     currentPage * ROWS_PER_PAGE
   );
 
   // --- SELECTION ---
   const handleCheckRow = (id) => {
-    setCheckedRows(prev => 
+    setCheckedRows(prev =>
       prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
     );
   };
@@ -233,20 +233,20 @@ const SectorsTable = () => {
 
   return (
     <div className="w-full space-y-4 relative">
-      
+
       {/* --- HEADER ACTIONS --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1 z-30 relative">
-        
+
         <div className="flex flex-wrap items-center gap-2">
-          
+
           {/* Actual Update Component Mounted Here */}
           <UpdateSectore checkedRows={checkedRows} />
 
           {/* Add / Copy Dropdown */}
           <div className="relative" ref={menuRef}>
-            <Button 
-              variant="primary" 
-              icon={Plus} 
+            <Button
+              variant="primary"
+              icon={Plus}
               onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
             >
               Add
@@ -254,7 +254,7 @@ const SectorsTable = () => {
 
             <AnimatePresence>
               {isAddMenuOpen && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
@@ -272,7 +272,7 @@ const SectorsTable = () => {
               )}
             </AnimatePresence>
           </div>
-          
+
           {checkedRows.length > 0 && (
             <Button variant="danger" icon={Trash2} onClick={handleDeleteData}>
               Delete
@@ -283,35 +283,35 @@ const SectorsTable = () => {
 
       {/* --- TABLE CARD --- */}
       <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col h-[70vh] relative z-20">
-        
+
         <div className="flex-1 overflow-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-100/90 dark:bg-slate-800/90 sticky top-0 z-20 backdrop-blur-sm">
               <tr>
                 <th className="p-4 w-12 text-center sticky left-0 bg-slate-100/90 dark:bg-slate-800/90 z-30 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                   <div className="flex justify-center">
-                    <Checkbox 
-                      checked={processedData.length > 0 && checkedRows.length === processedData.length} 
-                      onChange={handleCheckAll} 
+                    <Checkbox
+                      checked={processedData.length > 0 && checkedRows.length === processedData.length}
+                      onChange={handleCheckAll}
                     />
                   </div>
                 </th>
                 {columns.map((col) => (
                   <th key={col.key} className="p-3 min-w-[100px] font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     <div className="flex flex-col gap-1">
-                      <div 
+                      <div
                         className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                         onClick={() => handleSort(col.key)}
                       >
                         {col.label}
                         {sortConfig.key === col.key ? (
-                          sortConfig.direction === "asc" ? <ArrowUp size={12}/> : <ArrowDown size={12}/> 
+                          sortConfig.direction === "asc" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
                         ) : (
-                          <ArrowUp size={12} className="opacity-0 group-hover:opacity-30"/>
+                          <ArrowUp size={12} className="opacity-0 group-hover:opacity-30" />
                         )}
                       </div>
-                      <TableInput 
-                        value={filters[col.filterKey]} 
+                      <TableInput
+                        value={filters[col.filterKey]}
                         onChange={(e) => handleFilterChange(col.filterKey, e.target.value)}
                         placeholder="Filter..."
                       />
@@ -320,7 +320,7 @@ const SectorsTable = () => {
                 ))}
               </tr>
             </thead>
-            
+
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {loading ? (
                 <tr>
@@ -352,13 +352,13 @@ const SectorsTable = () => {
                     >
                       <td className="p-4 sticky left-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 z-10 text-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] border-r border-slate-100 dark:border-slate-800">
                         <div className="flex justify-center">
-                          <Checkbox 
-                            checked={checkedRows.includes(row._id)} 
-                            onChange={() => handleCheckRow(row._id)} 
+                          <Checkbox
+                            checked={checkedRows.includes(row._id)}
+                            onChange={() => handleCheckRow(row._id)}
                           />
                         </div>
                       </td>
-                      
+
                       <td className="p-3 text-sm font-medium text-slate-700 dark:text-slate-200">
                         {row.sector1}-{row.sector2}
                       </td>
@@ -402,7 +402,7 @@ const SectorsTable = () => {
             >
               <ChevronLeft size={16} />
             </button>
-            
+
             <span className="text-xs font-medium text-slate-700 dark:text-slate-300 px-2">
               Page {currentPage} of {totalPages || 1}
             </span>

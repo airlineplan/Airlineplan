@@ -337,7 +337,7 @@ const UpdateSectore = (props) => {
       if (response.status === 200) {
         setLoading(false);
         toast.success("Update successful!");
-        setTimeout(() => { window.location.reload(); }, 2000);
+        setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
       }
     } catch (err) {
       console.error(err);

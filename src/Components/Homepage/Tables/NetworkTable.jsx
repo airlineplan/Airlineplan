@@ -245,7 +245,7 @@ export default function NetworkTable() {
 
       if (response.data && response.data.message === "Data deleted successfully") {
         toast.success("Delete Successful");
-        setTimeout(() => { window.location.reload(); }, 2000);
+        setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
       } else {
         toast.error("Delete Failed");
       }
@@ -284,13 +284,13 @@ export default function NetworkTable() {
         });
       } else {
         setIsUploadOpen(false);
-        setTimeout(() => { window.location.reload(); }, 2000);
+        setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
       }
 
       if (response.data.status === 200) {
         toast.success(response.data.msg);
         setIsUploadOpen(false);
-        setTimeout(() => { window.location.reload(); }, 3000);
+        setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
       }
 
     } catch (error) {

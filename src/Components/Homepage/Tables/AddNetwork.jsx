@@ -335,7 +335,7 @@ const AddNetwork = ({ setAdd }) => {
 
       if (response.status === 201) {
         toast.success("Record added successfully!");
-        setTimeout(() => window.location.reload(), 1500);
+        setTimeout(() => window.dispatchEvent(new Event("refreshData")), 1500);
         handleClose();
       }
     } catch (err) {

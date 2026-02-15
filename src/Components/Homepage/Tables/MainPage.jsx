@@ -21,7 +21,7 @@ import ConnectionTable from "./ConnectionTable";
 import StationsTable from "./StationsTable";
 import Rotations from "./Rotations";
 
-// TODO: Make sure this import matches your actual Route Economics component path/name
+// Ensure this import matches your actual Route Economics component path/name
 import AircraftRoute from "../../../Pages/AircraftRoute"; 
 
 // --- UTILITIES ---
@@ -30,7 +30,6 @@ function cn(...inputs) {
 }
 
 // --- CONSTANTS ---
-// Added Route Economics as the last tab
 const TABS = [
   { id: 0, label: "Network", icon: Network, component: NetworkTable },
   { id: 1, label: "Sectors", icon: Map, component: SectorsTable },
@@ -83,17 +82,28 @@ const MainPage = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [flightsData, setFlightsData] = useState(null);
   const [totalFlights, setTotalFlights] = useState(0);
+  
+  // NEW: State to track soft reloads seamlessly
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Auth Check
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
     if (!accessToken) {
       navigate("/");
-    } else {
-      // Optional: Clean URL if redirecting from somewhere
-      navigate("/homepage"); 
+    } else if (window.location.pathname !== "/homepage") {
+      // Only navigate to homepage if not already there, preventing weird loops
+      navigate("/homepage", { replace: true }); 
     }
   }, [navigate]);
+
+  // NEW: Listen for 'refreshData' events to remount the active component 
+  // without triggering a 404 browser refresh
+  useEffect(() => {
+    const handleSoftReload = () => setRefreshKey((prev) => prev + 1);
+    window.addEventListener("refreshData", handleSoftReload);
+    return () => window.removeEventListener("refreshData", handleSoftReload);
+  }, []);
 
   // Fetch Data (Preserved Logic)
   const fetchFlightsData = async (page = 1, limit = 10) => {
@@ -115,7 +125,7 @@ const MainPage = () => {
     if (activeStep === 4) { // 4 is FLGTs tab
       fetchFlightsData();
     }
-  }, [activeStep]);
+  }, [activeStep, refreshKey]); // Added refreshKey here too!
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
@@ -182,7 +192,7 @@ const MainPage = () => {
         <main className="flex-1 relative">
           <AnimatePresence mode="wait">
             <motion.div
-              key={activeStep}
+              key={`${activeStep}-${refreshKey}`} // Changing refreshKey recreates this component
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
@@ -190,11 +200,7 @@ const MainPage = () => {
               className="h-full"
             >
               <div className="bg-white/50 dark:bg-slate-900/40 backdrop-blur-sm border border-slate-200/60 dark:border-slate-800/60 rounded-2xl shadow-xl overflow-hidden min-h-[calc(100vh-180px)]">
-                 {/* Passing props conditionally.
-                    Note: Adjust props based on what your child components actually accept.
-                 */}
                  <ActiveComponent 
-                    // Pass specific data to FLGTs as per original code
                     {...(activeStep === 4 ? { flightsData, isMaster: true } : {})} 
                  />
               </div>

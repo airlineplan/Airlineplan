@@ -315,7 +315,7 @@ const CopySector = (props) => {
       if (response.status === 201) {
         toast.success("Copy successful!");
         setLoading(false);
-        setTimeout(() => { window.location.reload(); }, 2000);
+        setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
       }
     } catch (err) {
       console.error(err);

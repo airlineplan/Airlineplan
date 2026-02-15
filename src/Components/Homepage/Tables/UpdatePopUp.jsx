@@ -319,7 +319,7 @@ const UpdatePopUp = (props) => {
           setLoading(false);
           toast.success("Updated successfully");
           setMessage(data.message);
-          setTimeout(() => { window.location.reload(); }, 2000);
+          setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
         })
         .catch((error) => {
           console.error(error);

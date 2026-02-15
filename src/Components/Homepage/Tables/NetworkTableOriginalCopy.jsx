@@ -216,7 +216,7 @@ const NetworkTable = () => {
         toast.success(response.data.msg);
         setOpenUploadSched(false);
         setTimeout(() => {
-          window.location.reload();
+          setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
         }, 2000);
       })
       .catch((error) => {
@@ -259,7 +259,7 @@ const NetworkTable = () => {
       setDeletedData(response.data.data);
       toast.success("Delete Successfull");
       setTimeout(() => {
-        window.location.reload();
+        setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
       }, 2000);
     } catch (error) {
       toast.error(error);

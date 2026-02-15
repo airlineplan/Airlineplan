@@ -133,7 +133,7 @@ const StationsTable = () => {
 
       if (response.status === 201 || response.status === 200) {
         toast.success("Stations updated successfully!");
-        setTimeout(() => window.location.reload(), 1500);
+        setTimeout(() => window.dispatchEvent(new Event("refreshData")), 1500);
       }
     } catch (error) {
       toast.error("An error occurred while saving.");
