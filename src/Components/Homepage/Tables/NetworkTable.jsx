@@ -103,7 +103,7 @@ const Modal = ({ isOpen, onClose, title, children }) => (
 );
 
 // --- MAIN PAGE COMPONENT ---
-const RowsPerPage = 8; // Preserved your specific rows per page
+const RowsPerPage = 8;
 
 export default function NetworkTable() {
   // --- STATE ---
@@ -114,14 +114,14 @@ export default function NetworkTable() {
   // Modals & Menus
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
-  const [add, setAdd] = useState(true); // Preserved your state for AddNetwork/CopyRow
+  const [add, setAdd] = useState(true);
 
   // Pagination & Sorting
   const [currentPage, setCurrentPage] = useState(1);
   const [arrow, setArrow] = useState({ column: "", direction: "Up" });
   const [checkedRows, setCheckedRows] = useState([]);
 
-  // Filters State (Cleaned up your individual states into an object)
+  // Filters State
   const [filters, setFilters] = useState({
     flight: "", depStn: "", std: "", bt: "", sta: "", arrStn: "", variant: "",
     effFromDt: "", effToDt: "", dow: "", domINTL: "", userTag1: "", userTag2: "",
@@ -174,7 +174,6 @@ export default function NetworkTable() {
   const filteredData = useMemo(() => {
     let data = [...networkTableData];
 
-    // Filter Logic mapped from your `filteredIds` array logic
     data = data.filter(row => {
       return (
         (row?.flight || "").toLowerCase().includes(filters.flight.toLowerCase()) &&
@@ -195,7 +194,6 @@ export default function NetworkTable() {
       );
     });
 
-    // Sort Logic mapped from your `sortedData` function
     if (arrow.column) {
       data.sort((a, b) => {
         const valA = String(a[arrow.column] || "");
@@ -209,7 +207,6 @@ export default function NetworkTable() {
     return data;
   }, [networkTableData, filters, arrow]);
 
-  // Preserved pagination slicing logic
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * RowsPerPage;
     return filteredData.slice(startIndex, startIndex + RowsPerPage);
@@ -267,7 +264,7 @@ export default function NetworkTable() {
 
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.post("ttp://localhost:5001/importUser", formData, {
+      const response = await axios.post("http://localhost:5001/importUser", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           "x-access-token": accessToken
@@ -286,7 +283,7 @@ export default function NetworkTable() {
           else if (skippedRow.error === "Data already exists") toast.error("Data already exists for a row.");
         });
       } else {
-        setOpenUploadSched(false);
+        setIsUploadOpen(false);
         setTimeout(() => { window.location.reload(); }, 2000);
       }
 
@@ -324,24 +321,13 @@ export default function NetworkTable() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 relative overflow-hidden">
+    <div className="w-full space-y-4 font-sans relative overflow-hidden">
 
-      {/* Background Ambience */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
-      <div className="absolute top-0 right-0 -z-10 m-auto h-[300px] w-[300px] rounded-full bg-cyan-500 opacity-10 blur-[100px]"></div>
-      <div className="absolute bottom-0 left-0 -z-10 m-auto h-[300px] w-[300px] rounded-full bg-indigo-500 opacity-10 blur-[100px]"></div>
-
-      <div className="p-6 mx-auto relative z-10 space-y-6">
+      <div className="mx-auto relative z-10 space-y-6">
 
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <Network className="text-indigo-500" size={24} />
-              Network Schedule
-            </h2>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Flights, schedule and network.</p>
-          </div>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1">
+          
 
           <div className="flex flex-wrap items-center gap-3">
             <Button
@@ -354,8 +340,7 @@ export default function NetworkTable() {
 
             {/* Actual Component Integrations */}
             <div className="relative" ref={menuRef}>
-              <div className="flex items-center gap-2 mr-2">
-
+              <div className="flex items-center gap-2">
 
                 {/* Render Your Custom Update Component */}
                 <UpdatePopUp checkedRows={checkedRows} />
@@ -377,10 +362,8 @@ export default function NetworkTable() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
-                    className="absolute right-0 ml-2 top-full mt-2 w-24 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-2 z-50 flex flex-col"
+                    className="absolute right-0 top-full mt-2 w-36 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-2 z-50 flex flex-col"
                   >
-                    {/* Note: Ensure these components render without MUI background/border issues. 
-                         If they are just buttons/text, they will fit perfectly here! */}
                     <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                       <CopyRow checkedRows={checkedRows} setAdd={setAdd} />
                     </div>
@@ -401,14 +384,14 @@ export default function NetworkTable() {
         </div>
 
         {/* Table Card */}
-        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col h-[75vh]">
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col h-[70vh]">
 
           {/* Table Container - Scrollable */}
           <div className="flex-1 overflow-auto custom-scrollbar relative">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-100/80 dark:bg-slate-800/80 sticky top-0 z-20 backdrop-blur-md">
+              <thead className="bg-slate-100/90 dark:bg-slate-800/90 sticky top-0 z-20 backdrop-blur-md">
                 <tr>
-                  <th className="p-4 w-12 text-center sticky left-0 bg-slate-100/80 dark:bg-slate-800/80 z-30">
+                  <th className="p-4 w-12 text-center sticky left-0 bg-slate-100/90 dark:bg-slate-800/90 z-30">
                     <Checkbox
                       checked={checkedRows.length === filteredData.length && filteredData.length > 0}
                       onChange={handleCheckAll}
@@ -441,7 +424,7 @@ export default function NetworkTable() {
 
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {paginatedData.length === 0 ? (
-                  <tr><td colSpan="16" className="p-8 text-center text-slate-500">No records found matching filters.</td></tr>
+                  <tr><td colSpan="16" className="p-10 text-center text-slate-500 text-sm italic">No records found matching filters.</td></tr>
                 ) : (
                   <AnimatePresence>
                     {paginatedData.map((row) => (
@@ -456,7 +439,7 @@ export default function NetworkTable() {
                           checkedRows.includes(row._id) && "bg-indigo-50/50 dark:bg-indigo-900/10"
                         )}
                       >
-                        <td className="p-4 sticky left-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 z-10 text-center">
+                        <td className="p-4 sticky left-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 z-10 text-center border-r border-slate-100 dark:border-slate-800">
                           <div className="flex justify-center">
                             <Checkbox
                               checked={checkedRows.includes(row._id)}
@@ -464,23 +447,23 @@ export default function NetworkTable() {
                             />
                           </div>
                         </td>
-                        <td className="p-3 text-sm font-medium text-slate-700 dark:text-slate-200">{row.flight}</td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.depStn}</td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.std}</td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.bt}</td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.sta}</td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.arrStn}</td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">
-                          <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.flight}</td>
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.depStn}</td>
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.std}</td>
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.bt}</td>
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.sta}</td>
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.arrStn}</td>
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                          <span className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                             {row.variant}
                           </span>
                         </td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{moment(row.effFromDt).format("DD-MMM-YY")}</td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{moment(row.effToDt).format("DD-MMM-YY")}</td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.dow}</td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{moment(row.effFromDt).format("DD-MMM-YY")}</td>
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{moment(row.effToDt).format("DD-MMM-YY")}</td>
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.dow}</td>
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">
                           <span className={cn(
-                            "px-2 py-0.5 rounded-full text-xs font-medium",
+                            "px-2 py-0.5 rounded-full font-medium",
                             row.domINTL?.toLowerCase() === 'intl'
                               ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
                               : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
@@ -488,10 +471,10 @@ export default function NetworkTable() {
                             {row.domINTL}
                           </span>
                         </td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.userTag1}</td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.userTag2}</td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400 max-w-[150px] truncate" title={row.remarks1}>{row.remarks1}</td>
-                        <td className="p-3 text-sm text-slate-600 dark:text-slate-400 max-w-[150px] truncate" title={row.remarks2}>{row.remarks2}</td>
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.userTag1}</td>
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.userTag2}</td>
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 max-w-[150px] truncate" title={row.remarks1}>{row.remarks1}</td>
+                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 max-w-[150px] truncate" title={row.remarks2}>{row.remarks2}</td>
                       </motion.tr>
                     ))}
                   </AnimatePresence>
@@ -500,49 +483,29 @@ export default function NetworkTable() {
             </table>
           </div>
 
-          {/* Footer / Pagination */}
-          <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-white/50 dark:bg-slate-900/50 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-slate-500">
+          {/* STANDARDIZED Footer / Pagination */}
+          <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/80 dark:bg-slate-900/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-xs text-slate-500 dark:text-slate-400">
               Showing {paginatedData.length > 0 ? (currentPage - 1) * RowsPerPage + 1 : 0} to {Math.min(currentPage * RowsPerPage, filteredData.length)} of {filteredData.length} entries
             </div>
 
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                disabled={currentPage === 1 || loading}
+                className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-slate-600 dark:text-slate-400"
               >
                 <ChevronLeft size={16} />
               </button>
-
-              {Array.from({ length: totalPages }, (_, i) => {
-                let pNum = i + 1;
-                // Visual windowing for pagination if you get too many pages
-                if (totalPages > 5 && (pNum < currentPage - 2 || pNum > currentPage + 2)) {
-                  if (pNum === 1 || pNum === totalPages) return <span key={pNum} className="text-slate-400 px-1">...</span>;
-                  return null;
-                }
-
-                return (
-                  <button
-                    key={pNum}
-                    onClick={() => setCurrentPage(pNum)}
-                    className={cn(
-                      "w-8 h-8 rounded-lg text-sm font-medium transition-all",
-                      currentPage === pNum
-                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                    )}
-                  >
-                    {pNum}
-                  </button>
-                );
-              })}
+              
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300 px-2">
+                Page {currentPage} of {totalPages || 1}
+              </span>
 
               <button
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages || totalPages === 0}
-                className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                disabled={currentPage === totalPages || totalPages === 0 || loading}
+                className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-slate-600 dark:text-slate-400"
               >
                 <ChevronRight size={16} />
               </button>
@@ -554,7 +517,6 @@ export default function NetworkTable() {
 
       {/* --- MODALS --- */}
 
-      {/* Upload Modal mapped to your Exact Needs */}
       <Modal isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} title="Upload Schedule">
         <div className="space-y-6">
           <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer relative">

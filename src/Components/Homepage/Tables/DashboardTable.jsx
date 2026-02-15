@@ -347,13 +347,7 @@ const DashboardTable = (props) => {
       <div className="flex flex-col gap-6">
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400 flex items-center gap-2">
-              <BarChart3 className="text-indigo-500" />
-              Operational Dashboard
-            </h1>
-            <p className="text-slate-500 text-sm mt-1">Analyze performance metrics over time.</p>
-          </div>
+          
           
           <div className="flex gap-4">
             <SingleSelectDropdown

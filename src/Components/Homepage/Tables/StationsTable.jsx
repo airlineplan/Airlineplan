@@ -147,14 +147,7 @@ const StationsTable = () => {
       
       {/* --- HEADER --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <RadioTower className="text-indigo-500" size={24} />
-            Station Configuration
-          </h2>
-          <p className="text-xs text-slate-500">Manage timezones and minimum/maximum connection times.</p>
-        </div>
-
+        
         <div className="flex items-center gap-3 bg-white/70 dark:bg-slate-900/60 backdrop-blur-sm px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                 <Clock size={16} className="text-indigo-500" />

@@ -6,7 +6,7 @@ import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { 
   Trash2, Plus, ArrowUp, ArrowDown, Search, 
-  Map, RefreshCw
+  Map, RefreshCw, ChevronLeft, ChevronRight 
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -232,18 +232,11 @@ const SectorsTable = () => {
   ];
 
   return (
-    <div className="w-full p-6 space-y-4 relative">
+    <div className="w-full space-y-4 relative">
       
       {/* --- HEADER ACTIONS --- */}
-      <div className="flex  flex-col md:flex-row md:items-center justify-between gap-4 p-1 z-30 relative">
-        <div>
-          {/* <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Map className="text-indigo-500" size={24} />
-            Sector Management
-          </h2> */}
-          <h4 className=" text-slate-500">Flight capacities, loads and sector information</h4>
-        </div>
-
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1 z-30 relative">
+        
         <div className="flex flex-wrap items-center gap-2">
           
           {/* Actual Update Component Mounted Here */}
@@ -357,7 +350,7 @@ const SectorsTable = () => {
                         checkedRows.includes(row._id) && "bg-indigo-50/50 dark:bg-indigo-900/10"
                       )}
                     >
-                      <td className="p-4 sticky left-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 z-10 text-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                      <td className="p-4 sticky left-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 z-10 text-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] border-r border-slate-100 dark:border-slate-800">
                         <div className="flex justify-center">
                           <Checkbox 
                             checked={checkedRows.includes(row._id)} 
@@ -395,28 +388,35 @@ const SectorsTable = () => {
           </table>
         </div>
 
-        {/* --- FOOTER / PAGINATION --- */}
-        <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
-          <span className="text-xs text-slate-500 dark:text-slate-400">
-             Page {currentPage} of {totalPages || 1}
-          </span>
-          <div className="flex gap-2">
+        {/* --- STANDARDIZED FOOTER / PAGINATION --- */}
+        <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/80 dark:bg-slate-900/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
+            Showing {paginatedData.length > 0 ? (currentPage - 1) * ROWS_PER_PAGE + 1 : 0} to {Math.min(currentPage * ROWS_PER_PAGE, processedData.length)} of {processedData.length} entries
+          </div>
+
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1 rounded border border-slate-200 dark:border-slate-700 text-xs hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
+              disabled={currentPage === 1 || loading}
+              className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-slate-600 dark:text-slate-400"
             >
-              Previous
+              <ChevronLeft size={16} />
             </button>
+            
+            <span className="text-xs font-medium text-slate-700 dark:text-slate-300 px-2">
+              Page {currentPage} of {totalPages || 1}
+            </span>
+
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages || totalPages === 0}
-              className="px-3 py-1 rounded border border-slate-200 dark:border-slate-700 text-xs hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 transition-colors"
+              disabled={currentPage === totalPages || totalPages === 0 || loading}
+              className="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-slate-600 dark:text-slate-400"
             >
-              Next
+              <ChevronRight size={16} />
             </button>
           </div>
         </div>
+
       </div>
 
       <ToastContainer position="bottom-right" theme="colored" />

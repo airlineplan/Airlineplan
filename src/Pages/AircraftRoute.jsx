@@ -351,14 +351,13 @@ export default function AircraftRoute() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
             <h1 className="text-4xl font-extrabold flex items-center gap-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
-              <Plane className="text-indigo-600 dark:text-indigo-400" size={32} />
-              Aircraft Route Calculator
+              {/* <Plane className="text-indigo-600 dark:text-indigo-400" size={32} /> */}
+              
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-2 text-lg">Operational cost analysis and route profitability estimation.</p>
+            <p className="text-slate-600 dark:text-slate-400 mt-2 text-lg"></p>
           </motion.div>
           
           <div className="flex items-center gap-4">
-            <ThemeToggle />
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
