@@ -263,7 +263,8 @@ const ConnectionTable = () => {
     <div className="w-full h-full p-6 space-y-6 bg-slate-50 dark:bg-slate-950 min-h-screen font-sans">
       
       {/* HEADER & FILTERS */}
-      <div className="flex flex-col gap-6">
+      {/* ⚠️ Added 'relative z-50' to keep dropdowns above the table */}
+      <div className="flex flex-col gap-6 relative z-50">
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
          
@@ -297,7 +298,8 @@ const ConnectionTable = () => {
       </div>
 
       {/* TABLE SECTION */}
-      <div className="relative bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col min-h-[400px]">
+      {/* ⚠️ Added 'z-10' so this block sits under the dropdowns */}
+      <div className="relative z-10 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col min-h-[400px]">
         
         {/* Table Content */}
         <div className="flex-1 overflow-x-auto custom-scrollbar relative">

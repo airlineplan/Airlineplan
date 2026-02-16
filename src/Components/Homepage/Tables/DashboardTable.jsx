@@ -368,7 +368,8 @@ const DashboardTable = (props) => {
     <div className="w-full p-6 space-y-6 relative pb-10">
       
       {/* HEADER & FILTERS */}
-      <div className="flex flex-col gap-6">
+      {/* ⚠️ Added 'relative z-50' here to pull the dropdown context above the table below */}
+      <div className="flex flex-col gap-6 relative z-50">
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="flex gap-4">
@@ -400,7 +401,8 @@ const DashboardTable = (props) => {
       </div>
 
       {/* TABLE SECTION */}
-      <div className="relative bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col min-h-[500px]">
+      {/* ⚠️ Added 'z-10' so it sits comfortably below the z-50 header block */}
+      <div className="relative z-10 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col min-h-[500px]">
         
         {/* Toolbar */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-end">
