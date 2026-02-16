@@ -157,7 +157,7 @@ const MainPage = () => {
               <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
                 Airlineplan
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Operations Dashboard</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Planning, Operations & Analysis</p>
             </div>
           </div>
 
