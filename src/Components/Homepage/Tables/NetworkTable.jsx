@@ -238,19 +238,27 @@ export default function NetworkTable() {
 
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.delete("https://airlineplan.com/delete", {
-        data: { ids: checkedRows },
+
+      // Make sure your URL points to your actual API (localhost or render based on your environment)
+      const response = await axios.delete("https://airlinebackend-zfsg.onrender.com/delete", {
+        data: { ids: checkedRows }, // This injects the payload into the request body
         headers: { "x-access-token": accessToken }
       });
 
       if (response.data && response.data.message === "Data deleted successfully") {
         toast.success("Delete Successful");
+
+        // Clear checkboxes after successful deletion
+        setCheckedRows([]);
+
+        // Trigger table refresh without reloading the browser
         setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
       } else {
         toast.error("Delete Failed");
       }
     } catch (error) {
-      toast.error("An error occurred while deleting");
+      const errorMsg = error.response?.data?.error || "An error occurred while deleting";
+      toast.error(errorMsg);
       console.error(error);
     }
   };
@@ -345,7 +353,7 @@ export default function NetworkTable() {
 
                 {/* Render Your Custom Update Component */}
                 <UpdatePopUp checkedRows={checkedRows} />
-                
+
                 <Button
                   variant="primary"
                   icon={Plus}
@@ -369,7 +377,7 @@ export default function NetworkTable() {
                       <CopyRow checkedRows={checkedRows} setAdd={setAdd} />
                     </div>
                     <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                      
+
                       <AddNetwork setAdd={setAdd} />
                     </div>
                   </motion.div>
@@ -499,7 +507,7 @@ export default function NetworkTable() {
               >
                 <ChevronLeft size={16} />
               </button>
-              
+
               <span className="text-xs font-medium text-slate-700 dark:text-slate-300 px-2">
                 Page {currentPage} of {totalPages || 1}
               </span>

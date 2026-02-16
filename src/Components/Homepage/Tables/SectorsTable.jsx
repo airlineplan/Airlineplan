@@ -127,7 +127,7 @@ const SectorsTable = () => {
 
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.delete("https://airlineplan.com/delete-sector", {
+      const response = await axios.delete("https://airlinebackend-zfsg.onrender.com/delete-sector", {
         headers: { "x-access-token": accessToken },
         data: { ids: checkedRows },
       });
