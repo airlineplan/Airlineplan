@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge";
 import { 
   LogOut, Plane, Network, Map, 
   RotateCw, LayoutDashboard, Link2, 
-  RadioTower, Globe, TrendingUp
+  RadioTower, Globe, TrendingUp, List // <-- Added 'List' icon here
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -20,6 +20,7 @@ import DashboardTable from "./DashboardTable";
 import ConnectionTable from "./ConnectionTable";
 import StationsTable from "./StationsTable";
 import Rotations from "./Rotations";
+import ListTable from "./ListTable";
 
 // Ensure this import matches your actual Route Economics component path/name
 import AircraftRoute from "../../../Pages/AircraftRoute"; 
@@ -37,8 +38,9 @@ const TABS = [
   { id: 3, label: "Rotations", icon: RotateCw, component: Rotations },
   { id: 4, label: "FLGTs", icon: Plane, component: FlgtsTable },
   { id: 5, label: "Dashboard", icon: LayoutDashboard, component: DashboardTable },
-  { id: 6, label: "Connections", icon: Link2, component: ConnectionTable },
-  { id: 7, label: "Route Economics", icon: TrendingUp, component: AircraftRoute },
+  { id: 6, label: "List", icon: List, component: ListTable }, // <-- Inserted LIST here
+  { id: 7, label: "Connections", icon: Link2, component: ConnectionTable }, // Shifted ID to 7
+  { id: 8, label: "Route Economics", icon: TrendingUp, component: AircraftRoute }, // Shifted ID to 8
 ];
 
 // --- COMPONENTS ---
@@ -83,7 +85,7 @@ const MainPage = () => {
   const [flightsData, setFlightsData] = useState(null);
   const [totalFlights, setTotalFlights] = useState(0);
   
-  // NEW: State to track soft reloads seamlessly
+  // State to track soft reloads seamlessly
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Auth Check
@@ -97,7 +99,7 @@ const MainPage = () => {
     }
   }, [navigate]);
 
-  // NEW: Listen for 'refreshData' events to remount the active component 
+  // Listen for 'refreshData' events to remount the active component 
   // without triggering a 404 browser refresh
   useEffect(() => {
     const handleSoftReload = () => setRefreshKey((prev) => prev + 1);
