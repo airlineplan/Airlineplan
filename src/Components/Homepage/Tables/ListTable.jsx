@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ChevronDown, Check, Plane, Clock, LayoutDashboard, Download, Layers } from "lucide-react";
+import * as XLSX from "xlsx";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -231,6 +234,57 @@ const ListTable = () => {
   }, [level1, level2, level3]); // Recompute whenever the user changes the dropdowns
 
 
+  // --- EXPORT TO EXCEL LOGIC ---
+  const downloadExcel = () => {
+    if (!tableData || tableData.length === 0) {
+      toast.warn("No data available to export.");
+      return;
+    }
+
+    try {
+      // 1. Prepare Header Row
+      const headers = ["Hierarchy / Grouping", ...DUMMY_COLUMNS];
+
+      // 2. Prepare Data Rows with visual indentation to match UI
+      const excelRows = tableData.map((row) => {
+        // Create an indentation string based on the level (4 spaces per level)
+        const indent = "    ".repeat(row.level);
+        
+        // Add a visual arrow for child rows, similar to the UI
+        const prefix = row.level > 0 ? "↳ " : "";
+        
+        // Combine the label and the row type (e.g., "    ↳ FL100 [Flight #]")
+        const hierarchyLabel = `${indent}${prefix}${row.label} [${row.type}]`;
+        
+        // Return the formatted row array
+        return [hierarchyLabel, ...row.data];
+      });
+
+      // 3. Combine headers and rows
+      const worksheetData = [headers, ...excelRows];
+
+      // 4. Create Workbook and Worksheet
+      const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+      
+      // Auto-size columns (Make the first column wide enough for the hierarchy)
+      const colWidths = [{ wch: 45 }]; // Hierarchy column
+      DUMMY_COLUMNS.forEach(() => colWidths.push({ wch: 15 })); // Data columns
+      ws["!cols"] = colWidths;
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Flight List");
+
+      // 5. Trigger File Download
+      XLSX.writeFile(wb, "List.xlsx");
+      toast.success("Excel exported successfully!");
+
+    } catch (error) {
+      console.error("Error exporting excel:", error);
+      toast.error("Failed to export Excel file.");
+    }
+  };
+
+
   return (
     <div className="w-full h-full p-6 space-y-6 flex flex-col min-h-[calc(100vh-180px)]">
       
@@ -326,7 +380,11 @@ const ListTable = () => {
              </div>
            </div>
 
-           <button className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium transition-colors border border-slate-200 dark:border-slate-700 whitespace-nowrap">
+           {/* Export Button connected to downloadExcel */}
+           <button 
+             onClick={downloadExcel}
+             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-emerald-500/20 hover:scale-[1.02]"
+           >
              <Download size={16} /> Export
            </button>
         </div>
@@ -399,6 +457,8 @@ const ListTable = () => {
         </div>
       </div>
       
+      {/* Toast notifications container */}
+      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 };
