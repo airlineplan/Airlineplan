@@ -3,7 +3,7 @@ import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { ChevronDown, Check, Plane, Clock, LayoutDashboard, Download, Layers, RefreshCw } from "lucide-react";
+import { ChevronDown, Check, LayoutDashboard, Download, Layers, RefreshCw } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -14,7 +14,7 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-// 1. Helper to parse "HH:MM" -> Decimal (e.g., "02:15" -> 2.25)
+// Helper to parse "HH:MM" -> Decimal (e.g., "02:15" -> 2.25)
 const parseDurationToDecimal = (timeStr) => {
   if (!timeStr || typeof timeStr !== 'string') return 0;
   const [hours, minutes] = timeStr.split(':').map(Number);
@@ -22,20 +22,62 @@ const parseDurationToDecimal = (timeStr) => {
   return hours + (minutes / 60);
 };
 
-// 2. Helper to get Column Key (e.g. "2026-2")
-const getPeriodKey = (dateStr, periodicity) => {
-  const d = new Date(dateStr);
+// Generates a standard YYYY-MM-DD key to ensure chronological sorting
+const getPeriodSortKey = (dateStr, periodicity) => {
+  if (!dateStr) return "Unknown";
+  let d = new Date(dateStr);
+  
+  // Fallback if API returns DD-MM-YYYY instead of standard ISO date
+  if (isNaN(d.getTime()) && typeof dateStr === 'string' && dateStr.split('-').length === 3) {
+    const parts = dateStr.split('-');
+    if(parts[2].length === 4) d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+  }
+  
   if (isNaN(d.getTime())) return "Unknown";
 
   const year = d.getFullYear();
   const month = d.getMonth() + 1; // 1-12
 
   switch (periodicity) {
-    case 'annually': return `${year}`;
-    case 'monthly': return `${year}-${month}`; // Matches "2026-2" format
-    case 'daily': return d.toISOString().split('T')[0];
-    default: return `${year}-${month}`;
+    case 'annually': return `${year}-12-31`;
+    case 'monthly': {
+      const lastDay = new Date(year, month, 0); // gets the exact last day of the given month
+      const mm = String(lastDay.getMonth() + 1).padStart(2, '0');
+      const dd = String(lastDay.getDate()).padStart(2, '0');
+      return `${year}-${mm}-${dd}`;
+    }
+    case 'quarterly': {
+      const q = Math.ceil(month / 3);
+      const lastMonthOfQ = q * 3;
+      const lastDay = new Date(year, lastMonthOfQ, 0);
+      const mm = String(lastMonthOfQ).padStart(2, '0');
+      const dd = String(lastDay.getDate()).padStart(2, '0');
+      return `${year}-${mm}-${dd}`; 
+    }
+    case 'daily': {
+      const mm = String(month).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${year}-${mm}-${dd}`;
+    }
+    default: return `${year}-${String(month).padStart(2, '0')}-01`;
   }
+};
+
+// Formats the YYYY-MM-DD sort key into display headers like "28-Feb-26"
+const formatPeriodKey = (sortKey, periodicity) => {
+  if (sortKey === "Unknown") return sortKey;
+  const d = new Date(sortKey);
+  if (isNaN(d.getTime())) return sortKey;
+
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const yy = String(d.getFullYear()).slice(-2);
+  
+  if (periodicity === 'annually') return d.getFullYear().toString();
+  if (periodicity === 'quarterly') return `Q${Math.ceil((d.getMonth() + 1) / 3)}-${yy}`;
+  
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mmm = months[d.getMonth()];
+  return `${dd}-${mmm}-${yy}`;
 };
 
 // --- DROPDOWN COMPONENTS ---
@@ -176,7 +218,6 @@ const SingleSelectDropdown = ({ placeholder, options = [], onChange, selected })
 const LABEL_OPTIONS = [{ label: "Dom", value: "dom" }, { label: "INTL", value: "intl" }, { label: "Both", value: "both" }];
 const PERIODICITY_OPTIONS = [{ label: "Annually", value: "annually" }, { label: "Quarterly", value: "quarterly" }, { label: "Monthly", value: "monthly" }, { label: "Daily", value: "daily" }];
 
-// Metric map: Label -> Schema Field or Calculation logic
 const METRIC_OPTIONS = [
   { label: "Departures", value: "departures" },
   { label: "FH", value: "fh" },   
@@ -191,8 +232,8 @@ const METRIC_OPTIONS = [
   { label: "Cargo T", value: "cargoT" }
 ];
 
-// Grouping Options (Map to Schema keys)
 const GROUPING_OPTIONS = [
+  { label: "None", value: "none" }, // Null option to disable grouping layer
   { label: "Dep Stn", value: "depStn" },
   { label: "Arr Stn", value: "arrStn" },
   { label: "Sector", value: "sector" },
@@ -224,19 +265,18 @@ const ListTable = () => {
     depTimeFrom: "", depTimeTo: "", arrTimeFrom: "", arrTimeTo: ""
   });
 
-  // Grouping Hierarchy (Default based on PivotTable1: Flight > Aircraft > Sector)
-  const [level1, setLevel1] = useState(GROUPING_OPTIONS[3]); // Flight
-  const [level2, setLevel2] = useState(GROUPING_OPTIONS[4]); // Aircraft
-  const [level3, setLevel3] = useState(GROUPING_OPTIONS[2]); // Sector
+  // Default tree sets level 3 to 'None' by default so it avoids unnecessary indentation
+  const [level1, setLevel1] = useState(GROUPING_OPTIONS[4]); // Flight #
+  const [level2, setLevel2] = useState(GROUPING_OPTIONS[5]); // Aircraft (variant)
+  const [level3, setLevel3] = useState(GROUPING_OPTIONS[0]); // None
 
   // --- API CALLS ---
 
-  // 1. Fetch Dropdowns
   useEffect(() => {
     const getDropdownData = async () => {
       try {
         const response = await axios.get(
-          `https://airlinebackend-zfsg.onrender.com/dashboard/populateDropDowns`,
+          `http://localhost:5001/dashboard/populateDropDowns`,
           { headers: { "x-access-token": localStorage.getItem("accessToken") } }
         );
         if (response.data) {
@@ -259,14 +299,13 @@ const ListTable = () => {
     getDropdownData();
   }, []);
 
-  // 2. Fetch Raw List Data
   const fetchListData = async () => {
     try {
       setLoading(true);
       const accessToken = localStorage.getItem("accessToken");
       
       const response = await axios.post(
-        'https://airlinebackend-zfsg.onrender.com/list-page-data', 
+        'http://localhost:5001/list-page-data', 
         filters,
         { headers: { 'x-access-token': accessToken } }
       );
@@ -293,54 +332,49 @@ const ListTable = () => {
   const { tableColumns, tableData } = useMemo(() => {
     if (!rawFlights.length) return { tableColumns: [], tableData: [] };
 
-    // 1. Identify distinct columns (e.g., "2026-2", "2026-3")
     const periodicityVal = filters.periodicity.value;
     const periodSet = new Set();
 
-    // Pre-process flights to add _periodKey and _val
     const processedFlights = rawFlights.map(f => {
-      const pKey = getPeriodKey(f.date, periodicityVal);
+      // Use purely sortable keys for mapping
+      const pKey = getPeriodSortKey(f.date, periodicityVal);
       periodSet.add(pKey);
 
       let val = 0;
-      // METRIC LOGIC
       if (filters.metric.value === 'departures') {
-        val = 1; // Simple Count
+        val = 1; 
       } else if (['bh', 'bt', 'fh'].includes(filters.metric.value)) {
-        // Parse time duration format ("HH:MM") into decimals for FH & BH
-        // Fallback to 'bt' if your schema specifically maps Block Hours to 'bt' instead of 'bh'
         const timeVal = f[filters.metric.value] || f[filters.metric.value === 'bh' ? 'bt' : filters.metric.value]; 
         val = parseDurationToDecimal(timeVal); 
+      } else if (filters.metric.value === 'rsk' || filters.metric.value === 'rask') {
+        val = parseFloat(f['rsk'] || f['rask']) || 0; 
       } else {
-        val = parseFloat(f[filters.metric.value]) || 0; // Sum generic field
+        val = parseFloat(f[filters.metric.value]) || 0; 
       }
 
       return { ...f, _periodKey: pKey, _val: val };
     });
 
+    // Chronological sorting naturally works with YYYY-MM-DD
     const sortedColumns = Array.from(periodSet).sort();
     
-    // Helper to create zero-filled array: [Col1, Col2, ...] (Grand total removed)
     const getZeroDataArray = () => Array(sortedColumns.length).fill(0);
 
-    const hierarchyLevels = [level1, level2, level3].filter(Boolean);
+    // Filter out 'None' selections to prevent blank hierarchies
+    const hierarchyLevels = [level1, level2, level3].filter(lvl => lvl && lvl.value !== 'none');
+    
     let idCounter = 1;
     let finalRows = [];
 
-    // Grand Total Accumulator
-    const networkTotal = getZeroDataArray();
-
-    // Recursive function to build rows
     const buildTree = (subset, depth) => {
+      // Exit if we pass selected dimensions (handles 'None' attributes seamlessly)
       if (depth >= hierarchyLevels.length) return null;
 
       const groupByField = hierarchyLevels[depth].value;
       const groupLabel = hierarchyLevels[depth].label;
 
-      // Grouping
       const groups = {};
       subset.forEach(f => {
-        // Handle Missing Values as "(blank)"
         const key = f[groupByField] ? f[groupByField] : "(blank)";
         if (!groups[key]) groups[key] = [];
         groups[key].push(f);
@@ -352,7 +386,6 @@ const ListTable = () => {
         const groupFlights = groups[key];
         const groupTotalData = getZeroDataArray();
 
-        // Calculate Sums for this Group
         groupFlights.forEach(f => {
           const colIndex = sortedColumns.indexOf(f._periodKey);
           if (colIndex !== -1) {
@@ -360,10 +393,8 @@ const ListTable = () => {
           }
         });
 
-        // 1. Push Group Header Row
-        const rowId = idCounter++;
         finalRows.push({
-          id: rowId,
+          id: idCounter++,
           type: groupLabel,
           label: key,
           level: depth,
@@ -371,10 +402,8 @@ const ListTable = () => {
           isTotalRow: false
         });
 
-        // 2. Recurse for Children
         const childrenExist = buildTree(groupFlights, depth + 1);
 
-        // 3. Push "Total" Row (Footer for this group)
         if (childrenExist) {
           finalRows.push({
             id: idCounter++,
@@ -399,41 +428,21 @@ const ListTable = () => {
       return true; 
     };
 
-    // Start Building
     buildTree(processedFlights, 0);
 
-    // Calculate Network Grand Total
-    processedFlights.forEach(f => {
-      const colIndex = sortedColumns.indexOf(f._periodKey);
-      if (colIndex !== -1) {
-        networkTotal[colIndex] += f._val;
-      }
-    });
-
-    // Append Network Grand Total
-    finalRows.push({
-      id: idCounter++,
-      type: "Network",
-      label: "Grand Total",
-      level: 0,
-      data: networkTotal,
-      isTotalRow: true
-    });
-
-    // Apply Number Formatting
     const metricVal = filters.metric.value;
-    const isDecimal = ['fh', 'bh', 'bt', 'cargoT'].includes(metricVal);
+    const isDecimal = ['fh', 'bh', 'bt', 'cargoT', 'rsk', 'rask'].includes(metricVal);
 
     const formattedRows = finalRows.map(row => ({
       ...row,
       data: row.data.map(val => {
-        if (isDecimal) return Number(val.toFixed(2)); // Decimals for Time/Tonnage
-        return Math.round(val); // Integers for Departures, Pax, Capacity, etc.
+        if (isDecimal) return Number(val.toFixed(2));
+        return Math.round(val); 
       })
     }));
 
     return {
-      tableColumns: [...sortedColumns], // Removed Grand Total from Headers
+      tableColumns: [...sortedColumns], 
       tableData: formattedRows
     };
 
@@ -444,7 +453,9 @@ const ListTable = () => {
   const downloadExcel = () => {
     if (!tableData || tableData.length === 0) return toast.warn("No data available to export.");
     try {
-      const headers = ["Hierarchy / Grouping", ...tableColumns];
+      // Map sort keys to pretty headers upon export
+      const prettyHeaders = tableColumns.map(c => formatPeriodKey(c, filters.periodicity.value));
+      const headers = ["Hierarchy / Grouping", ...prettyHeaders];
       const excelRows = tableData.map((row) => {
         const indent = "    ".repeat(row.level);
         const label = row.isTotalRow ? `${indent}${row.label}` : `${indent}${row.label}`;
@@ -465,7 +476,6 @@ const ListTable = () => {
     }
   };
 
-  // Helper for inputs
   const updateFilter = (key, val) => setFilters(prev => ({ ...prev, [key]: val }));
 
   return (
@@ -558,7 +568,8 @@ const ListTable = () => {
                 </th>
                 {tableColumns.map((col, idx) => (
                   <th key={idx} className="bg-slate-50/90 dark:bg-slate-800/90 border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[100px] text-center text-sm font-bold text-slate-800 dark:text-slate-200">
-                    {col}
+                    {/* Format the key directly on render */}
+                    {formatPeriodKey(col, filters.periodicity.value)}
                   </th>
                 ))}
               </tr>
@@ -575,7 +586,6 @@ const ListTable = () => {
                     row.isTotalRow && "pl-4 italic"
                   )}>
                     <div className="flex items-center gap-2">
-                        {/* Bullet points for levels */}
                         {!row.isTotalRow && row.level === 0 && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
                         {row.label}
                     </div>
