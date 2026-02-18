@@ -178,12 +178,17 @@ const PERIODICITY_OPTIONS = [{ label: "Annually", value: "annually" }, { label: 
 
 // Metric map: Label -> Schema Field or Calculation logic
 const METRIC_OPTIONS = [
-  { label: "Departures", value: "departures" }, // Count
-  { label: "FH (Block Hours)", value: "bt" },   // Calculates Decimal from BT
-  { label: "Seats", value: "seats" },           // Sum
-  { label: "Pax", value: "pax" },               // Sum
-  { label: "ASK", value: "ask" },               // Sum
-  { label: "RSK", value: "rsk" }                // Sum
+  { label: "Departures", value: "departures" },
+  { label: "FH", value: "fh" },   
+  { label: "BH", value: "bh" },   
+  { label: "Seats", value: "seats" },           
+  { label: "Pax", value: "pax" },               
+  { label: "ASK", value: "ask" },               
+  { label: "RSK", value: "rsk" },
+  { label: "ATK", value: "atk" },
+  { label: "RTK", value: "rtk" },
+  { label: "Cargo Capacity", value: "cargoCapacity" },
+  { label: "Cargo T", value: "cargoT" }
 ];
 
 // Grouping Options (Map to Schema keys)
@@ -301,8 +306,11 @@ const ListTable = () => {
       // METRIC LOGIC
       if (filters.metric.value === 'departures') {
         val = 1; // Simple Count
-      } else if (filters.metric.value === 'bt') {
-        val = parseDurationToDecimal(f.bt); // Parse "02:15" -> 2.25
+      } else if (['bh', 'bt', 'fh'].includes(filters.metric.value)) {
+        // Parse time duration format ("HH:MM") into decimals for FH & BH
+        // Fallback to 'bt' if your schema specifically maps Block Hours to 'bt' instead of 'bh'
+        const timeVal = f[filters.metric.value] || f[filters.metric.value === 'bh' ? 'bt' : filters.metric.value]; 
+        val = parseDurationToDecimal(timeVal); 
       } else {
         val = parseFloat(f[filters.metric.value]) || 0; // Sum generic field
       }
@@ -312,8 +320,8 @@ const ListTable = () => {
 
     const sortedColumns = Array.from(periodSet).sort();
     
-    // Helper to create zero-filled array: [Col1, Col2, ..., GrandTotal]
-    const getZeroDataArray = () => Array(sortedColumns.length + 1).fill(0);
+    // Helper to create zero-filled array: [Col1, Col2, ...] (Grand total removed)
+    const getZeroDataArray = () => Array(sortedColumns.length).fill(0);
 
     const hierarchyLevels = [level1, level2, level3].filter(Boolean);
     let idCounter = 1;
@@ -332,7 +340,7 @@ const ListTable = () => {
       // Grouping
       const groups = {};
       subset.forEach(f => {
-        // Handle Missing Values as "(blank)" matching screenshot
+        // Handle Missing Values as "(blank)"
         const key = f[groupByField] ? f[groupByField] : "(blank)";
         if (!groups[key]) groups[key] = [];
         groups[key].push(f);
@@ -349,7 +357,6 @@ const ListTable = () => {
           const colIndex = sortedColumns.indexOf(f._periodKey);
           if (colIndex !== -1) {
             groupTotalData[colIndex] += f._val;
-            groupTotalData[sortedColumns.length] += f._val; // Grand Total Col
           }
         });
 
@@ -368,8 +375,6 @@ const ListTable = () => {
         const childrenExist = buildTree(groupFlights, depth + 1);
 
         // 3. Push "Total" Row (Footer for this group)
-        // Only if it had children (or if it's the deepest level, some excel styles verify this)
-        // Screenshot shows: "A 100" (Row) -> Children -> "A 100 Total" (Row)
         if (childrenExist) {
           finalRows.push({
             id: idCounter++,
@@ -379,8 +384,7 @@ const ListTable = () => {
             data: groupTotalData,
             isTotalRow: true
           });
-        } else if (depth < hierarchyLevels.length -1) {
-             // Even if no deeper grouping logic found (rare), push total for consistency
+        } else if (depth < hierarchyLevels.length - 1) {
              finalRows.push({
                 id: idCounter++,
                 type: "Total",
@@ -392,7 +396,7 @@ const ListTable = () => {
         }
       });
       
-      return true; // Indicates children were processed
+      return true; 
     };
 
     // Start Building
@@ -403,7 +407,6 @@ const ListTable = () => {
       const colIndex = sortedColumns.indexOf(f._periodKey);
       if (colIndex !== -1) {
         networkTotal[colIndex] += f._val;
-        networkTotal[sortedColumns.length] += f._val;
       }
     });
 
@@ -418,21 +421,19 @@ const ListTable = () => {
     });
 
     // Apply Number Formatting
-    const isDecimal = filters.metric.value !== 'departures';
-    // If ASK/Seats (large numbers), round. If FH (hours), use decimals.
-    const isLargeNumber = ['ask', 'seats', 'pax'].includes(filters.metric.value);
+    const metricVal = filters.metric.value;
+    const isDecimal = ['fh', 'bh', 'bt', 'cargoT'].includes(metricVal);
 
     const formattedRows = finalRows.map(row => ({
       ...row,
       data: row.data.map(val => {
-        if (isLargeNumber) return Math.round(val); // No decimals for ASK/Pax
-        if (isDecimal) return Number(val.toFixed(2)); // Decimals for FH
-        return Math.round(val); // Integers for Departures
+        if (isDecimal) return Number(val.toFixed(2)); // Decimals for Time/Tonnage
+        return Math.round(val); // Integers for Departures, Pax, Capacity, etc.
       })
     }));
 
     return {
-      tableColumns: [...sortedColumns, "Grand Total"],
+      tableColumns: [...sortedColumns], // Removed Grand Total from Headers
       tableData: formattedRows
     };
 
@@ -492,7 +493,7 @@ const ListTable = () => {
               <SingleSelectDropdown placeholder="Select Metric..." options={METRIC_OPTIONS} selected={filters.metric} onChange={(v) => updateFilter('metric', v)} />
             </div>
             <span className="text-xs text-slate-500 italic">
-              {filters.metric.value === 'bt' ? "(Calculated from Block Time)" : "(Count or Sum)"}
+              {['fh', 'bh', 'bt'].includes(filters.metric.value) ? "(Calculated from duration in HH:MM format)" : ""}
             </span>
           </div>
         </div>
@@ -556,10 +557,7 @@ const ListTable = () => {
                   Month
                 </th>
                 {tableColumns.map((col, idx) => (
-                  <th key={idx} className={cn(
-                    "bg-slate-50/90 dark:bg-slate-800/90 border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[100px] text-center text-sm font-bold text-slate-800 dark:text-slate-200",
-                    col === "Grand Total" && "bg-slate-200/50"
-                  )}>
+                  <th key={idx} className="bg-slate-50/90 dark:bg-slate-800/90 border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[100px] text-center text-sm font-bold text-slate-800 dark:text-slate-200">
                     {col}
                   </th>
                 ))}
