@@ -190,7 +190,7 @@ const MainPage = () => {
             <ThemeToggle />
             <div className="text-right hidden 2xl:block">
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Admin User</p>
-              <p className="text-xs text-slate-500">admiddn@airlineplan.com</p>
+              <p className="text-xs text-slate-500">admin@airlineplan.com</p>
             </div>
             <LogoutButton onClick={handleLogout} />
           </div>
