@@ -547,7 +547,7 @@ const ListTable = () => {
     }));
 
     // Append Grand Total
-    formattedRows.push({
+    formattedRows.unshift({
         id: "grand-total",
         type: "Grand Total",
         label: "Grand Total",
