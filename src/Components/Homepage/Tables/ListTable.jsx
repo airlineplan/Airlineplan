@@ -26,13 +26,13 @@ const parseDurationToDecimal = (timeStr) => {
 const getPeriodSortKey = (dateStr, periodicity) => {
   if (!dateStr) return "Unknown";
   let d = new Date(dateStr);
-  
+
   // Fallback if API returns DD-MM-YYYY instead of standard ISO date
   if (isNaN(d.getTime()) && typeof dateStr === 'string' && dateStr.split('-').length === 3) {
     const parts = dateStr.split('-');
-    if(parts[2].length === 4) d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+    if (parts[2].length === 4) d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
   }
-  
+
   if (isNaN(d.getTime())) return "Unknown";
 
   const year = d.getFullYear();
@@ -52,7 +52,7 @@ const getPeriodSortKey = (dateStr, periodicity) => {
       const lastDay = new Date(year, lastMonthOfQ, 0);
       const mm = String(lastMonthOfQ).padStart(2, '0');
       const dd = String(lastDay.getDate()).padStart(2, '0');
-      return `${year}-${mm}-${dd}`; 
+      return `${year}-${mm}-${dd}`;
     }
     case 'daily': {
       const mm = String(month).padStart(2, '0');
@@ -71,10 +71,10 @@ const formatPeriodKey = (sortKey, periodicity) => {
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const yy = String(d.getFullYear()).slice(-2);
-  
+
   if (periodicity === 'annually') return d.getFullYear().toString();
   if (periodicity === 'quarterly') return `Q${Math.ceil((d.getMonth() + 1) / 3)}-${yy}`;
-  
+
   const dd = String(d.getDate()).padStart(2, '0');
   const mmm = months[d.getMonth()];
   return `${dd}-${mmm}-${yy}`;
@@ -220,16 +220,16 @@ const PERIODICITY_OPTIONS = [{ label: "Annually", value: "annually" }, { label: 
 
 const METRIC_OPTIONS = [
   { label: "Departures", value: "departures" },
-  { label: "FH", value: "fh" },   
-  { label: "BH", value: "bh" },   
-  { label: "Seats", value: "seats" },           
-  { label: "Pax", value: "pax" },               
-  { label: "ASK", value: "ask" },               
+  { label: "FH", value: "fh" },
+  { label: "BH", value: "bt" },
+  { label: "Seats", value: "seats" },
+  { label: "Pax", value: "pax" },
+  { label: "ASK", value: "ask" },
   { label: "RSK", value: "rsk" },
-  { label: "ATK", value: "atk" },
-  { label: "RTK", value: "rtk" },
-  { label: "Cargo Capacity", value: "cargoCapacity" },
-  { label: "Cargo T", value: "cargoT" }
+  { label: "ATK", value: "cargoAtk" },
+  { label: "RTK", value: "cargoRtk" },
+  { label: "Cargo Capacity", value: "CargoCapT" },
+  { label: "Cargo T", value: "CargoT" }
 ];
 
 const GROUPING_OPTIONS = [
@@ -276,7 +276,7 @@ const ListTable = () => {
     const getDropdownData = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:5001/dashboard/populateDropDowns`,
+          `https://airlinebackend-zfsg.onrender.com/dashboard/populateDropDowns`,
           { headers: { "x-access-token": localStorage.getItem("accessToken") } }
         );
         if (response.data) {
@@ -303,13 +303,13 @@ const ListTable = () => {
     try {
       setLoading(true);
       const accessToken = localStorage.getItem("accessToken");
-      
+
       const response = await axios.post(
-        'http://localhost:5001/list-page-data', 
+        'https://airlinebackend-zfsg.onrender.com/list-page-data',
         filters,
         { headers: { 'x-access-token': accessToken } }
       );
-      
+
       const flightsData = response.data.flights || response.data || [];
       setRawFlights(Array.isArray(flightsData) ? flightsData : []);
 
@@ -325,57 +325,99 @@ const ListTable = () => {
   useEffect(() => {
     fetchListData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]); 
+  }, [filters]);
 
   // --- PIVOT ALGORITHM (Memoized) ---
 
   const { tableColumns, tableData } = useMemo(() => {
-    if (!rawFlights.length) return { tableColumns: [], tableData: [] };
+    if (!rawFlights.length) {
+      return { tableColumns: [], tableData: [] };
+    }
 
     const periodicityVal = filters.periodicity.value;
     const periodSet = new Set();
 
+    // ===============================
+    // 1️⃣ PREPROCESS FLIGHTS
+    // ===============================
     const processedFlights = rawFlights.map(f => {
-      // Use purely sortable keys for mapping
       const pKey = getPeriodSortKey(f.date, periodicityVal);
       periodSet.add(pKey);
 
       let val = 0;
-      if (filters.metric.value === 'departures') {
-        val = 1; 
-      } else if (['bh', 'bt', 'fh'].includes(filters.metric.value)) {
-        const timeVal = f[filters.metric.value] || f[filters.metric.value === 'bh' ? 'bt' : filters.metric.value]; 
-        val = parseDurationToDecimal(timeVal); 
-      } else if (filters.metric.value === 'rsk' || filters.metric.value === 'rask') {
-        val = parseFloat(f['rsk'] || f['rask']) || 0; 
-      } else {
-        val = parseFloat(f[filters.metric.value]) || 0; 
+      const metricKey = filters.metric.value;
+
+      // ---- Departures ----
+      if (metricKey === "departures") {
+        val = 1;
+      }
+
+      // ---- Block Time (bt stored as HH:MM or decimal) ----
+      else if (metricKey === "bt") {
+        const rawVal = f.bt;
+
+        if (typeof rawVal === "number") {
+          val = rawVal;
+        }
+        else if (typeof rawVal === "string" && !rawVal.includes(":")) {
+          val = parseFloat(rawVal) || 0;
+        }
+        else {
+          val = parseDurationToDecimal(rawVal);
+        }
+      }
+
+      // ---- All Numeric Fields (dynamic) ----
+      else {
+        const rawVal = f[metricKey];
+
+        if (typeof rawVal === "number") {
+          val = rawVal;
+        }
+        else if (typeof rawVal === "string") {
+          val = parseFloat(rawVal.replace(/,/g, "")) || 0;
+        }
+        else {
+          val = 0;
+        }
       }
 
       return { ...f, _periodKey: pKey, _val: val };
     });
 
-    // Chronological sorting naturally works with YYYY-MM-DD
+    // ===============================
+    // 2️⃣ SORT PERIOD COLUMNS
+    // ===============================
     const sortedColumns = Array.from(periodSet).sort();
-    
-    const getZeroDataArray = () => Array(sortedColumns.length).fill(0);
 
-    // Filter out 'None' selections to prevent blank hierarchies
-    const hierarchyLevels = [level1, level2, level3].filter(lvl => lvl && lvl.value !== 'none');
-    
+    // Pre-build column index map (performance improvement)
+    const columnIndexMap = {};
+    sortedColumns.forEach((col, idx) => {
+      columnIndexMap[col] = idx;
+    });
+
+    const getZeroArray = () => Array(sortedColumns.length).fill(0);
+
+    // ===============================
+    // 3️⃣ BUILD HIERARCHY LEVELS
+    // ===============================
+    const hierarchyLevels = [level1, level2, level3].filter(
+      lvl => lvl && lvl.value !== "none"
+    );
+
     let idCounter = 1;
-    let finalRows = [];
+    const finalRows = [];
 
     const buildTree = (subset, depth) => {
-      // Exit if we pass selected dimensions (handles 'None' attributes seamlessly)
-      if (depth >= hierarchyLevels.length) return null;
+      if (depth >= hierarchyLevels.length) return false;
 
       const groupByField = hierarchyLevels[depth].value;
       const groupLabel = hierarchyLevels[depth].label;
 
       const groups = {};
+
       subset.forEach(f => {
-        const key = f[groupByField] ? f[groupByField] : "(blank)";
+        const key = f[groupByField] || "(blank)";
         if (!groups[key]) groups[key] = [];
         groups[key].push(f);
       });
@@ -384,69 +426,81 @@ const ListTable = () => {
 
       sortedKeys.forEach(key => {
         const groupFlights = groups[key];
-        const groupTotalData = getZeroDataArray();
+        const groupTotals = getZeroArray();
 
+        // ---- Aggregate ----
         groupFlights.forEach(f => {
-          const colIndex = sortedColumns.indexOf(f._periodKey);
-          if (colIndex !== -1) {
-            groupTotalData[colIndex] += f._val;
+          const colIndex = columnIndexMap[f._periodKey];
+          if (colIndex !== undefined) {
+            groupTotals[colIndex] += f._val;
           }
         });
 
+        // ---- Push Group Row ----
         finalRows.push({
           id: idCounter++,
           type: groupLabel,
           label: key,
           level: depth,
-          data: groupTotalData,
+          data: groupTotals,
           isTotalRow: false
         });
 
-        const childrenExist = buildTree(groupFlights, depth + 1);
+        const hasChildren = buildTree(groupFlights, depth + 1);
 
-        if (childrenExist) {
+        // ---- Push Total Row ----
+        if (hasChildren || depth < hierarchyLevels.length - 1) {
           finalRows.push({
             id: idCounter++,
             type: "Total",
             label: `${key} Total`,
             level: depth,
-            data: groupTotalData,
+            data: groupTotals,
             isTotalRow: true
           });
-        } else if (depth < hierarchyLevels.length - 1) {
-             finalRows.push({
-                id: idCounter++,
-                type: "Total",
-                label: `${key} Total`,
-                level: depth,
-                data: groupTotalData,
-                isTotalRow: true
-              });
         }
       });
-      
-      return true; 
+
+      return true;
     };
 
     buildTree(processedFlights, 0);
 
-    const metricVal = filters.metric.value;
-    const isDecimal = ['fh', 'bh', 'bt', 'cargoT', 'rsk', 'rask'].includes(metricVal);
+    // ===============================
+    // 4️⃣ FORMAT NUMBERS
+    // ===============================
+    const decimalMetrics = [
+      "bt",
+      "rsk",
+      "cargoAtk",
+      "cargoRtk",
+      "CargoT"
+    ];
+
+    const isDecimalMetric = decimalMetrics.includes(filters.metric.value);
 
     const formattedRows = finalRows.map(row => ({
       ...row,
-      data: row.data.map(val => {
-        if (isDecimal) return Number(val.toFixed(2));
-        return Math.round(val); 
-      })
+      data: row.data.map(val =>
+        isDecimalMetric
+          ? Number(val.toFixed(2))
+          : Math.round(val)
+      )
     }));
 
     return {
-      tableColumns: [...sortedColumns], 
+      tableColumns: sortedColumns,
       tableData: formattedRows
     };
 
-  }, [rawFlights, level1, level2, level3, filters.periodicity, filters.metric]);
+  }, [
+    rawFlights,
+    level1,
+    level2,
+    level3,
+    filters.periodicity,
+    filters.metric
+  ]);
 
 
   // --- EXCEL EXPORT ---
@@ -510,28 +564,28 @@ const ListTable = () => {
 
         {/* TIME FILTERS */}
         <div className="w-full xl:w-[22.5%] p-5 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white/50 dark:bg-slate-800/30 shadow-sm relative flex flex-col justify-center">
-            <div className="absolute -top-3 left-4 bg-slate-50 dark:bg-slate-950 px-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-               Time Filters (Local)
-            </div>
-            <div className="grid grid-cols-[80px_1fr_1fr] gap-2 items-center mt-2">
-               <span className="text-xs font-bold text-slate-500"></span>
-               <span className="text-xs font-bold text-slate-500 text-center">From</span>
-               <span className="text-xs font-bold text-slate-500 text-center">To</span>
-               
-               <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Dep</span>
-               <input type="time" value={filters.depTimeFrom} onChange={(e) => updateFilter('depTimeFrom', e.target.value)} className="w-full text-xs p-1 rounded border dark:bg-slate-900 dark:border-slate-700" />
-               <input type="time" value={filters.depTimeTo} onChange={(e) => updateFilter('depTimeTo', e.target.value)} className="w-full text-xs p-1 rounded border dark:bg-slate-900 dark:border-slate-700" />
+          <div className="absolute -top-3 left-4 bg-slate-50 dark:bg-slate-950 px-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            Time Filters (Local)
+          </div>
+          <div className="grid grid-cols-[80px_1fr_1fr] gap-2 items-center mt-2">
+            <span className="text-xs font-bold text-slate-500"></span>
+            <span className="text-xs font-bold text-slate-500 text-center">From</span>
+            <span className="text-xs font-bold text-slate-500 text-center">To</span>
 
-               <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Arr</span>
-               <input type="time" value={filters.arrTimeFrom} onChange={(e) => updateFilter('arrTimeFrom', e.target.value)} className="w-full text-xs p-1 rounded border dark:bg-slate-900 dark:border-slate-700" />
-               <input type="time" value={filters.arrTimeTo} onChange={(e) => updateFilter('arrTimeTo', e.target.value)} className="w-full text-xs p-1 rounded border dark:bg-slate-900 dark:border-slate-700" />
-            </div>
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Dep</span>
+            <input type="time" value={filters.depTimeFrom} onChange={(e) => updateFilter('depTimeFrom', e.target.value)} className="w-full text-xs p-1 rounded border dark:bg-slate-900 dark:border-slate-700" />
+            <input type="time" value={filters.depTimeTo} onChange={(e) => updateFilter('depTimeTo', e.target.value)} className="w-full text-xs p-1 rounded border dark:bg-slate-900 dark:border-slate-700" />
+
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Arr</span>
+            <input type="time" value={filters.arrTimeFrom} onChange={(e) => updateFilter('arrTimeFrom', e.target.value)} className="w-full text-xs p-1 rounded border dark:bg-slate-900 dark:border-slate-700" />
+            <input type="time" value={filters.arrTimeTo} onChange={(e) => updateFilter('arrTimeTo', e.target.value)} className="w-full text-xs p-1 rounded border dark:bg-slate-900 dark:border-slate-700" />
+          </div>
         </div>
       </div>
 
       {/* --- TABLE AREA --- */}
       <div className="relative z-10 flex-1 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col">
-        
+
         {/* Toolbar */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/50">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -547,17 +601,17 @@ const ListTable = () => {
             </div>
           </div>
           <button onClick={downloadExcel} className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20">
-             <Download size={14} /> Export
+            <Download size={14} /> Export
           </button>
         </div>
 
         {/* The Table */}
         <div className="flex-1 overflow-auto custom-scrollbar relative">
           {loading && (
-             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-50">
-                <RefreshCw className="animate-spin text-indigo-500 mb-3" size={32} />
-                <span className="text-sm font-medium text-slate-600">Loading...</span>
-             </div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-50">
+              <RefreshCw className="animate-spin text-indigo-500 mb-3" size={32} />
+              <span className="text-sm font-medium text-slate-600">Loading...</span>
+            </div>
           )}
 
           <table className="w-full text-left border-collapse">
@@ -586,8 +640,8 @@ const ListTable = () => {
                     row.isTotalRow && "pl-4 italic"
                   )}>
                     <div className="flex items-center gap-2">
-                        {!row.isTotalRow && row.level === 0 && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
-                        {row.label}
+                      {!row.isTotalRow && row.level === 0 && <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                      {row.label}
                     </div>
                   </td>
                   {row.data.map((val, idx) => (
