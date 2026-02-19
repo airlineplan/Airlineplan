@@ -281,7 +281,7 @@ const METRIC_OPTIONS = [
   { label: "Seats", value: "seats" },
   { label: "Pax", value: "pax" },
   { label: "ASK", value: "ask" },
-  { label: "RSK", value: "rsk" },
+  { label: "RPK", value: "rpk" },
   { label: "ATK", value: "cargoAtk" },
   { label: "RTK", value: "cargoRtk" },
   { label: "Cargo Capacity", value: "CargoCapT" },
@@ -294,9 +294,9 @@ const GROUPING_OPTIONS = [
   { label: "Arr Stn", value: "arrStn" },
   { label: "Sector", value: "sector" },
   { label: "Flight #", value: "flight" },
-  { label: "Aircraft", value: "variant" },
+  { label: "Variant", value: "variant" },
   { label: "Rotation #", value: "rotationNumber" },
-  { label: "Dom/Intl", value: "domIntl" }
+  // { label: "Dom/Intl", value: "domIntl" }
 ];
 
 // --- MAIN COMPONENT ---
@@ -494,16 +494,16 @@ const ListTable = () => {
         const hasChildren = buildTree(groupFlights, depth + 1);
 
         // ---- Push Total Row ----
-        if (hasChildren || depth < hierarchyLevels.length - 1) {
-          finalRows.push({
-            id: idCounter++,
-            type: "Total",
-            label: `${key} Total`,
-            level: depth,
-            data: groupTotals,
-            isTotalRow: true
-          });
-        }
+        // if (hasChildren || depth < hierarchyLevels.length - 1) {
+        //   finalRows.push({
+        //     id: idCounter++,
+        //     type: "Total",
+        //     label: `${key} Total`,
+        //     level: depth,
+        //     data: groupTotals,
+        //     isTotalRow: true
+        //   });
+        // }
       });
 
       return true;
@@ -518,7 +518,7 @@ const ListTable = () => {
       "fh",
       "bh",
       "bt",
-      "rsk",
+      "rpk",
       "cargoAtk",
       "cargoRtk",
       "CargoT"
@@ -625,9 +625,6 @@ const ListTable = () => {
             <div className="w-full sm:w-64">
               <SingleSelectDropdown placeholder="Select Metric..." options={METRIC_OPTIONS} selected={filters.metric} onChange={(v) => updateFilter('metric', v)} />
             </div>
-            <span className="text-xs text-slate-500 italic">
-              {['fh', 'bh', 'bt'].includes(filters.metric.value) ? "(Calculated from duration in HH:MM format)" : ""}
-            </span>
           </div>
         </div>
 
