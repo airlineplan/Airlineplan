@@ -10,11 +10,11 @@ export default function ThemeToggle() {
   return (
     <motion.button
       onClick={toggleTheme}
-      className={`relative p-2 rounded-full border transition-colors duration-300 ${
-        isDark 
-          ? "bg-slate-800 border-slate-700 text-yellow-400 hover:bg-slate-700" 
+      // Added w-10 h-10 and flex/items-center to guarantee it stays perfectly round and visible
+      className={`relative w-10 h-10 rounded-full border flex items-center justify-center shrink-0 transition-colors duration-300 ${isDark
+          ? "bg-slate-800 border-slate-700 text-yellow-400 hover:bg-slate-700"
           : "bg-indigo-50 border-indigo-100 text-indigo-600 hover:bg-indigo-100"
-      }`}
+        }`}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       aria-label="Toggle Dark Mode"
