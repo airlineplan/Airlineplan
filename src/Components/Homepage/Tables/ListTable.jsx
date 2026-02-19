@@ -25,57 +25,107 @@ const parseDurationToDecimal = (timeStr) => {
 // Generates a standard YYYY-MM-DD key to ensure chronological sorting
 const getPeriodSortKey = (dateStr, periodicity) => {
   if (!dateStr) return "Unknown";
+
   let d = new Date(dateStr);
 
-  // Fallback if API returns DD-MM-YYYY instead of standard ISO date
-  if (isNaN(d.getTime()) && typeof dateStr === 'string' && dateStr.split('-').length === 3) {
-    const parts = dateStr.split('-');
-    if (parts[2].length === 4) d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+  // Fallback for DD-MM-YYYY
+  if (
+    isNaN(d.getTime()) &&
+    typeof dateStr === "string" &&
+    dateStr.split("-").length === 3
+  ) {
+    const parts = dateStr.split("-");
+    if (parts[2].length === 4) {
+      d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+    }
   }
 
   if (isNaN(d.getTime())) return "Unknown";
 
   const year = d.getFullYear();
-  const month = d.getMonth() + 1; // 1-12
+  const month = d.getMonth() + 1;
 
   switch (periodicity) {
-    case 'annually': return `${year}-12-31`;
-    case 'monthly': {
-      const lastDay = new Date(year, month, 0); // gets the exact last day of the given month
-      const mm = String(lastDay.getMonth() + 1).padStart(2, '0');
-      const dd = String(lastDay.getDate()).padStart(2, '0');
+    case "annually":
+      return `${year}-12-31`;
+
+    case "monthly": {
+      const lastDay = new Date(year, month, 0);
+      const mm = String(lastDay.getMonth() + 1).padStart(2, "0");
+      const dd = String(lastDay.getDate()).padStart(2, "0");
       return `${year}-${mm}-${dd}`;
     }
-    case 'quarterly': {
+
+    case "quarterly": {
       const q = Math.ceil(month / 3);
       const lastMonthOfQ = q * 3;
       const lastDay = new Date(year, lastMonthOfQ, 0);
-      const mm = String(lastMonthOfQ).padStart(2, '0');
-      const dd = String(lastDay.getDate()).padStart(2, '0');
+      const mm = String(lastMonthOfQ).padStart(2, "0");
+      const dd = String(lastDay.getDate()).padStart(2, "0");
       return `${year}-${mm}-${dd}`;
     }
-    case 'daily': {
-      const mm = String(month).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
+
+    case "weekly": {
+      // Week ending Sunday
+      const dayOfWeek = d.getDay(); // 0 = Sunday
+      const diffToSunday = 7 - dayOfWeek;
+      const weekEnd = new Date(d);
+      weekEnd.setDate(d.getDate() + (dayOfWeek === 0 ? 0 : diffToSunday));
+
+      const mm = String(weekEnd.getMonth() + 1).padStart(2, "0");
+      const dd = String(weekEnd.getDate()).padStart(2, "0");
+
+      return `${weekEnd.getFullYear()}-${mm}-${dd}`;
+    }
+
+    case "daily": {
+      const mm = String(month).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
       return `${year}-${mm}-${dd}`;
     }
-    default: return `${year}-${String(month).padStart(2, '0')}-01`;
+
+    default:
+      return `${year}-${String(month).padStart(2, "0")}-01`;
   }
 };
 
 // Formats the YYYY-MM-DD sort key into display headers like "28-Feb-26"
 const formatPeriodKey = (sortKey, periodicity) => {
   if (sortKey === "Unknown") return sortKey;
+
   const d = new Date(sortKey);
   if (isNaN(d.getTime())) return sortKey;
 
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const months = [
+    "Jan","Feb","Mar","Apr","May","Jun",
+    "Jul","Aug","Sep","Oct","Nov","Dec"
+  ];
+
   const yy = String(d.getFullYear()).slice(-2);
 
-  if (periodicity === 'annually') return d.getFullYear().toString();
-  if (periodicity === 'quarterly') return `Q${Math.ceil((d.getMonth() + 1) / 3)}-${yy}`;
+  if (periodicity === "annually") {
+    return d.getFullYear().toString();
+  }
 
-  const dd = String(d.getDate()).padStart(2, '0');
+  if (periodicity === "quarterly") {
+    return `Q${Math.ceil((d.getMonth() + 1) / 3)}-${yy}`;
+  }
+
+  if (periodicity === "weekly") {
+    // Calculate ISO week number
+    const tempDate = new Date(d);
+    tempDate.setHours(0, 0, 0, 0);
+
+    tempDate.setDate(tempDate.getDate() + 4 - (tempDate.getDay() || 7));
+    const yearStart = new Date(tempDate.getFullYear(), 0, 1);
+    const weekNo = Math.ceil(
+      ((tempDate - yearStart) / 86400000 + 1) / 7
+    );
+
+    return `W${String(weekNo).padStart(2, "0")}-${yy}`;
+  }
+
+  const dd = String(d.getDate()).padStart(2, "0");
   const mmm = months[d.getMonth()];
   return `${dd}-${mmm}-${yy}`;
 };
@@ -216,7 +266,13 @@ const SingleSelectDropdown = ({ placeholder, options = [], onChange, selected })
 // --- STATIC OPTIONS ---
 
 const LABEL_OPTIONS = [{ label: "Dom", value: "dom" }, { label: "INTL", value: "intl" }, { label: "Both", value: "both" }];
-const PERIODICITY_OPTIONS = [{ label: "Annually", value: "annually" }, { label: "Quarterly", value: "quarterly" }, { label: "Monthly", value: "monthly" }, { label: "Daily", value: "daily" }];
+const PERIODICITY_OPTIONS = [
+  { label: "Annually", value: "annually" },
+  { label: "Quarterly", value: "quarterly" },
+  { label: "Monthly", value: "monthly" },
+  { label: "Weekly", value: "weekly" },  
+  { label: "Daily", value: "daily" }
+];
 
 const METRIC_OPTIONS = [
   { label: "Departures", value: "departures" },
