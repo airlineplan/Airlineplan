@@ -75,7 +75,7 @@ const ComboboxField = ({ label, name, value, onChange, error, options = [], disa
           value={value}
           disabled={disabled}
           onChange={(e) => {
-            onChange(e); 
+            onChange(e);
             setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
@@ -189,7 +189,7 @@ const AddNetwork = ({ setAdd }) => {
   // --- DST-AWARE AUTO-CALCULATE STA ENGINE ---
   useEffect(() => {
     const { std, bt, depStn, arrStn, effFromDt } = formData;
-    
+
     // We only explicitly require STD and BT to attempt calculation. 
     // This ensures calculation runs even for brand new stations.
     if (std && bt) {
@@ -204,9 +204,9 @@ const AddNetwork = ({ setAdd }) => {
 
         const getTzMins = (config, flightDateStr) => {
           if (!config) return 0; // Fallback for completely new/unrecognized stations
-          
+
           let tz = config.stdtz;
-          
+
           if (flightDateStr && config.nextDSTStart && config.nextDSTEnd) {
             const fDate = new Date(flightDateStr);
             const dStart = new Date(config.nextDSTStart);
@@ -217,7 +217,7 @@ const AddNetwork = ({ setAdd }) => {
               }
             }
           }
-          
+
           if (!tz || !tz.startsWith('UTC')) return 0;
           const sign = tz.includes('-') ? -1 : 1;
           const timePart = tz.replace(/UTC[+-]/, '');
@@ -239,7 +239,7 @@ const AddNetwork = ({ setAdd }) => {
         // FORMULA: STA = STD + BT + Diff in TZ (ArrTZ - DepTZ)
         const diffInTzMins = arrTzMins - depTzMins;
         let totalMins = (stdH * 60 + (stdM || 0)) + (btH * 60 + (btM || 0)) + diffInTzMins;
-        
+
         // Wrap around 24 hours to cleanly handle midnight crossovers (forwards or backwards)
         totalMins = ((totalMins % 1440) + 1440) % 1440;
 
@@ -346,20 +346,30 @@ const AddNetwork = ({ setAdd }) => {
                     <ComboboxField label="Arrival Stn" name="arrStn" placeholder="Select or Type Arr Station" value={formData.arrStn} onChange={handleChange} options={dropdownData.to || []} error={errors.arrStn} required />
                     <InputField label="Variant" name="variant" placeholder="e.g. A330-200" value={formData.variant} onChange={handleChange} error={errors.variant} required />
                     <InputField label="Dom / Intl" name="domINTL" placeholder="DOM or INTL" value={formData.domINTL} onChange={handleChange} required />
-                    
-                    <div className="hidden lg:block"></div> 
-                    
+
+                    <div className="hidden lg:block"></div>
+
                     <div className="lg:col-span-3 pb-2 border-b border-slate-100 dark:border-slate-800 mb-2 mt-2">
                       <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">Schedule & Timing</h3>
                     </div>
                     <ComboboxField label="STD (Local)" name="std" placeholder="HH:MM" value={formData.std} onChange={handleChange} options={timeOptions} required />
-                    <InputField label="BT" name="bt" type="time" value={formData.bt} onChange={handleChange} required />
+                    <InputField
+                      label="BT (Duration HH:MM)"
+                      name="bt"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="e.g. 02:30"
+                      value={formData.bt}
+                      onChange={handleChange}
+                      error={errors.bt}
+                      required
+                    />
                     <ComboboxField label="STA (Local) - Auto Calculated" name="sta" placeholder="HH:MM" value={formData.sta} onChange={handleChange} options={timeOptions} className="font-bold bg-indigo-50/50 dark:bg-indigo-900/20" />
-                    
+
                     <InputField label="Effective From" name="effFromDt" type="date" icon={Calendar} value={formData.effFromDt} onChange={handleChange} error={errors.effFromDt} required />
                     <InputField label="Effective To" name="effToDt" type="date" icon={Calendar} value={formData.effToDt} onChange={handleChange} error={errors.effToDt} required min={formData.effFromDt} />
                     <InputField label="Days of Week" name="dow" type="number" placeholder="e.g. 1234567" value={formData.dow} onChange={handleChange} error={errors.dow} required />
-                    
+
                     <div className="lg:col-span-3 pb-2 border-b border-slate-100 dark:border-slate-800 mb-2 mt-2">
                       <h3 className="text-sm font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide">Additional Info</h3>
                     </div>
