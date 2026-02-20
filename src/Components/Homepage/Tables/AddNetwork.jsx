@@ -275,6 +275,10 @@ const AddNetwork = ({ setAdd }) => {
       case "arrStn": if (!/^[a-zA-Z0-9\s]{0,4}$/.test(value)) errorMsg = "Max 4 alphanumeric chars"; break;
       case "variant": if (!/^[a-zA-Z0-9\s-]{0,8}$/.test(value)) errorMsg = "Max 8 chars (letters, nums, -)"; break;
       case "dow": if (!/^[1-7]{0,7}$/.test(value)) errorMsg = "Digits 1-7 only (Max 7 digits)"; break;
+      case "bt":
+        if (!/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value))
+          errorMsg = "Enter valid duration HH:MM (00:00 - 23:59)";
+        break;
       case "userTag1":
       case "userTag2":
       case "remarks1":
