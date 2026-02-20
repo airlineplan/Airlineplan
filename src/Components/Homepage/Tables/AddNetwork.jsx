@@ -262,6 +262,18 @@ const AddNetwork = ({ setAdd }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "bt") {
+      let cleaned = value.replace(/\D/g, "");
+
+      if (cleaned.length >= 3) {
+        cleaned = cleaned.slice(0, 4);
+        value = cleaned.slice(0, 2) + ":" + cleaned.slice(2);
+      }
+
+      setFormData(prev => ({ ...prev, [name]: value }));
+      validateField(name, value);
+      return;
+    }
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
     validateField(name, value);
