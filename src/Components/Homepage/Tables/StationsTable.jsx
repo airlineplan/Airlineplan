@@ -37,16 +37,20 @@ const StyledInput = ({ value, onChange, error, placeholder, type = "text", ...pr
 );
 
 const StyledSelect = ({ value, onChange, options }) => (
-  <select
-    value={value || ""}
-    onChange={onChange}
-    className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 dark:text-slate-200 cursor-pointer appearance-none"
-    style={{ backgroundImage: 'none' }}
-  >
-    {options.map((opt) => (
-      <option key={opt} value={opt}>{opt}</option>
-    ))}
-  </select>
+  <div className="relative">
+    <select
+      value={value || ""}
+      onChange={onChange}
+      className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 dark:text-slate-200 cursor-pointer appearance-none pr-6"
+    >
+      {options.map((opt) => (
+        <option key={opt} value={opt}>{opt}</option>
+      ))}
+    </select>
+    <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center px-1 text-slate-500">
+      <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+    </div>
+  </div>
 );
 
 // --- MAIN COMPONENT ---
@@ -143,11 +147,11 @@ const StationsTable = () => {
   };
 
   return (
-    <div className="w-full p-6 h-[calc(100vh-140px)] flex flex-col gap-4">
+    // FIX 1: Removed h-[calc(100vh-140px)] and replaced with dynamic overflow layout like NetworkTable
+    <div className="w-full space-y-4 font-sans relative overflow-hidden p-4 md:p-6">
       
       {/* --- HEADER --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1">
-        
         <div className="flex items-center gap-3 bg-white/70 dark:bg-slate-900/60 backdrop-blur-sm px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                 <Clock size={16} className="text-indigo-500" />
@@ -171,24 +175,24 @@ const StationsTable = () => {
       </div>
 
       {/* --- TABLE CARD --- */}
-      <div className="flex-1 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col relative">
+      {/* FIX 2: Applied h-[70vh] with min-h-[400px] to ensure it always renders tall enough in landscape */}
+      <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col h-[70vh] min-h-[400px]">
         
-        <div className="flex-1 overflow-auto custom-scrollbar">
+        <div className="flex-1 overflow-auto custom-scrollbar relative">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-100/95 dark:bg-slate-800/95 sticky top-0 z-20 backdrop-blur-sm shadow-sm">
+            <thead className="bg-slate-100/95 dark:bg-slate-800/95 sticky top-0 z-30 backdrop-blur-md shadow-sm">
               <tr>
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-12 text-xs font-bold text-slate-500 dark:text-slate-400">#</th>
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[100px] text-xs font-bold text-slate-500 dark:text-slate-400">Station</th>
+                {/* FIX 3: Made # and Station headers sticky to the left so they stay visible when horizontally scrolling */}
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[40px] text-xs font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-40 bg-slate-100/95 dark:bg-slate-800/95">#</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[120px] text-xs font-bold text-slate-500 dark:text-slate-400 sticky left-[40px] z-40 bg-slate-100/95 dark:bg-slate-800/95 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)]">Station</th>
                 
-                {/* --- NEW HEADERS --- */}
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[90px] text-xs font-bold text-slate-500 dark:text-slate-400">Avg Taxi-Out</th>
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[90px] text-xs font-bold text-slate-500 dark:text-slate-400">Avg Taxi-In</th>
-                {/* ------------------- */}
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[100px] text-xs font-bold text-slate-500 dark:text-slate-400">Avg Taxi-Out</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[100px] text-xs font-bold text-slate-500 dark:text-slate-400">Avg Taxi-In</th>
 
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[110px] text-xs font-bold text-slate-500 dark:text-slate-400">STD TZ</th>
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[110px] text-xs font-bold text-slate-500 dark:text-slate-400">DST TZ</th>
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[130px] text-xs font-bold text-slate-500 dark:text-slate-400">Next DST Start</th>
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[130px] text-xs font-bold text-slate-500 dark:text-slate-400">Next DST End</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[120px] text-xs font-bold text-slate-500 dark:text-slate-400">STD TZ</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[120px] text-xs font-bold text-slate-500 dark:text-slate-400">DST TZ</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[140px] text-xs font-bold text-slate-500 dark:text-slate-400">Next DST Start</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[140px] text-xs font-bold text-slate-500 dark:text-slate-400">Next DST End</th>
                 
                 <th colSpan={2} className="p-1 border-r border-b border-slate-200 dark:border-slate-700 text-center text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/10">Dom - Dom</th>
                 <th colSpan={2} className="p-1 border-r border-b border-slate-200 dark:border-slate-700 text-center text-xs font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-50/50 dark:bg-cyan-900/10">Dom - INTL</th>
@@ -196,14 +200,15 @@ const StationsTable = () => {
                 <th colSpan={2} className="p-1 border-b border-slate-200 dark:border-slate-700 text-center text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-900/10">INTL - INTL</th>
               </tr>
               <tr>
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-indigo-50/30">Min CT</th>
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-indigo-50/30">Max CT</th>
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-cyan-50/30">Min CT</th>
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-cyan-50/30">Max CT</th>
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-emerald-50/30">Min CT</th>
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-emerald-50/30">Max CT</th>
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-purple-50/30">Min CT</th>
-                <th className="p-2 border-b border-slate-200 dark:border-slate-700 text-center w-[80px] text-[10px] text-slate-500 font-semibold bg-purple-50/30">Max CT</th>
+                {/* Min Widths added to sub-headers to prevent input crushing */}
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-indigo-50/30">Min CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-indigo-50/30">Max CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-cyan-50/30">Min CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-cyan-50/30">Max CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-emerald-50/30">Min CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-emerald-50/30">Max CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-purple-50/30">Min CT</th>
+                <th className="p-2 border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-purple-50/30">Max CT</th>
               </tr>
             </thead>
 
@@ -214,11 +219,10 @@ const StationsTable = () => {
                 </tr>
               ) : (
                 data.map((row, index) => (
-                  <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="p-2 text-center text-xs font-medium text-slate-500 border-r border-slate-100 dark:border-slate-800">{index + 1}</td>
-                    <td className="p-2 text-center text-xs font-medium text-slate-800 dark:text-slate-200 border-r border-slate-100 dark:border-slate-800">{row.stationName}</td>
+                  <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                    <td className="p-2 text-center text-xs font-medium text-slate-500 border-r border-slate-100 dark:border-slate-800 sticky left-0 z-20 bg-white/95 dark:bg-slate-900/95 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50">{index + 1}</td>
+                    <td className="p-2 text-center text-xs font-medium text-slate-800 dark:text-slate-200 border-r border-slate-100 dark:border-slate-800 sticky left-[40px] z-20 bg-white/95 dark:bg-slate-900/95 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.02)]">{row.stationName}</td>
                     
-                    {/* --- NEW CELLS --- */}
                     <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-orange-50/10">
                       <StyledInput 
                         value={row.avgTaxiOutTime} 
@@ -233,7 +237,6 @@ const StationsTable = () => {
                         placeholder="00:00"
                       />
                     </td>
-                    {/* ----------------- */}
 
                     <td className="p-1 border-r border-slate-100 dark:border-slate-800">
                       <StyledSelect value={row.stdtz} options={TIMEZONES} onChange={(e) => handleInputChange(e, index, 'stdtz')} />
@@ -292,11 +295,11 @@ const StationsTable = () => {
         </div>
 
         {/* --- FOOTER --- */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex justify-end">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex justify-end">
             <button
                 onClick={saveStation}
                 disabled={isLoading}
-                className="inline-flex items-center justify-center px-6 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
             >
                 {isLoading ? (
                     <>

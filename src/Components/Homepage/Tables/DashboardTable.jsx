@@ -195,7 +195,6 @@ const DashboardTable = (props) => {
           { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
         );
         
-        // Safety check to ensure we are setting valid arrays even if backend sends malformed data
         if (response.data && typeof response.data === 'object') {
           setMultiSelectValues({
             from: Array.isArray(response.data.from) ? response.data.from : [],
@@ -208,7 +207,6 @@ const DashboardTable = (props) => {
         }
       } catch (error) {
         console.error("Error fetching dropdowns:", error);
-        // Leave the default empty arrays if this call fails
       }
     };
     getDropdownData();
@@ -230,7 +228,6 @@ const DashboardTable = (props) => {
         headers: { 'x-access-token': accessToken },
       });
   
-      // Strictly enforce that 'data' is always an array to prevent .map() crashes
       if (Array.isArray(response.data)) {
         setData(response.data);
       } else {
@@ -240,8 +237,6 @@ const DashboardTable = (props) => {
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load dashboard data');
-      
-      // CRITICAL FIX: Reset data to empty array on 401/500 errors to prevent React crash
       setData([]); 
     } finally {
       setLoading(false);
@@ -250,14 +245,16 @@ const DashboardTable = (props) => {
   
   useEffect(() => {
     fetchData();
-  }, []); // Initial load
+  }, []); 
 
   // --- DOWNLOAD LOGIC ---
   const transformData = () => {
+    // 💡 NEW: Added "ft: 'FT'" next to BH to include it in the downloaded Excel sheet
     const propertyMappings = {
       destinations: 'Destinations', departures: 'Departures', seats: 'Seats', pax: 'Pax',
       paxSF: 'Pax SF', paxLF: 'Pax LF', cargoCapT: 'Cargo Ton Capacity', cargoT: 'Cargo Tons',
-      ct2ctc: 'Cargo Tons/Cargo Ton Capacity', cftk2atk: 'Cargo FTK/Cargo ATK', bh: 'BH',
+      ct2ctc: 'Cargo Tons/Cargo Ton Capacity', cftk2atk: 'Cargo FTK/Cargo ATK', 
+      bh: 'BH', ft: 'FT', 
       waslgcd: 'Weighted average stage length per FLGT by GCD', waslbh: 'Weighted average stage length per FLGT by BH',
       adu: 'Average Daily Utilisation', asks: 'ASKs (Mn)', rsks: 'RSKs (Mn)',
       cargoAtk: 'Cargo ATKs (Thousands)', cargoRtk: 'Cargo FTKs (Thousands)',
@@ -336,6 +333,7 @@ const DashboardTable = (props) => {
     return `${day} ${month} ${year}`;
   };
 
+  // 💡 NEW: Added `{ label: "FT", ... }` immediately below BH for the UI Table
   const TABLE_ROWS = [
     { label: "Destinations", render: (item) => item?.destinations ? item.destinations : " " },
     { label: "Departures", render: (item) => item?.departures ? item.departures : " " },
@@ -352,6 +350,7 @@ const DashboardTable = (props) => {
     { label: "Cargo FTK/Cargo ATK", render: (item) => item?.cftk2atk != null ? (isNaN(item.cftk2atk) ? "N/A" : item.cftk2atk + "%") : " " },
     { isSpacer: true },
     { label: "BH", render: (item) => item?.bh ? Math.round(item.bh) : " " },
+    { label: "FT", render: (item) => item?.ft ? Math.round(item.ft) : " " }, 
     { isSpacer: true },
     { isHeader: true, label: "Weighted average stage length per FLGT" },
     { label: "by GCD", render: (item) => item?.departures ? (parseFloat(item.sumOfGcd) / parseFloat(item.departures)).toLocaleString("en-US", { maximumFractionDigits: 0 }) : " " },
@@ -368,7 +367,6 @@ const DashboardTable = (props) => {
     <div className="w-full p-6 space-y-6 relative pb-10">
       
       {/* HEADER & FILTERS */}
-      {/* ⚠️ Added 'relative z-50' here to pull the dropdown context above the table below */}
       <div className="flex flex-col gap-6 relative z-50">
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -401,7 +399,6 @@ const DashboardTable = (props) => {
       </div>
 
       {/* TABLE SECTION */}
-      {/* ⚠️ Added 'z-10' so it sits comfortably below the z-50 header block */}
       <div className="relative z-10 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col min-h-[500px]">
         
         {/* Toolbar */}
