@@ -146,7 +146,7 @@ export default function NetworkTable() {
     const fetchData = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("https://airlinebackend-zfsg.onrender.com/get-data", {
+        const response = await axios.get("https://airlineplan.com/get-data", {
           headers: { "x-access-token": accessToken },
         });
         setNetworkTableData(response.data || []);
@@ -240,7 +240,7 @@ export default function NetworkTable() {
       const accessToken = localStorage.getItem("accessToken");
 
       // Make sure your URL points to your actual API (localhost or render based on your environment)
-      const response = await axios.delete("https://airlinebackend-zfsg.onrender.com/delete", {
+      const response = await axios.delete("https://airlineplan.com/delete", {
         data: { ids: checkedRows }, // This injects the payload into the request body
         headers: { "x-access-token": accessToken }
       });
@@ -272,7 +272,7 @@ export default function NetworkTable() {
 
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.post("https://airlinebackend-zfsg.onrender.com/importUser", formData, {
+      const response = await axios.post("https://airlineplan.com/importUser", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           "x-access-token": accessToken

@@ -166,8 +166,8 @@ const Rotations = () => {
       try {
         const token = localStorage.getItem("accessToken");
         const [varRes, rotRes] = await Promise.all([
-          axios.get("https://airlinebackend-zfsg.onrender.com/listVariants", { headers: { "x-access-token": token } }),
-          axios.get("https://airlinebackend-zfsg.onrender.com/listRotations", { headers: { "x-access-token": token } })
+          axios.get("https://airlineplan.com/listVariants", { headers: { "x-access-token": token } }),
+          axios.get("https://airlineplan.com/listRotations", { headers: { "x-access-token": token } })
         ]);
         setListOfVariant(varRes.data);
         setListOfRotations(rotRes.data);
@@ -205,7 +205,7 @@ const Rotations = () => {
     };
 
     try {
-      const res = await axios.post("https://airlinebackend-zfsg.onrender.com/flightsWoRotations", requestData, {
+      const res = await axios.post("https://airlineplan.com/flightsWoRotations", requestData, {
         headers: { "x-access-token": localStorage.getItem("accessToken") }
       });
       setFlgtsTableData(res.data.data);
@@ -222,7 +222,7 @@ const Rotations = () => {
   const handleRotationChange = async (val) => {
     if (val === "new") {
       try {
-        const res = await axios.get("https://airlinebackend-zfsg.onrender.com/getNextRotationNumber", {
+        const res = await axios.get("https://airlineplan.com/getNextRotationNumber", {
           headers: { "x-access-token": localStorage.getItem("accessToken") }
         });
         setSelectedRotation(res.data.nextRotationNumber);
@@ -232,7 +232,7 @@ const Rotations = () => {
       } catch (e) { console.error(e); }
     } else {
       try {
-        const res = await axios.get(`https://airlinebackend-zfsg.onrender.com/rotationbyid/${val}`, {
+        const res = await axios.get(`https://airlineplan.com/rotationbyid/${val}`, {
           headers: { "x-access-token": localStorage.getItem("accessToken") }
         });
         const { rotationDetails, rotationSummary } = res.data;
@@ -252,7 +252,7 @@ const Rotations = () => {
       return;
     }
     try {
-      await axios.post("https://airlinebackend-zfsg.onrender.com/updateRotationSummary", {
+      await axios.post("https://airlineplan.com/updateRotationSummary", {
         rotationNumber: selectedRotation,
         rotationTag, effFromDate, effToDate, dow, selectedVariant
       }, { headers: { "x-access-token": localStorage.getItem("accessToken") } });
@@ -268,7 +268,7 @@ const Rotations = () => {
     }
     setIsLoading(true);
     try {
-      const res = await axios.post("https://airlinebackend-zfsg.onrender.com/addRotationDetailsFlgtChange", {
+      const res = await axios.post("https://airlineplan.com/addRotationDetailsFlgtChange", {
         rotationNumber: selectedRotation,
         depNumber: rotationDevelopmentTableData.length + 1,
         flightNumber: flight,
@@ -304,7 +304,7 @@ const Rotations = () => {
   const handleDeleteRotation = async () => {
     setIsRotationDeleting(true);
     try {
-      await axios.post("https://airlinebackend-zfsg.onrender.com/deleteCompleteRotation", {
+      await axios.post("https://airlineplan.com/deleteCompleteRotation", {
         rotationNumber: selectedRotation,
         selectedVariant,
         totalDepNumber: rotationDevelopmentTableData.length
@@ -322,12 +322,12 @@ const Rotations = () => {
         let res;
         
         if(!lastObject) {
-             res = await axios.post("https://airlinebackend-zfsg.onrender.com/deleteRotation", {
+             res = await axios.post("https://airlineplan.com/deleteRotation", {
                 rotationNumber: selectedRotation, selectedVariant
              }, { headers: { "x-access-token": localStorage.getItem("accessToken") } });
              if(res.status === 200) setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
         } else {
-            res = await axios.post("https://airlinebackend-zfsg.onrender.com/deletePrevInRotation", {
+            res = await axios.post("https://airlineplan.com/deletePrevInRotation", {
                 rotationNumber: selectedRotation, selectedVariant,
                 depNumber: rotationDevelopmentTableData.length,
                 _id: lastObject._id

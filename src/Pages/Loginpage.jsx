@@ -71,7 +71,7 @@ export default function Loginpage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await fetch('https://airlinebackend-zfsg.onrender.com/user-login', {
+      const response = await fetch('https://airlineplan.com/user-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

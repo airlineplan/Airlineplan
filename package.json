@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "proxy": "https://airlinebackend-zfsg.onrender.com/",
+  "proxy": "https://airlineplan.com/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

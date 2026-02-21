@@ -164,7 +164,7 @@ export default function CopyRow(props) {
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const response = await axios.get("https://airlinebackend-zfsg.onrender.com/get-stationData", {
+        const response = await axios.get("https://airlineplan.com/get-stationData", {
           headers: { "x-access-token": localStorage.getItem("accessToken") },
         });
         if (response.data && response.data.data) {
@@ -177,7 +177,7 @@ export default function CopyRow(props) {
 
     const fetchDropdowns = async () => {
       try {
-        const response = await axios.get("https://airlinebackend-zfsg.onrender.com/dashboard/populateDropDowns", {
+        const response = await axios.get("https://airlineplan.com/dashboard/populateDropDowns", {
           headers: { "x-access-token": localStorage.getItem("accessToken") },
         });
         if (response.data) {
@@ -346,7 +346,7 @@ export default function CopyRow(props) {
   const DataId = props?.checkedRows?.[0];
   const fetchData = async () => {
     try {
-      const response = await axios.get(`https://airlinebackend-zfsg.onrender.com/products/${DataId}`);
+      const response = await axios.get(`https://airlineplan.com/products/${DataId}`);
       const item = response.data;
       setFlight(item.flight || "");
       setDepStn(item.depStn || "");
@@ -388,7 +388,7 @@ export default function CopyRow(props) {
       setLoading(true);
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const response = await axios.post(
-        "https://airlinebackend-zfsg.onrender.com/add-Data",
+        "https://airlineplan.com/add-Data",
         {
           flight, depStn, std, bt, sta, arrStn, variant, effFromDt, effToDt,
           dow, domINTL, userTag1, userTag2, remarks1, timeZone, remarks2,

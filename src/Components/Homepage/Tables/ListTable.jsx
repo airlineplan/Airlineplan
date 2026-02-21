@@ -332,7 +332,7 @@ const ListTable = () => {
     const getDropdownData = async () => {
       try {
         const response = await axios.get(
-          `https://airlinebackend-zfsg.onrender.com/dashboard/populateDropDowns`,
+          `https://airlineplan.com/dashboard/populateDropDowns`,
           { headers: { "x-access-token": localStorage.getItem("accessToken") } }
         );
         if (response.data) {
@@ -361,7 +361,7 @@ const ListTable = () => {
       const accessToken = localStorage.getItem("accessToken");
 
       const response = await axios.post(
-        'https://airlinebackend-zfsg.onrender.com/list-page-data',
+        'https://airlineplan.com/list-page-data',
         filters,
         { headers: { 'x-access-token': accessToken } }
       );

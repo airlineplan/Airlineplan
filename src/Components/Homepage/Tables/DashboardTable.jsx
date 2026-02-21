@@ -191,7 +191,7 @@ const DashboardTable = (props) => {
     const getDropdownData = async () => {
       try {
         const response = await axios.get(
-          `https://airlinebackend-zfsg.onrender.com/dashboard/populateDropDowns`,
+          `https://airlineplan.com/dashboard/populateDropDowns`,
           { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
         );
         
@@ -223,7 +223,7 @@ const DashboardTable = (props) => {
         setSelectedValues(updatedValues); 
       }
   
-      const response = await axios.get('https://airlinebackend-zfsg.onrender.com/dashboard', {
+      const response = await axios.get('https://airlineplan.com/dashboard', {
         params: updatedValues,
         headers: { 'x-access-token': accessToken },
       });

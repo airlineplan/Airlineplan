@@ -53,7 +53,7 @@ export default function Signup() {
     setLoading(true);
     
     try {
-      const response = await fetch('https://airlinebackend-zfsg.onrender.com/user-signup', {
+      const response = await fetch('https://airlineplan.com/user-signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
