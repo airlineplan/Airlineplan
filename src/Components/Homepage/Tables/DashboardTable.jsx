@@ -4,8 +4,8 @@ import * as XLSX from 'xlsx';
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { 
-  Download, ChevronDown, Check, 
+import {
+  Download, ChevronDown, Check,
   BarChart3, RefreshCw
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
@@ -176,12 +176,12 @@ const DashboardTable = (props) => {
   // --- STATE ---
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  const [selectedValues, setSelectedValues] = useState({ 
-    label: singleSelectLabelOptions[2], 
-    periodicity: singleSelectPeriodicityOptions[3] 
+
+  const [selectedValues, setSelectedValues] = useState({
+    label: singleSelectLabelOptions[2],
+    periodicity: singleSelectPeriodicityOptions[3]
   });
-  
+
   const [multiSelectValues, setMultiSelectValues] = useState({
     from: [], to: [], sector: [], variant: [], userTag1: [], userTag2: [],
   });
@@ -194,7 +194,7 @@ const DashboardTable = (props) => {
           `https://airlineplan.com/dashboard/populateDropDowns`,
           { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
         );
-        
+
         if (response.data && typeof response.data === 'object') {
           setMultiSelectValues({
             from: Array.isArray(response.data.from) ? response.data.from : [],
@@ -216,18 +216,18 @@ const DashboardTable = (props) => {
     try {
       setLoading(true);
       const accessToken = localStorage.getItem("accessToken");
-  
+
       let updatedValues = { ...selectedValues };
       if (selected && fieldName) {
         updatedValues = { ...selectedValues, [fieldName]: selected };
-        setSelectedValues(updatedValues); 
+        setSelectedValues(updatedValues);
       }
-  
+
       const response = await axios.get('https://airlineplan.com/dashboard', {
         params: updatedValues,
         headers: { 'x-access-token': accessToken },
       });
-  
+
       if (Array.isArray(response.data)) {
         setData(response.data);
       } else {
@@ -237,15 +237,15 @@ const DashboardTable = (props) => {
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load dashboard data');
-      setData([]); 
+      setData([]);
     } finally {
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
     fetchData();
-  }, []); 
+  }, []);
 
   // --- DOWNLOAD LOGIC ---
   const transformData = () => {
@@ -253,8 +253,8 @@ const DashboardTable = (props) => {
     const propertyMappings = {
       destinations: 'Destinations', departures: 'Departures', seats: 'Seats', pax: 'Pax',
       paxSF: 'Pax SF', paxLF: 'Pax LF', cargoCapT: 'Cargo Ton Capacity', cargoT: 'Cargo Tons',
-      ct2ctc: 'Cargo Tons/Cargo Ton Capacity', cftk2atk: 'Cargo FTK/Cargo ATK', 
-      bh: 'BH', ft: 'FT', 
+      ct2ctc: 'Cargo Tons/Cargo Ton Capacity', cftk2atk: 'Cargo FTK/Cargo ATK',
+      bh: 'BH', fh: 'FH',
       waslgcd: 'Weighted average stage length per FLGT by GCD', waslbh: 'Weighted average stage length per FLGT by BH',
       adu: 'Average Daily Utilisation', asks: 'ASKs (Mn)', rsks: 'RSKs (Mn)',
       cargoAtk: 'Cargo ATKs (Thousands)', cargoRtk: 'Cargo FTKs (Thousands)',
@@ -350,7 +350,7 @@ const DashboardTable = (props) => {
     { label: "Cargo FTK/Cargo ATK", render: (item) => item?.cftk2atk != null ? (isNaN(item.cftk2atk) ? "N/A" : item.cftk2atk + "%") : " " },
     { isSpacer: true },
     { label: "BH", render: (item) => item?.bh ? Math.round(item.bh) : " " },
-    { label: "FT", render: (item) => item?.ft ? Math.round(item.ft) : " " }, 
+    { label: "FH", render: (item) => item?.fh ? Math.round(item.fh).toLocaleString() : " " },
     { isSpacer: true },
     { isHeader: true, label: "Weighted average stage length per FLGT" },
     { label: "by GCD", render: (item) => item?.departures ? (parseFloat(item.sumOfGcd) / parseFloat(item.departures)).toLocaleString("en-US", { maximumFractionDigits: 0 }) : " " },
@@ -365,10 +365,10 @@ const DashboardTable = (props) => {
 
   return (
     <div className="w-full p-6 space-y-6 relative pb-10">
-      
+
       {/* HEADER & FILTERS */}
       <div className="flex flex-col gap-6 relative z-50">
-        
+
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="flex gap-4">
             <SingleSelectDropdown
@@ -400,10 +400,10 @@ const DashboardTable = (props) => {
 
       {/* TABLE SECTION */}
       <div className="relative z-10 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col min-h-[500px]">
-        
+
         {/* Toolbar */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-end">
-          <button 
+          <button
             onClick={downloadDashboardTable}
             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-emerald-500/20 hover:scale-[1.02]"
           >
@@ -436,7 +436,7 @@ const DashboardTable = (props) => {
                   )}
                 </tr>
               </thead>
-              
+
               <tbody className="bg-white/50 dark:bg-slate-900/50">
                 {TABLE_ROWS.map((row, rowIdx) => {
                   if (row.isSpacer) {
@@ -475,7 +475,7 @@ const DashboardTable = (props) => {
           )}
         </div>
       </div>
-      
+
       <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
