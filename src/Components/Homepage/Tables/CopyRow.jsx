@@ -16,7 +16,7 @@ function cn(...inputs) {
 // --- UI COMPONENTS ---
 const Button = ({ children, variant = "primary", className, loading, ...props }) => {
   const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed";
-  
+
   const variants = {
     primary: "bg-gradient-to-r from-indigo-500 to-cyan-500 text-white hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02]",
     ghost: "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800",
@@ -39,7 +39,7 @@ const InputGroup = ({ label, error, children }) => (
     </label>
     {children}
     {error && (
-      <motion.span 
+      <motion.span
         initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
         className="text-xs text-red-500 font-medium leading-tight"
       >
@@ -56,7 +56,7 @@ const ComboboxInput = ({ value, onChange, placeholder, options = [], disabled = 
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef(null);
 
-  const filteredOptions = options.filter(opt => 
+  const filteredOptions = options.filter(opt =>
     opt.label.toLowerCase().includes((value || "").toLowerCase())
   );
 
@@ -85,7 +85,7 @@ const ComboboxInput = ({ value, onChange, placeholder, options = [], disabled = 
       {!disabled && (
         <Search size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
       )}
-      
+
       <AnimatePresence>
         {isOpen && filteredOptions.length > 0 && !disabled && (
           <motion.div
@@ -117,8 +117,8 @@ const ComboboxInput = ({ value, onChange, placeholder, options = [], disabled = 
 export default function CopyRow(props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [stationsList, setStationsList] = useState([]); 
-  const [dropdownData, setDropdownData] = useState({ from: [], to: [] }); 
+  const [stationsList, setStationsList] = useState([]);
+  const [dropdownData, setDropdownData] = useState({ from: [], to: [] });
 
   const [flight, setFlight] = useState("");
   const [depStn, setDepStn] = useState("");
@@ -203,11 +203,11 @@ export default function CopyRow(props) {
       const arrStationConfig = stationsList.find(s => s.stationName === arrStn);
 
       if (depStationConfig?.stdtz && arrStationConfig?.stdtz) {
-        
+
         // Dynamic Helper: Selects STD vs DST based on flight date, then parses it to Minutes
         const getTzMins = (config, flightDateStr) => {
           let tz = config.stdtz;
-          
+
           if (flightDateStr && config.nextDSTStart && config.nextDSTEnd) {
             const fDate = new Date(flightDateStr);
             const dStart = new Date(config.nextDSTStart);
@@ -218,7 +218,7 @@ export default function CopyRow(props) {
               }
             }
           }
-          
+
           if (!tz || !tz.startsWith('UTC')) return 0;
           const sign = tz.includes('-') ? -1 : 1;
           const timePart = tz.replace(/UTC[+-]/, '');
@@ -232,20 +232,20 @@ export default function CopyRow(props) {
 
         const [stdH, stdM] = std.split(':').map(Number);
         const [btH, btM] = bt.split(':').map(Number);
-        
+
         if (isNaN(stdH) || isNaN(btH)) return; // Safety guard
 
         // FORMULA: STA = STD + BT + Diff in TZ (ArrTZ - DepTZ)
         const diffInTzMins = arrTzMins - depTzMins;
         let totalMins = (stdH * 60 + (stdM || 0)) + (btH * 60 + (btM || 0)) + diffInTzMins;
-        
+
         // Wrap around to handle midnight crossovers
-        totalMins = ((totalMins % 1440) + 1440) % 1440; 
+        totalMins = ((totalMins % 1440) + 1440) % 1440;
 
         const staH = Math.floor(totalMins / 60);
         const staM = totalMins % 60;
         const calculatedSTA = `${String(staH).padStart(2, '0')}:${String(staM).padStart(2, '0')}`;
-        
+
         setSta(prev => prev !== calculatedSTA ? calculatedSTA : prev);
       }
     }
@@ -282,7 +282,7 @@ export default function CopyRow(props) {
   };
 
   const handleSTD = (value) => setStd(value);
-  const handleSTA = (value) => setSta(value); 
+  const handleSTA = (value) => setSta(value);
   const handleBT = (event) => setBt(event.target.value);
 
   const handleVariant = (event) => {
@@ -342,6 +342,18 @@ export default function CopyRow(props) {
     else setEffFromDtError("");
   }, [effFromDt]);
 
+  const decimalToHHMM = (decimal) => {
+    if (!decimal) return "";
+
+    const num = parseFloat(decimal);
+    if (isNaN(num)) return decimal;
+
+    const hours = Math.floor(num);
+    const minutes = Math.round((num - hours) * 100);
+
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
+
   // --- API DATA LOGIC ---
   const DataId = props?.checkedRows?.[0];
   const fetchData = async () => {
@@ -351,14 +363,14 @@ export default function CopyRow(props) {
       setFlight(item.flight || "");
       setDepStn(item.depStn || "");
       setStd(item.std || "");
-      setBt(item.bt || "");
+      setBt(decimalToHHMM(item.bt));
       setSta(item.sta || "");
       setArrStn(item.arrStn || "");
       setVariant(item.variant || "");
-      
+
       setEffFromDt(item.effFromDt ? dayjs(item.effFromDt).format("YYYY-MM-DD") : "");
       setEffToDt(item.effToDt ? dayjs(item.effToDt).format("YYYY-MM-DD") : "");
-      
+
       setDow(item.dow || "");
       setDomIntl(item.domINTL ? item.domINTL.toLowerCase() : "");
       setUserTag1(item.userTag1 || "");
@@ -448,7 +460,7 @@ export default function CopyRow(props) {
               onClick={() => { handleClose(); props.setAdd(true); setLoading(false); }}
               className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
             />
-            
+
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -456,12 +468,12 @@ export default function CopyRow(props) {
               onKeyDown={handleKeyDown}
               className="fixed inset-0 m-auto z-50 w-full max-w-5xl h-fit max-h-[90vh] overflow-y-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 custom-scrollbar"
             >
-              
+
               <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
                 <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
                   Copy Row Data
                 </h3>
-                <button 
+                <button
                   onClick={() => { handleClose(); props.setAdd(true); setLoading(false); }}
                   className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
                 >
@@ -470,47 +482,47 @@ export default function CopyRow(props) {
               </div>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="Flight" error={flightError}>
                     <input className={baseInputStyles} value={flight} onChange={handleFlight} placeholder="Flight number" />
                   </InputGroup>
                   <InputGroup label="Dep Stn" error={depStnError}>
-                    <ComboboxInput 
-                      value={depStn} 
-                      onChange={handleDepStn} 
-                      placeholder="Select or Type Dep Station" 
-                      options={dropdownData.from || []} 
+                    <ComboboxInput
+                      value={depStn}
+                      onChange={handleDepStn}
+                      placeholder="Select or Type Dep Station"
+                      options={dropdownData.from || []}
                     />
                   </InputGroup>
                   <InputGroup label="Arr Stn" error={arrStnError}>
-                    <ComboboxInput 
-                      value={arrStn} 
-                      onChange={handleArrStn} 
-                      placeholder="Select or Type Arr Station" 
-                      options={dropdownData.to || []} 
+                    <ComboboxInput
+                      value={arrStn}
+                      onChange={handleArrStn}
+                      placeholder="Select or Type Arr Station"
+                      options={dropdownData.to || []}
                     />
                   </InputGroup>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="STD (LT)">
-                    <ComboboxInput 
-                      value={std} 
-                      onChange={handleSTD} 
-                      placeholder="HH:MM" 
-                      options={timeOptions} 
+                    <ComboboxInput
+                      value={std}
+                      onChange={handleSTD}
+                      placeholder="HH:MM"
+                      options={timeOptions}
                     />
                   </InputGroup>
                   <InputGroup label="BT">
                     <input className={baseInputStyles} required type="time" value={bt} onChange={handleBT} />
                   </InputGroup>
                   <InputGroup label="STA (LT) - Auto Calculated">
-                    <ComboboxInput 
-                      value={sta} 
-                      onChange={handleSTA} 
-                      placeholder="HH:MM" 
-                      options={timeOptions} 
+                    <ComboboxInput
+                      value={sta}
+                      onChange={handleSTA}
+                      placeholder="HH:MM"
+                      options={timeOptions}
                       className="bg-indigo-50/50 dark:bg-indigo-900/20"
                     />
                   </InputGroup>
