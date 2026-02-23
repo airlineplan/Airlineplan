@@ -14,9 +14,8 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-// --- CUSTOM UI COMPONENTS (Replacing React-Select & MUI) ---
+// --- CUSTOM UI COMPONENTS ---
 
-// Custom MultiSelect that behaves exactly like react-select (emits array of objects)
 const MultiSelectDropdown = ({ placeholder, options = [], onChange, selected = [] }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
@@ -88,8 +87,7 @@ const MultiSelectDropdown = ({ placeholder, options = [], onChange, selected = [
   );
 };
 
-// Custom SingleSelect that behaves exactly like react-select (emits value string)
-const SingleSelectDropdown = ({ placeholder, options = [], onChange, value }) => {
+const SingleSelectDropdown = ({ placeholder, options = [], onChange, selected }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -102,11 +100,11 @@ const SingleSelectDropdown = ({ placeholder, options = [], onChange, value }) =>
   }, []);
 
   const handleSelect = (opt) => {
-    if (onChange) onChange(opt.value);
+    if (onChange) onChange(opt); // 🔥 FIX: Pass the entire object back, not just the string
     setIsOpen(false);
   };
 
-  const selectedOption = options.find(o => o.value === value);
+  const safeOptions = Array.isArray(options) ? options : [];
 
   return (
     <div className="relative w-48 lg:w-64" ref={containerRef}>
@@ -121,7 +119,7 @@ const SingleSelectDropdown = ({ placeholder, options = [], onChange, value }) =>
         )}
       >
         <span className="text-slate-700 dark:text-slate-200 font-medium truncate">
-          {selectedOption ? selectedOption.label : "Select..."}
+          {selected ? selected.label : "Select..."}
         </span>
         <ChevronDown size={16} className={cn("text-slate-400 transition-transform", isOpen && "rotate-180")} />
       </button>
@@ -174,9 +172,12 @@ const ConnectionTable = () => {
     from: [], to: [], sector: [], variant: [], userTag1: [], userTag2: [],
   });
 
-  // Filters
-  const [label, setLabel] = useState(singleSelectLabelOptions[2].value); // 'both'
-  const [periodicity, setPeriodicity] = useState(singleSelectPeriodicityOptions[3].value); // 'weekly'
+  // 🔥 FIX: Store the entire object in state, just like DashboardTable.jsx
+  const [selectedValues, setSelectedValues] = useState({ 
+    label: singleSelectLabelOptions[2], 
+    periodicity: singleSelectPeriodicityOptions[3] 
+  });
+
   const [filters, setFilters] = useState({
     from: [], to: [], sector: [], variant: [], userTag1: [], userTag2: []
   });
@@ -202,10 +203,10 @@ const ConnectionTable = () => {
       setLoading(true);
       const accessToken = localStorage.getItem("accessToken");
   
-      // FIX: Matches old frontend by calling /dashboard, passing label/periodicity wrapped in 'value' object
+      // 🔥 FIX: Pass the state objects directly. Axios GET will correctly stringify them.
       const params = {
-        label: { value: label },
-        periodicity: { value: periodicity },
+        label: selectedValues.label,
+        periodicity: selectedValues.periodicity,
         from: filters.from,
         to: filters.to,
         sector: filters.sector,
@@ -228,18 +229,20 @@ const ConnectionTable = () => {
     }
   };
   
-  // Trigger API call when any filter changes
   useEffect(() => {
     fetchData();
-  }, [label, periodicity, filters]);
+  }, [selectedValues, filters]);
 
   const handleFilterChange = (key, selected) => {
     setFilters(prev => ({ ...prev, [key]: selected }));
   };
 
+  const handleSingleSelectChange = (key, selectedOpt) => {
+    setSelectedValues(prev => ({ ...prev, [key]: selectedOpt }));
+  };
+
   // --- RENDER HELPERS ---
   
-  // Exact same date format logic as your old code
   const formatHeaderDate = (inputDate) => {
     if (!inputDate) return " ---------            ";
     const date = new Date(inputDate);
@@ -250,37 +253,33 @@ const ConnectionTable = () => {
     return `${day} ${month} ${year}`;
   };
 
-  // Structured row config to keep JSX clean, matching your exact object keys
   const TABLE_ROWS = [
     { label: "Connecting Flights", dataKey: "connectingFlights" },
     { label: "Seat Capacity on Beyond Flights", dataKey: "seatCapBeyondFlgts" },
     { label: "Seat Capacity on Behind Flights", dataKey: "seatCapBehindFlgts" },
     { label: "Cargo Capacity on Beyond Flights", dataKey: "cargoCapBeyondFlgts" },
-    { label: "Cargo Capacity on Behind Flights", dataKey: "cargoCapBehindFlgts" },
+    { label: "Cargo Capacity on Behind Flights", dataKey: "cargoCapBehindFlgts" }, // Note: You might want to check this key. It was duplicated in your original array.
   ];
 
   return (
     <div className="w-full h-full p-6 space-y-6 bg-slate-50 dark:bg-slate-950 min-h-screen font-sans">
       
       {/* HEADER & FILTERS */}
-      {/* ⚠️ Added 'relative z-50' to keep dropdowns above the table */}
       <div className="flex flex-col gap-6 relative z-50">
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-         
-          
           <div className="flex gap-4">
             <SingleSelectDropdown
               placeholder="Label"
               options={singleSelectLabelOptions}
-              onChange={setLabel}
-              value={label}
+              onChange={(v) => handleSingleSelectChange('label', v)}
+              selected={selectedValues.label}
             />
             <SingleSelectDropdown
               placeholder="Periodicity"
               options={singleSelectPeriodicityOptions}
-              onChange={setPeriodicity}
-              value={periodicity}
+              onChange={(v) => handleSingleSelectChange('periodicity', v)}
+              selected={selectedValues.periodicity}
             />
           </div>
         </div>
@@ -298,7 +297,6 @@ const ConnectionTable = () => {
       </div>
 
       {/* TABLE SECTION */}
-      {/* ⚠️ Added 'z-10' so this block sits under the dropdowns */}
       <div className="relative z-10 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col min-h-[400px]">
         
         {/* Table Content */}
@@ -316,7 +314,7 @@ const ConnectionTable = () => {
                     {/* Empty top-left cell */}
                   </th>
                   
-                  {/* Dynamic Date Columns - Automatically mapping N columns without hardcoding indexes */}
+                  {/* Dynamic Date Columns */}
                   {data.map((col, idx) => (
                     <th key={idx} className="bg-slate-50/90 dark:bg-slate-800/90 border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[120px] text-center text-sm font-bold text-slate-800 dark:text-slate-200">
                       {formatHeaderDate(col?.endDate)}
@@ -338,7 +336,7 @@ const ConnectionTable = () => {
                       {row.label}
                     </td>
                     
-                    {/* Dynamic Data Cells - replacing the hardcoded data[0], data[1], etc. */}
+                    {/* Dynamic Data Cells */}
                     {data.map((colData, colIdx) => (
                       <td key={colIdx} className="p-3 border-r border-b border-slate-200 dark:border-slate-800 text-center text-sm text-slate-600 dark:text-slate-400 tabular-nums font-medium">
                         {colData[row.dataKey] ? colData[row.dataKey] : " "}
