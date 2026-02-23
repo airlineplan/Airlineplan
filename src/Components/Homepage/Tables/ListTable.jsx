@@ -655,7 +655,11 @@ const ListTable = () => {
             <thead>
               <tr>
                 <th className="sticky left-0 z-20 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[250px] shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] text-xs font-bold uppercase text-slate-500">
-                  Month
+                  {filters.periodicity.label === "Annually" ? "Year" : 
+                   filters.periodicity.label === "Quarterly" ? "Quarter" : 
+                   filters.periodicity.label === "Monthly" ? "Month" : 
+                   filters.periodicity.label === "Weekly" ? "Week" : 
+                   "Day"}
                 </th>
                 {tableColumns.map((col, idx) => (
                   <th key={idx} className="bg-slate-50/90 dark:bg-slate-800/90 border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[100px] text-center text-sm font-bold text-slate-800 dark:text-slate-200">
