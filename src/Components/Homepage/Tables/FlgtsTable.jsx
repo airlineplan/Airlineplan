@@ -5,8 +5,8 @@ import debounce from "lodash.debounce";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { 
-  Download, ArrowUp, ArrowDown, Search, 
+import {
+  Download, ArrowUp, ArrowDown, Search,
   Plane, Calendar, ChevronLeft, ChevronRight, Loader2
 } from "lucide-react";
 
@@ -23,11 +23,11 @@ const COLUMNS_CONFIG = [
   { key: 'depStn', label: 'Dep Stn', minWidth: '80px' },
   { key: 'std', label: 'STD (LT)', minWidth: '80px' },
   { key: 'bt', label: 'BT', minWidth: '80px' },
-  { key: 'ft', label: 'FT', minWidth: '80px', isFloat: true }, // NEW: FT added here
+  { key: 'fh', label: 'FT', minWidth: '80px', isFloat: true, masterOnly: true },
   { key: 'sta', label: 'STA (LT)', minWidth: '80px' },
   { key: 'arrStn', label: 'Arr Stn', minWidth: '80px' },
   { key: 'sector', label: 'Sector', minWidth: '100px', masterOnly: true },
-  { key: 'acftType', label: 'ACFT', minWidth: '90px', masterOnly: true }, 
+  { key: 'acftType', label: 'ACFT', minWidth: '90px', masterOnly: true },
   { key: 'bh', label: 'BH', minWidth: '80px', masterOnly: true, isFloat: true }, // NEW: BH added here
   { key: 'fh', label: 'FH', minWidth: '80px', masterOnly: true, isFloat: true },
   { key: 'variant', label: 'Variant', minWidth: '100px' },
@@ -67,7 +67,7 @@ const FlgtsTable = ({ isMaster = true }) => {
   const [flgtsTableData, setFlgtsTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
   const [totalFlights, setTotalFlights] = useState(0);
@@ -84,18 +84,18 @@ const FlgtsTable = ({ isMaster = true }) => {
       try {
         const accessToken = localStorage.getItem("accessToken");
         if (!accessToken) throw new Error("No access token");
-        
+
         const activeFilters = Object.fromEntries(
           Object.entries(currentFilters).filter(([_, v]) => v !== "")
         );
         const requestBody = { ...activeFilters, page, limit };
-        
+
         const response = await axios.post(
           "https://airlineplan.com/searchflights",
           requestBody,
           { headers: { "x-access-token": accessToken, "Content-Type": "application/json" } }
         );
-        
+
         setFlgtsTableData(response.data.data || []);
         setTotalFlights(response.data.total || 0);
       } catch (error) {
@@ -114,7 +114,7 @@ const FlgtsTable = ({ isMaster = true }) => {
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
-    setCurrentPage(1); 
+    setCurrentPage(1);
   };
 
   const handleSort = (key) => {
@@ -132,7 +132,7 @@ const FlgtsTable = ({ isMaster = true }) => {
         responseType: "blob",
         headers: { "x-access-token": accessToken },
       });
-      
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -152,7 +152,7 @@ const FlgtsTable = ({ isMaster = true }) => {
     return [...flgtsTableData].sort((a, b) => {
       const colA = a[sortConfig.key] || "";
       const colB = b[sortConfig.key] || "";
-      
+
       if (sortConfig.direction === "Up") {
         return String(colA).localeCompare(String(colB));
       } else {
@@ -164,7 +164,7 @@ const FlgtsTable = ({ isMaster = true }) => {
   const renderCell = (row, col) => {
     const val = row[col.key];
     if (col.isDate) return moment(val).format("DD-MMM-YY");
-    if (col.isFloat) return val ? parseFloat(val).toFixed(2) : ""; 
+    if (col.isFloat) return val ? parseFloat(val).toFixed(2) : "";
     if (col.isInt) return val ? parseInt(val) : "";
     return val;
   };
@@ -185,7 +185,7 @@ const FlgtsTable = ({ isMaster = true }) => {
           </button>
         </div>
       )}
-      
+
       <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col h-[70vh]">
         <div className="flex-1 overflow-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
@@ -195,26 +195,26 @@ const FlgtsTable = ({ isMaster = true }) => {
                   #
                 </th>
                 {visibleColumns.map((col) => (
-                  <th 
-                    key={col.key} 
+                  <th
+                    key={col.key}
                     className="p-3 text-xs font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700"
                     style={{ minWidth: col.minWidth }}
                   >
                     <div className="flex flex-col gap-1">
-                      <div 
+                      <div
                         className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                         onClick={() => handleSort(col.key)}
                       >
                         {col.label}
                         {sortConfig.key === col.key ? (
-                          sortConfig.direction === "Up" ? <ArrowUp size={12}/> : <ArrowDown size={12}/> 
+                          sortConfig.direction === "Up" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
                         ) : (
-                          <ArrowUp size={12} className="opacity-0 group-hover:opacity-30"/>
+                          <ArrowUp size={12} className="opacity-0 group-hover:opacity-30" />
                         )}
                       </div>
-                      <TableInput 
+                      <TableInput
                         name={col.key}
-                        value={filters[col.key]} 
+                        value={filters[col.key]}
                         onChange={handleFilterChange}
                         placeholder="Filter..."
                       />
@@ -223,7 +223,7 @@ const FlgtsTable = ({ isMaster = true }) => {
                 ))}
               </tr>
             </thead>
-            
+
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {loading && flgtsTableData.length === 0 ? (
                 <tr>
@@ -265,12 +265,12 @@ const FlgtsTable = ({ isMaster = true }) => {
             </tbody>
           </table>
         </div>
-        
+
         <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/80 dark:bg-slate-900/80 flex items-center justify-between">
           <div className="text-xs text-slate-500 dark:text-slate-400">
             Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, totalFlights)} of {totalFlights} flights
           </div>
-          
+
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}

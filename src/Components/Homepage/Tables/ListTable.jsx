@@ -67,7 +67,7 @@ const getPeriodSortKey = (dateStr, periodicity) => {
 
     case "weekly": {
       // Week ending Sunday
-      const dayOfWeek = d.getDay(); // 0 = Sunday
+      const dayOfWeek = d.getDay();
       const diffToSunday = 7 - dayOfWeek;
       const weekEnd = new Date(d);
       weekEnd.setDate(d.getDate() + (dayOfWeek === 0 ? 0 : diffToSunday));
@@ -90,44 +90,15 @@ const getPeriodSortKey = (dateStr, periodicity) => {
 };
 
 // Formats the YYYY-MM-DD sort key into display headers like "28-Feb-26"
-const formatPeriodKey = (sortKey, periodicity) => {
-  if (sortKey === "Unknown") return sortKey;
+const formatHeaderDate = (inputDate) => {
+  const date = new Date(inputDate);
+  if (isNaN(date)) return " --------- ";
 
-  const d = new Date(sortKey);
-  if (isNaN(d.getTime())) return sortKey;
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date);
+  const year = String(date.getFullYear()).slice(-2);
 
-  const months = [
-    "Jan","Feb","Mar","Apr","May","Jun",
-    "Jul","Aug","Sep","Oct","Nov","Dec"
-  ];
-
-  const yy = String(d.getFullYear()).slice(-2);
-
-  if (periodicity === "annually") {
-    return d.getFullYear().toString();
-  }
-
-  if (periodicity === "quarterly") {
-    return `Q${Math.ceil((d.getMonth() + 1) / 3)}-${yy}`;
-  }
-
-  if (periodicity === "weekly") {
-    // Calculate ISO week number
-    const tempDate = new Date(d);
-    tempDate.setHours(0, 0, 0, 0);
-
-    tempDate.setDate(tempDate.getDate() + 4 - (tempDate.getDay() || 7));
-    const yearStart = new Date(tempDate.getFullYear(), 0, 1);
-    const weekNo = Math.ceil(
-      ((tempDate - yearStart) / 86400000 + 1) / 7
-    );
-
-    return `W${String(weekNo).padStart(2, "0")}-${yy}`;
-  }
-
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mmm = months[d.getMonth()];
-  return `${dd}-${mmm}-${yy}`;
+  return `${day} ${month} ${year}`;
 };
 
 // --- DROPDOWN COMPONENTS ---
@@ -267,10 +238,10 @@ const SingleSelectDropdown = ({ placeholder, options = [], onChange, selected })
 
 const LABEL_OPTIONS = [{ label: "Dom", value: "dom" }, { label: "INTL", value: "intl" }, { label: "Both", value: "both" }];
 const PERIODICITY_OPTIONS = [
-  { label: "Annually", value: "annually" },
+  { label: "Annual", value: "annually" },
   { label: "Quarterly", value: "quarterly" },
   { label: "Monthly", value: "monthly" },
-  { label: "Weekly", value: "weekly" },  
+  { label: "Weekly", value: "weekly" },
   { label: "Daily", value: "daily" }
 ];
 
@@ -415,11 +386,11 @@ const ListTable = () => {
           val = rawVal;
         }
         else if (typeof rawVal === "string") {
-            if (rawVal.includes(":")) {
-                val = parseDurationToDecimal(rawVal);
-            } else {
-                val = parseFloat(rawVal.replace(/,/g, "")) || 0;
-            }
+          if (rawVal.includes(":")) {
+            val = parseDurationToDecimal(rawVal);
+          } else {
+            val = parseFloat(rawVal.replace(/,/g, "")) || 0;
+          }
         }
         else {
           val = 0;
@@ -529,11 +500,11 @@ const ListTable = () => {
     // Calculate Grand Total from Level 0 items
     const grandTotals = getZeroArray();
     finalRows.forEach(row => {
-        if (row.level === 0 && !row.isTotalRow) {
-            row.data.forEach((val, idx) => {
-                grandTotals[idx] += val;
-            });
-        }
+      if (row.level === 0 && !row.isTotalRow) {
+        row.data.forEach((val, idx) => {
+          grandTotals[idx] += val;
+        });
+      }
     });
 
     // Format all rows
@@ -548,13 +519,13 @@ const ListTable = () => {
 
     // Append Grand Total
     formattedRows.unshift({
-        id: "grand-total",
-        type: "Grand Total",
-        label: "Grand Total",
-        level: 0,
-        data: grandTotals.map(val => isDecimalMetric ? Number(val.toFixed(2)) : Math.round(val)),
-        isTotalRow: true,
-        isGrandTotal: true // Custom flag for styling
+      id: "grand-total",
+      type: "Grand Total",
+      label: "Grand Total",
+      level: 0,
+      data: grandTotals.map(val => isDecimalMetric ? Number(val.toFixed(2)) : Math.round(val)),
+      isTotalRow: true,
+      isGrandTotal: true // Custom flag for styling
     });
 
     return {
@@ -689,7 +660,7 @@ const ListTable = () => {
                 {tableColumns.map((col, idx) => (
                   <th key={idx} className="bg-slate-50/90 dark:bg-slate-800/90 border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[100px] text-center text-sm font-bold text-slate-800 dark:text-slate-200">
                     {/* Format the key directly on render */}
-                    {formatPeriodKey(col, filters.periodicity.value)}
+                    {formatHeaderDate(col)}
                   </th>
                 ))}
               </tr>
@@ -697,9 +668,9 @@ const ListTable = () => {
             <tbody className="bg-white/50 dark:bg-slate-900/50">
               {tableData.map((row) => (
                 <tr key={row.id} className={cn(
-                    "group transition-colors", 
-                    row.isTotalRow ? "bg-slate-100 dark:bg-slate-800 font-semibold" : "hover:bg-indigo-50/50 dark:hover:bg-slate-800/30",
-                    row.isGrandTotal && "bg-emerald-50 dark:bg-emerald-900/20 border-t-2 border-emerald-500/30"
+                  "group transition-colors",
+                  row.isTotalRow ? "bg-slate-100 dark:bg-slate-800 font-semibold" : "hover:bg-indigo-50/50 dark:hover:bg-slate-800/30",
+                  row.isGrandTotal && "bg-emerald-50 dark:bg-emerald-900/20 border-t-2 border-emerald-500/30"
                 )}>
                   <td className={cn(
                     "sticky left-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-r border-b border-slate-200 dark:border-slate-800 p-3 text-sm shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)]",
