@@ -7,7 +7,7 @@ import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
   Download, ArrowUp, ArrowDown, Search,
-  Plane, Calendar, ChevronLeft, ChevronRight, Loader2
+  ChevronLeft, ChevronRight, Loader2
 } from "lucide-react";
 
 // --- UTILITIES ---
@@ -16,36 +16,38 @@ function cn(...inputs) {
 }
 
 // --- CONFIGURATION ---
+// Notice the added `id` fields to guarantee unique React Keys, 
+// and `formatAsTime` added to the FT column.
 const COLUMNS_CONFIG = [
-  { key: 'date', label: 'Date', minWidth: '100px', isDate: true },
-  { key: 'day', label: 'Day', minWidth: '80px' },
-  { key: 'flight', label: 'Flight #', minWidth: '100px' },
-  { key: 'depStn', label: 'Dep Stn', minWidth: '80px' },
-  { key: 'std', label: 'STD (LT)', minWidth: '80px' },
-  { key: 'bt', label: 'BT', minWidth: '80px' },
-  { key: 'fh', label: 'FT', minWidth: '80px', isFloat: true, masterOnly: true },
-  { key: 'sta', label: 'STA (LT)', minWidth: '80px' },
-  { key: 'arrStn', label: 'Arr Stn', minWidth: '80px' },
-  { key: 'sector', label: 'Sector', minWidth: '100px', masterOnly: true },
-  { key: 'acftType', label: 'ACFT', minWidth: '90px', masterOnly: true },
-  { key: 'bh', label: 'BH', minWidth: '80px', masterOnly: true, isFloat: true }, // NEW: BH added here
-  { key: 'fh', label: 'FH', minWidth: '80px', masterOnly: true, isFloat: true },
-  { key: 'variant', label: 'Variant', minWidth: '100px' },
-  { key: 'seats', label: 'Seats', minWidth: '80px', masterOnly: true },
-  { key: 'CargoCapT', label: 'Cargo Cap', minWidth: '100px', masterOnly: true, isFloat: true },
-  { key: 'dist', label: 'Dist', minWidth: '80px', masterOnly: true },
-  { key: 'pax', label: 'Pax', minWidth: '80px', masterOnly: true, isInt: true },
-  { key: 'CargoT', label: 'Cargo T', minWidth: '100px', masterOnly: true, isFloat: true },
-  { key: 'ask', label: 'ASK', minWidth: '90px', masterOnly: true, isInt: true },
-  { key: 'rsk', label: 'RSK', minWidth: '90px', masterOnly: true, isInt: true },
-  { key: 'cargoAtk', label: 'Cargo ATK', minWidth: '100px', masterOnly: true, isInt: true },
-  { key: 'cargoRtk', label: 'Cargo RTK', minWidth: '100px', masterOnly: true, isInt: true },
-  { key: 'domIntl', label: 'Dom/Intl', minWidth: '90px', masterOnly: true },
-  { key: 'userTag1', label: 'User Tag 1', minWidth: '120px', masterOnly: true },
-  { key: 'userTag2', label: 'User Tag 2', minWidth: '120px', masterOnly: true },
-  { key: 'remarks1', label: 'Remarks 1', minWidth: '150px', masterOnly: true },
-  { key: 'remarks2', label: 'Remarks 2', minWidth: '150px', masterOnly: true },
-  { key: 'rotationNumber', label: 'Rotation #', minWidth: '100px', masterOnly: true },
+  { id: 'date', key: 'date', label: 'Date', minWidth: '100px', isDate: true },
+  { id: 'day', key: 'day', label: 'Day', minWidth: '80px' },
+  { id: 'flight', key: 'flight', label: 'Flight #', minWidth: '100px' },
+  { id: 'depStn', key: 'depStn', label: 'Dep Stn', minWidth: '80px' },
+  { id: 'std', key: 'std', label: 'STD (LT)', minWidth: '80px' },
+  { id: 'bt', key: 'bt', label: 'BT', minWidth: '80px' },
+  { id: 'ft', key: 'fh', label: 'FT', minWidth: '80px', formatAsTime: true, masterOnly: true }, // FT configuration
+  { id: 'sta', key: 'sta', label: 'STA (LT)', minWidth: '80px' },
+  { id: 'arrStn', key: 'arrStn', label: 'Arr Stn', minWidth: '80px' },
+  { id: 'sector', key: 'sector', label: 'Sector', minWidth: '100px', masterOnly: true },
+  { id: 'acftType', key: 'acftType', label: 'ACFT', minWidth: '90px', masterOnly: true },
+  { id: 'bh', key: 'bh', label: 'BH', minWidth: '80px', masterOnly: true, isFloat: true },
+  { id: 'fh', key: 'fh', label: 'FH', minWidth: '80px', masterOnly: true, isFloat: true }, // FH configuration
+  { id: 'variant', key: 'variant', label: 'Variant', minWidth: '100px' },
+  { id: 'seats', key: 'seats', label: 'Seats', minWidth: '80px', masterOnly: true },
+  { id: 'CargoCapT', key: 'CargoCapT', label: 'Cargo Cap', minWidth: '100px', masterOnly: true, isFloat: true },
+  { id: 'dist', key: 'dist', label: 'Dist', minWidth: '80px', masterOnly: true },
+  { id: 'pax', key: 'pax', label: 'Pax', minWidth: '80px', masterOnly: true, isInt: true },
+  { id: 'CargoT', key: 'CargoT', label: 'Cargo T', minWidth: '100px', masterOnly: true, isFloat: true },
+  { id: 'ask', key: 'ask', label: 'ASK', minWidth: '90px', masterOnly: true, isInt: true },
+  { id: 'rsk', key: 'rsk', label: 'RSK', minWidth: '90px', masterOnly: true, isInt: true },
+  { id: 'cargoAtk', key: 'cargoAtk', label: 'Cargo ATK', minWidth: '100px', masterOnly: true, isInt: true },
+  { id: 'cargoRtk', key: 'cargoRtk', label: 'Cargo RTK', minWidth: '100px', masterOnly: true, isInt: true },
+  { id: 'domIntl', key: 'domIntl', label: 'Dom/Intl', minWidth: '90px', masterOnly: true },
+  { id: 'userTag1', key: 'userTag1', label: 'User Tag 1', minWidth: '120px', masterOnly: true },
+  { id: 'userTag2', key: 'userTag2', label: 'User Tag 2', minWidth: '120px', masterOnly: true },
+  { id: 'remarks1', key: 'remarks1', label: 'Remarks 1', minWidth: '150px', masterOnly: true },
+  { id: 'remarks2', key: 'remarks2', label: 'Remarks 2', minWidth: '150px', masterOnly: true },
+  { id: 'rotationNumber', key: 'rotationNumber', label: 'Rotation #', minWidth: '100px', masterOnly: true },
 ];
 
 // --- COMPONENTS ---
@@ -150,9 +152,18 @@ const FlgtsTable = ({ isMaster = true }) => {
   const sortedData = useMemo(() => {
     if (!sortConfig.key) return flgtsTableData;
     return [...flgtsTableData].sort((a, b) => {
-      const colA = a[sortConfig.key] || "";
-      const colB = b[sortConfig.key] || "";
+      let colA = a[sortConfig.key];
+      let colB = b[sortConfig.key];
 
+      if (colA === null || colA === undefined) colA = "";
+      if (colB === null || colB === undefined) colB = "";
+
+      // Fix: Handle Number Sorting Properly
+      if (typeof colA === 'number' && typeof colB === 'number') {
+        return sortConfig.direction === "Up" ? colA - colB : colB - colA;
+      }
+
+      // Fallback for strings
       if (sortConfig.direction === "Up") {
         return String(colA).localeCompare(String(colB));
       } else {
@@ -163,9 +174,31 @@ const FlgtsTable = ({ isMaster = true }) => {
 
   const renderCell = (row, col) => {
     const val = row[col.key];
+    
+    // Ignore empty/null cells
+    if (val === undefined || val === null || val === "") return "";
+
     if (col.isDate) return moment(val).format("DD-MMM-YY");
-    if (col.isFloat) return val ? parseFloat(val).toFixed(2) : "";
-    if (col.isInt) return val ? parseInt(val) : "";
+    
+    // Fix: Convert decimal hours (e.g. 1.5) to HH:MM (e.g. 1:30) for FT
+    if (col.formatAsTime) {
+      const floatVal = parseFloat(val);
+      if (isNaN(floatVal)) return val;
+      
+      let hours = Math.trunc(floatVal);
+      let mins = Math.round((floatVal - hours) * 60);
+      
+      // Handle edge case where rounding pushes minutes to 60
+      if (mins === 60) {
+          hours += 1;
+          mins = 0;
+      }
+      return `${hours}:${mins.toString().padStart(2, '0')}`;
+    }
+
+    if (col.isFloat) return parseFloat(val).toFixed(2);
+    if (col.isInt) return parseInt(val, 10);
+    
     return val;
   };
 
@@ -196,7 +229,7 @@ const FlgtsTable = ({ isMaster = true }) => {
                 </th>
                 {visibleColumns.map((col) => (
                   <th
-                    key={col.key}
+                    key={col.id} // Fix: Used col.id instead of col.key to prevent React loop conflicts
                     className="p-3 text-xs font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700"
                     style={{ minWidth: col.minWidth }}
                   >
@@ -213,7 +246,7 @@ const FlgtsTable = ({ isMaster = true }) => {
                         )}
                       </div>
                       <TableInput
-                        name={col.key}
+                        name={col.key} // Maintains filter bindings to the correct DB schema field
                         value={filters[col.key]}
                         onChange={handleFilterChange}
                         placeholder="Filter..."
@@ -254,7 +287,7 @@ const FlgtsTable = ({ isMaster = true }) => {
                         {(currentPage - 1) * rowsPerPage + index + 1}
                       </td>
                       {visibleColumns.map((col) => (
-                        <td key={col.key} className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                        <td key={col.id} className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">
                           {renderCell(row, col)}
                         </td>
                       ))}
