@@ -215,7 +215,7 @@ const ConnectionTable = () => {
         userTag2: filters.userTag2
       };
   
-      const response = await axios.get('https://airlineplan.com/dashboard', {
+      const response = await axios.get('https://airlineplan.com/createConnections', {
         params,
         headers: { 'x-access-token': accessToken },
       });
