@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge";
 import {
   LogOut, Plane, Network, Map,
   RotateCw, LayoutDashboard, Link2,
-  RadioTower, Globe, TrendingUp, List
+  RadioTower, Globe, TrendingUp, List, Eye // <-- Added 'Eye' icon for View tab
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -22,6 +22,7 @@ import StationsTable from "./StationsTable";
 import Rotations from "./Rotations";
 import ListTable from "./ListTable";
 import ThemeToggle from "../ThemeToggle"; 
+import ViewPage from "./ViewPage";  // <-- Added import for your new View component
 
 // Ensure this import matches your actual Route Economics component path/name
 import AircraftRoute from "../../../Pages/AircraftRoute";
@@ -32,16 +33,18 @@ function cn(...inputs) {
 }
 
 // --- CONSTANTS ---
+// Shifted the IDs down by 1 starting from Dashboard to fit View at id: 5
 const TABS = [
   { id: 0, label: "Network", icon: Network, component: NetworkTable },
   { id: 1, label: "Sectors", icon: Map, component: SectorsTable },
   { id: 2, label: "Stations", icon: RadioTower, component: StationsTable },
   { id: 3, label: "Rotations", icon: RotateCw, component: Rotations },
   { id: 4, label: "FLGTs", icon: Plane, component: FlgtsTable },
-  { id: 5, label: "Dashboard", icon: LayoutDashboard, component: DashboardTable },
-  { id: 6, label: "List", icon: List, component: ListTable },
-  { id: 7, label: "Connections", icon: Link2, component: ConnectionTable },
-  { id: 8, label: "Route Economics", icon: TrendingUp, component: AircraftRoute },
+  { id: 5, label: "View", icon: Eye, component: ViewPage }, // <-- NEW TAB
+  { id: 6, label: "Dashboard", icon: LayoutDashboard, component: DashboardTable },
+  { id: 7, label: "List", icon: List, component: ListTable },
+  { id: 8, label: "Connections", icon: Link2, component: ConnectionTable },
+  { id: 9, label: "Route Economics", icon: TrendingUp, component: AircraftRoute },
 ];
 
 // --- COMPONENTS ---
