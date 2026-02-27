@@ -56,7 +56,7 @@ const baseInputStyles = "w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/
 
 // --- MAIN COMPONENT ---
 const UpdatePopUp = (props) => {
-  // --- STATE (Preserved Exactly) ---
+  // --- STATE ---
   const [openUpdate, setOpenUpdate] = useState(false);
   const [product, setProduct] = useState("");
 
@@ -95,7 +95,7 @@ const UpdatePopUp = (props) => {
   const DataId = props.checkedRows?.[0];
   const productId = props.checkedRows;
 
-  // --- HANDLERS (Preserved Exactly) ---
+  // --- HANDLERS ---
   const handleUpdateOpen = () => {
     setOpenUpdate(true);
     setFlightError(null);
@@ -133,7 +133,7 @@ const UpdatePopUp = (props) => {
 
   const handleSTD = (event) => setStd(event.target.value);
   const handleBT = (event) => setBt(event.target.value);
-  const handleSTA = (event) => setSta(event.target.value);
+  const handleSTA = (event) => setSta(event.target.value); // Manual override is possible via this handler
 
   const handleArrStn = (event) => {
     const value = event.target.value;
@@ -208,7 +208,33 @@ const UpdatePopUp = (props) => {
     }
   };
 
-  // Required Field logic preserved
+  // --- AUTO CALCULATION LOGIC FOR STA ---
+  useEffect(() => {
+    if (std && bt) {
+      // Split time strings into hours and minutes
+      const [stdHours, stdMinutes] = std.split(":").map(Number);
+      const [btHours, btMinutes] = bt.split(":").map(Number);
+
+      if (!isNaN(stdHours) && !isNaN(stdMinutes) && !isNaN(btHours) && !isNaN(btMinutes)) {
+        // Calculate total minutes and rollover hours
+        let totalMinutes = stdMinutes + btMinutes;
+        let extraHours = Math.floor(totalMinutes / 60);
+        let finalMinutes = totalMinutes % 60;
+
+        // Calculate total hours and handle midnight rollover (24-hour format)
+        let totalHours = stdHours + btHours + extraHours;
+        let finalHours = totalHours % 24;
+
+        // Pad with zeros to maintain "HH:mm" structure expected by type="time"
+        const formattedHours = String(finalHours).padStart(2, "0");
+        const formattedMinutes = String(finalMinutes).padStart(2, "0");
+
+        setSta(`${formattedHours}:${formattedMinutes}`);
+      }
+    }
+  }, [std, bt]); // Runs whenever STD or BT changes
+
+  // Required Field logic
   useEffect(() => {
     if (!effToDt && !isBulkUpdate) {
       setEffToDtError("This field is required.");
@@ -257,7 +283,7 @@ const UpdatePopUp = (props) => {
     }
   };
 
-  // Helper Functions Preserved Exactly
+  // Helper Functions
   function isValidProductData(productData) {
     for (const key in productData) {
       if (productData.hasOwnProperty(key) && (productData[key] !== '' && productData[key] !== null && productData[key] !== undefined)) {
@@ -275,7 +301,7 @@ const UpdatePopUp = (props) => {
     }
   }
 
-  // Submit Handler Preserved Exactly
+  // Submit Handler
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!effFromDt && !isBulkUpdate) {
@@ -426,6 +452,7 @@ const UpdatePopUp = (props) => {
                     <input className={baseInputStyles} required={!isBulkUpdate} type="time" value={bt} onChange={handleBT} />
                   </InputGroup>
                   <InputGroup label="STA (LT)">
+                    {/* Value is tied to state, meaning it can be over-written by handleSTA, but also updated by useEffect */}
                     <input className={baseInputStyles} type="time" value={sta} onChange={handleSTA} />
                   </InputGroup>
                 </div>

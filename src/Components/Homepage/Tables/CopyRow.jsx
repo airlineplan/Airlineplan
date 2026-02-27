@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import { motion, AnimatePresence } from "framer-motion";
@@ -117,7 +117,6 @@ const ComboboxInput = ({ value, onChange, placeholder, options = [], disabled = 
 export default function CopyRow(props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [stationsList, setStationsList] = useState([]);
   const [dropdownData, setDropdownData] = useState({ from: [], to: [] });
 
   const [flight, setFlight] = useState("");
@@ -148,33 +147,8 @@ export default function CopyRow(props) {
   const [remarks1Error, setRemarks1Error] = useState("");
   const [remarks2Error, setRemarks2Error] = useState("");
 
-  const timeOptions = useMemo(() => {
-    const times = [];
-    for (let h = 0; h < 24; h++) {
-      for (let m = 0; m < 60; m += 15) {
-        const hh = String(h).padStart(2, '0');
-        const mm = String(m).padStart(2, '0');
-        times.push({ label: `${hh}:${mm}`, value: `${hh}:${mm}` });
-      }
-    }
-    return times;
-  }, []);
-
-  // --- API: Fetch Stations & Dropdowns ---
+  // --- API: Fetch Dropdowns ---
   useEffect(() => {
-    const fetchStations = async () => {
-      try {
-        const response = await axios.get("https://airlineplan.com/get-stationData", {
-          headers: { "x-access-token": localStorage.getItem("accessToken") },
-        });
-        if (response.data && response.data.data) {
-          setStationsList(response.data.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch stations list", error);
-      }
-    };
-
     const fetchDropdowns = async () => {
       try {
         const response = await axios.get("https://airlineplan.com/dashboard/populateDropDowns", {
@@ -192,65 +166,30 @@ export default function CopyRow(props) {
       }
     };
 
-    fetchStations();
     fetchDropdowns();
   }, []);
 
-  // --- DST-AWARE AUTO-CALCULATE STA ENGINE ---
+  // --- AUTO CALCULATION LOGIC FOR STA ---
   useEffect(() => {
-    if (std && bt && depStn && arrStn && stationsList.length > 0) {
-      const depStationConfig = stationsList.find(s => s.stationName === depStn);
-      const arrStationConfig = stationsList.find(s => s.stationName === arrStn);
+    if (std && bt) {
+      const [stdHours, stdMinutes] = std.split(":").map(Number);
+      const [btHours, btMinutes] = bt.split(":").map(Number);
 
-      if (depStationConfig?.stdtz && arrStationConfig?.stdtz) {
+      if (!isNaN(stdHours) && !isNaN(stdMinutes) && !isNaN(btHours) && !isNaN(btMinutes)) {
+        let totalMinutes = stdMinutes + btMinutes;
+        let extraHours = Math.floor(totalMinutes / 60);
+        let finalMinutes = totalMinutes % 60;
 
-        // Dynamic Helper: Selects STD vs DST based on flight date, then parses it to Minutes
-        const getTzMins = (config, flightDateStr) => {
-          let tz = config.stdtz;
+        let totalHours = stdHours + btHours + extraHours;
+        let finalHours = totalHours % 24;
 
-          if (flightDateStr && config.nextDSTStart && config.nextDSTEnd) {
-            const fDate = new Date(flightDateStr);
-            const dStart = new Date(config.nextDSTStart);
-            const dEnd = new Date(config.nextDSTEnd);
-            if (!isNaN(fDate) && !isNaN(dStart) && !isNaN(dEnd)) {
-              if (fDate >= dStart && fDate <= dEnd) {
-                tz = config.dsttz || config.stdtz;
-              }
-            }
-          }
+        const formattedHours = String(finalHours).padStart(2, "0");
+        const formattedMinutes = String(finalMinutes).padStart(2, "0");
 
-          if (!tz || !tz.startsWith('UTC')) return 0;
-          const sign = tz.includes('-') ? -1 : 1;
-          const timePart = tz.replace(/UTC[+-]/, '');
-          if (!timePart) return 0;
-          const [hours, minutes] = timePart.split(':').map(Number);
-          return sign * ((hours * 60) + (minutes || 0));
-        };
-
-        const depTzMins = getTzMins(depStationConfig, effFromDt);
-        const arrTzMins = getTzMins(arrStationConfig, effFromDt);
-
-        const [stdH, stdM] = std.split(':').map(Number);
-        const [btH, btM] = bt.split(':').map(Number);
-
-        if (isNaN(stdH) || isNaN(btH)) return; // Safety guard
-
-        // FORMULA: STA = STD + BT + Diff in TZ (ArrTZ - DepTZ)
-        const diffInTzMins = arrTzMins - depTzMins;
-        let totalMins = (stdH * 60 + (stdM || 0)) + (btH * 60 + (btM || 0)) + diffInTzMins;
-
-        // Wrap around to handle midnight crossovers
-        totalMins = ((totalMins % 1440) + 1440) % 1440;
-
-        const staH = Math.floor(totalMins / 60);
-        const staM = totalMins % 60;
-        const calculatedSTA = `${String(staH).padStart(2, '0')}:${String(staM).padStart(2, '0')}`;
-
-        setSta(prev => prev !== calculatedSTA ? calculatedSTA : prev);
+        setSta(`${formattedHours}:${formattedMinutes}`);
       }
     }
-  }, [std, bt, depStn, arrStn, effFromDt, stationsList]);
-
+  }, [std, bt]);
 
   // --- HANDLERS ---
   const handleClickOpen = () => {
@@ -281,8 +220,9 @@ export default function CopyRow(props) {
     else seArrStnError("Arr Stn must be 4 characters long");
   };
 
-  const handleSTD = (value) => setStd(value);
-  const handleSTA = (value) => setSta(value);
+  // Updated handlers to extract values from native input events
+  const handleSTD = (event) => setStd(event.target.value);
+  const handleSTA = (event) => setSta(event.target.value);
   const handleBT = (event) => setBt(event.target.value);
 
   const handleVariant = (event) => {
@@ -507,24 +447,13 @@ export default function CopyRow(props) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="STD (LT)">
-                    <ComboboxInput
-                      value={std}
-                      onChange={handleSTD}
-                      placeholder="HH:MM"
-                      options={timeOptions}
-                    />
+                     <input className={baseInputStyles} required type="time" value={std} onChange={handleSTD} />
                   </InputGroup>
                   <InputGroup label="BT">
                     <input className={baseInputStyles} required type="time" value={bt} onChange={handleBT} />
                   </InputGroup>
-                  <InputGroup label="STA (LT) - Auto Calculated">
-                    <ComboboxInput
-                      value={sta}
-                      onChange={handleSTA}
-                      placeholder="HH:MM"
-                      options={timeOptions}
-                      className="bg-indigo-50/50 dark:bg-indigo-900/20"
-                    />
+                  <InputGroup label="STA (LT)">
+                     <input className={baseInputStyles} type="time" value={sta} onChange={handleSTA} />
                   </InputGroup>
                 </div>
 

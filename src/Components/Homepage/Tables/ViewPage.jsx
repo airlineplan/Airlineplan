@@ -4,37 +4,57 @@ import axios from "axios";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+// --- CONSTANTS ---
+const TIMEZONES = [
+  'UTC-12:00', 'UTC-11:45', 'UTC-11:30', 'UTC-11:15', 'UTC-11:00', 'UTC-10:45', 'UTC-10:30', 'UTC-10:15', 'UTC-10:00', 'UTC-9:45', 'UTC-9:30', 'UTC-9:15', 'UTC-9:00', 'UTC-8:45', 'UTC-8:30', 'UTC-8:15', 'UTC-8:00', 'UTC-7:45', 'UTC-7:30', 'UTC-7:15', 'UTC-7:00', 'UTC-6:45', 'UTC-6:30', 'UTC-6:15', 'UTC-6:00', 'UTC-5:45', 'UTC-5:30', 'UTC-5:15', 'UTC-5:00', 'UTC-4:45', 'UTC-4:30', 'UTC-4:15', 'UTC-4:00', 'UTC-3:45', 'UTC-3:30', 'UTC-3:15', 'UTC-3:00', 'UTC-2:45', 'UTC-2:30', 'UTC-2:15', 'UTC-2:00', 'UTC-1:45', 'UTC-1:30', 'UTC-1:15', 'UTC-1:00', 'UTC-0:45', 'UTC-0:30', 'UTC-0:15', 'UTC+0:00', 'UTC+0:15', 'UTC+0:30', 'UTC+0:45', 'UTC+1:00', 'UTC+1:15', 'UTC+1:30', 'UTC+1:45', 'UTC+2:00', 'UTC+2:15', 'UTC+2:30', 'UTC+2:45', 'UTC+3:00', 'UTC+3:15', 'UTC+3:30', 'UTC+3:45', 'UTC+4:00', 'UTC+4:15', 'UTC+4:30', 'UTC+4:45', 'UTC+5:00', 'UTC+5:15', 'UTC+5:30', 'UTC+5:45', 'UTC+6:00', 'UTC+6:15', 'UTC+6:30', 'UTC+6:45', 'UTC+7:00', 'UTC+7:15', 'UTC+7:30', 'UTC+7:45', 'UTC+8:00', 'UTC+8:15', 'UTC+8:30', 'UTC+8:45', 'UTC+9:00', 'UTC+9:15', 'UTC+9:30', 'UTC+9:45', 'UTC+10:00', 'UTC+10:15', 'UTC+10:30', 'UTC+10:45', 'UTC+11:00', 'UTC+11:15', 'UTC+11:30', 'UTC+11:45', 'UTC+12:00'
+];
+
 function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
 // --- UTILITY: Calculate true 7-day timeline position ---
-const calculateTruePosition = (flightDate, std, bt, weekStartStr) => {
+const calculateTruePosition = (
+  flightDate,
+  std,
+  bt,
+  weekStartStr,
+  localTimezone,
+  viewTimezone
+) => {
   if (!flightDate || !std || !bt) return { left: "0%", width: "0%" };
 
-  const totalMinutesWeek = 7 * 24 * 60; // 10,080 minutes
+  const totalMinutesWeek = 7 * 24 * 60;
 
-  // Set week start boundary (Monday 00:00)
+  // Offsets
+  const localOffset = parseUTCOffsetToMinutes(localTimezone);
+  const viewOffset = parseUTCOffsetToMinutes(viewTimezone);
+
+  // --- Build flight local datetime ---
+  const flightLocal = new Date(flightDate);
+  const [stdH, stdM] = std.split(":").map(Number);
+  flightLocal.setHours(stdH || 0, stdM || 0, 0, 0);
+
+  // --- Convert Local → UTC ---
+  const flightUTC = new Date(flightLocal.getTime() - localOffset * 60000);
+
+  // --- Convert UTC → View Timezone ---
+  const flightInViewTZ = new Date(flightUTC.getTime() + viewOffset * 60000);
+
+  // --- Week Start in View Timezone ---
   const weekStart = new Date(weekStartStr);
   weekStart.setHours(0, 0, 0, 0);
 
-  // Set flight start boundary
-  const fStart = new Date(flightDate);
-  const [stdH, stdM] = std.split(":").map(Number);
-  fStart.setHours(stdH || 0, stdM || 0, 0, 0);
+  // Calculate minutes from week start
+  const elapsedMinutes = (flightInViewTZ - weekStart) / (1000 * 60);
 
-  // Calculate total minutes elapsed from Monday 00:00 to the flight's STD
-  const elapsedMinutesBeforeFlight = (fStart - weekStart) / (1000 * 60);
-
-  // Parse Block Time (BT) to get duration
+  // Duration
   const [btH, btM] = bt.split(":").map(Number);
   const durationMinutes = (btH || 0) * 60 + (btM || 0);
 
-  // Convert to percentages relative to the 7-day container
-  const leftPercent = (elapsedMinutesBeforeFlight / totalMinutesWeek) * 100;
+  const leftPercent = (elapsedMinutes / totalMinutesWeek) * 100;
   const widthPercent = (durationMinutes / totalMinutesWeek) * 100;
 
-  // Clamp values so overflowing flights don't break the UI layout
   return {
     left: `${Math.max(0, leftPercent)}%`,
     width: `${Math.min(100 - Math.max(0, leftPercent), widthPercent)}%`
@@ -42,9 +62,15 @@ const calculateTruePosition = (flightDate, std, bt, weekStartStr) => {
 };
 
 // --- SUB-COMPONENTS ---
-const FlightBar = ({ flight, weekStart, mode }) => {
-  const pos = calculateTruePosition(flight.date, flight.std, flight.bt, weekStart);
-
+const FlightBar = ({ flight, weekStart, mode, timezone }) => {
+  const pos = calculateTruePosition(
+    flight.date,
+    flight.std,
+    flight.bt,
+    weekStart,
+    flight.localTimezone || "UTC+5:30", // from backend (important)
+    timezone
+  );
   // Determine text inside the bar based on the selected mode
   let blockLabel = "";
   if (mode === "Rotations" || mode === "Aircraft") blockLabel = flight.sector || `${flight.depStn}-${flight.arrStn}`;
@@ -77,6 +103,7 @@ const TimelineGrid = () => (
 const ViewPage = () => {
   const [mode, setMode] = useState("Rotations");
   const [stationCode, setStationCode] = useState("DEL");
+  const [timezone, setTimezone] = useState("UTC+5:30"); // Added state for the timezone
 
   const getStartOfWeek = () => {
     const today = new Date();
@@ -87,7 +114,6 @@ const ViewPage = () => {
   };
 
   const [weekStart, setWeekStart] = useState(getStartOfWeek());
-  // const [weekStart, setWeekStart] = useState("2026-02-15"); // YYYY-MM-DD for precise math
 
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -100,7 +126,12 @@ const ViewPage = () => {
         const accessToken = localStorage.getItem("accessToken");
         const response = await axios.get("https://airlineplan.com/view-page-data", {
           headers: { "x-access-token": accessToken },
-          params: { mode, station: stationCode, weekStart }
+          params: {
+            mode,
+            station: stationCode,
+            weekStart,
+            viewTimezone: timezone
+          }
         });
 
         // Ensure we are setting the 'rows' array from our optimized backend response
@@ -126,6 +157,13 @@ const ViewPage = () => {
   const formatDateHeader = (dateStr) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: '2-digit' }).replace(/,/g, ' |');
+  };
+
+  const parseUTCOffsetToMinutes = (tz) => {
+    // Example: "UTC+5:30"
+    const sign = tz.includes("+") ? 1 : -1;
+    const [hours, minutes] = tz.replace("UTC", "").replace("+", "").replace("-", "").split(":").map(Number);
+    return sign * ((hours || 0) * 60 + (minutes || 0));
   };
 
   return (
@@ -173,10 +211,14 @@ const ViewPage = () => {
           <label className="text-sm font-semibold text-slate-600 dark:text-slate-400">Timezone</label>
           <div className="relative">
             <Globe2 size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-            <select className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm rounded-lg pl-8 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
-              <option>UTC+04:30</option>
-              <option>UTC+03:30</option>
-              <option>UTC+00:00</option>
+            <select
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm rounded-lg pl-8 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+            >
+              {TIMEZONES.map((tz) => (
+                <option key={tz} value={tz}>{tz}</option>
+              ))}
             </select>
             <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
           </div>
@@ -266,6 +308,7 @@ const ViewPage = () => {
                         flight={flight}
                         weekStart={weekStart}
                         mode={mode}
+                        timezone={timezone}
                       />
                     ))}
                   </div>
