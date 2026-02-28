@@ -187,7 +187,7 @@ const ConnectionTable = () => {
     const getDropdownData = async () => {
       try {
         const response = await axios.get(
-          `https://airlineplan.com/dashboard/populateDropDowns`,
+          `http://localhost:3000/dashboard/populateDropDowns`,
           { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
         );
         setDropdownOptions(response.data);
@@ -215,7 +215,7 @@ const ConnectionTable = () => {
         userTag2: filters.userTag2
       };
   
-      const response = await axios.get('https://airlineplan.com/createConnections', {
+      const response = await axios.get('http://localhost:3000/createConnections', {
         params,
         headers: { 'x-access-token': accessToken },
       });

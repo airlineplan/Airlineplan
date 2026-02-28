@@ -102,7 +102,7 @@ const StationsTable = () => {
     const fetchData = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("https://airlineplan.com/get-stationData", {
+        const response = await axios.get("http://localhost:3000/get-stationData", {
           headers: { "x-access-token": accessToken },
         });
         if(response.data?.data) {
@@ -128,7 +128,7 @@ const StationsTable = () => {
         homeTimeZone: selectedHomeTimeZone,
       };
 
-      const response = await axios.post('https://airlineplan.com/saveStation', requestData, {
+      const response = await axios.post('http://localhost:3000/saveStation', requestData, {
         headers: {
           "x-access-token": accessToken,
           "Content-Type": "application/json",

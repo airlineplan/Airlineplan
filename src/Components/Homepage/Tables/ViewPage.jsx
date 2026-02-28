@@ -150,7 +150,7 @@ const ViewPage = () => {
     const fetchWeeks = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const res = await axios.get("https://airlineplan.com/master-weeks", {
+        const res = await axios.get("http://localhost:3000/master-weeks", {
           headers: { "x-access-token": accessToken }
         });
 
@@ -178,7 +178,7 @@ const ViewPage = () => {
       setLoading(true);
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("https://airlineplan.com/view-page-data", {
+        const response = await axios.get("http://localhost:3000/view-page-data", {
           headers: { "x-access-token": accessToken },
           params: { mode, station: stationCode, weekStart, viewTimezone: timezone }
         });
@@ -241,11 +241,11 @@ const ViewPage = () => {
 
   // --- Date Math for UI (Monday Start, Sunday End) ---
   const timelineStart = useMemo(() => {
-    if (!weekStart) return null;
-    const start = new Date(weekStart);
-    start.setDate(start.getDate() - 6); 
-    return start;
-  }, [weekStart]);
+  if (!weekStart) return null;
+  const start = new Date(weekStart);
+  start.setHours(0, 0, 0, 0);
+  return start;
+}, [weekStart]);
 
   // Generate Array of 7 Days for the new Timeline Header
   const weekDays = useMemo(() => {
@@ -342,8 +342,9 @@ const ViewPage = () => {
       )}
 
       {/* 3. Main Data View */}
-      <div className="flex-1 overflow-x-auto mt-2 custom-scrollbar flex flex-col">
-        <div className="min-w-[1000px] flex-1 flex flex-col">
+      <div className="flex-1 mt-2 flex flex-col">
+  <div className="flex-1 overflow-auto custom-scrollbar">
+    <div className="min-w-[1000px] flex flex-col">
 
           {/* TIMELINE HEADER */}
           <div className="flex border-b-2 border-slate-800 dark:border-slate-500 bg-white dark:bg-slate-900 shrink-0">
@@ -393,7 +394,7 @@ const ViewPage = () => {
               )}
             </div>
           </div>
-
+</div>
           {/* VIRTUALIZED DATA ROWS */}
           <div ref={parentRef} className="flex-1 overflow-y-auto custom-scrollbar relative">
             {processedData.length === 0 && !loading ? (
