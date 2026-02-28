@@ -115,7 +115,7 @@ const MainPage = () => {
   const fetchFlightsData = async (page = 1, limit = 10) => {
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.get(`http://localhost:3000/flight?page=${page}&limit=${limit}`, {
+      const response = await axios.get(`https://airlineplan.com/flight?page=${page}&limit=${limit}`, {
         headers: { "x-access-token": accessToken },
       });
       setFlightsData(response.data.data);

@@ -150,7 +150,7 @@ const ViewPage = () => {
     const fetchWeeks = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const res = await axios.get("http://localhost:3000/master-weeks", {
+        const res = await axios.get("https://airlineplan.com/master-weeks", {
           headers: { "x-access-token": accessToken }
         });
 
@@ -178,7 +178,7 @@ const ViewPage = () => {
       setLoading(true);
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("http://localhost:3000/view-page-data", {
+        const response = await axios.get("https://airlineplan.com/view-page-data", {
           headers: { "x-access-token": accessToken },
           params: { mode, station: stationCode, weekStart, viewTimezone: timezone }
         });

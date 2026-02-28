@@ -154,7 +154,7 @@ const AddNetwork = ({ setAdd }) => {
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const response = await axios.get("http://localhost:3000/get-stationData", {
+        const response = await axios.get("https://airlineplan.com/get-stationData", {
           headers: { "x-access-token": localStorage.getItem("accessToken") },
         });
         if (response.data && response.data.data) {
@@ -167,7 +167,7 @@ const AddNetwork = ({ setAdd }) => {
 
     const fetchDropdowns = async () => {
       try {
-        const response = await axios.get("http://localhost:3000/dashboard/populateDropDowns", {
+        const response = await axios.get("https://airlineplan.com/dashboard/populateDropDowns", {
           headers: { "x-access-token": localStorage.getItem("accessToken") },
         });
         if (response.data) {
@@ -329,7 +329,7 @@ const AddNetwork = ({ setAdd }) => {
     setLoading(true);
     try {
       const payload = { ...formData, domINTL: formData.domINTL.toLowerCase(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone };
-      const response = await axios.post("http://localhost:3000/add-Data", payload, {
+      const response = await axios.post("https://airlineplan.com/add-Data", payload, {
         headers: { "x-access-token": localStorage.getItem("accessToken"), "Content-Type": "application/json" },
       });
 

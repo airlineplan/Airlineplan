@@ -107,7 +107,7 @@ const SectorsTable = () => {
     const fetchData = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("http://localhost:3000/sectors", {
+        const response = await axios.get("https://airlineplan.com/sectors", {
           headers: { "x-access-token": accessToken },
         });
         setSectorsTableData(response.data || []);
@@ -127,7 +127,7 @@ const SectorsTable = () => {
 
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.delete("http://localhost:3000/delete-sector", {
+      const response = await axios.delete("https://airlineplan.com/delete-sector", {
         headers: { "x-access-token": accessToken },
         data: { ids: checkedRows },
       });

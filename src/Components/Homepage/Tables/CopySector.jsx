@@ -95,7 +95,7 @@ const CopySector = (props) => {
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const response = await axios.get("http://localhost:3000/get-stationData", {
+        const response = await axios.get("https://airlineplan.com/get-stationData", {
           headers: { "x-access-token": localStorage.getItem("accessToken") },
         });
         if (response.data && response.data.data) {
@@ -159,7 +159,7 @@ const CopySector = (props) => {
       return;
     }
     try {
-      const response = await axios.get(`http://localhost:3000/sectorsbyid/${DataId}`);
+      const response = await axios.get(`https://airlineplan.com/sectorsbyid/${DataId}`);
       const item = response.data;
       
       setFromDt(item?.fromDt ? moment(item.fromDt).format("YYYY-MM-DD") : "");
@@ -306,7 +306,7 @@ const CopySector = (props) => {
     try {
       setLoading(true);
       const response = await axios.post(
-        "http://localhost:3000/add-sector",
+        "https://airlineplan.com/add-sector",
         // Included std and sta in the payload to match AddSector & UpdateSectore
         { sector1, sector2, acftType, variant, std, bt, sta, gcd, paxCapacity, CargoCapT, paxLF, cargoLF, fromDt, toDt },
         { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }

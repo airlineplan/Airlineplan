@@ -100,7 +100,7 @@ const UpdateSectore = (props) => {
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const response = await axios.get("http://localhost:3000/get-stationData", {
+        const response = await axios.get("https://airlineplan.com/get-stationData", {
           headers: { "x-access-token": localStorage.getItem("accessToken") },
         });
         if (response.data && response.data.data) {
@@ -268,7 +268,7 @@ const UpdateSectore = (props) => {
     }
 
     try {
-      const response = await axios.get(`http://localhost:3000/sectorsbyid/${DataId}`);
+      const response = await axios.get(`https://airlineplan.com/sectorsbyid/${DataId}`);
       const item = response.data;
 
       const formtEffFromDate = item.fromDt ? moment(item.fromDt).format("YYYY-MM-DD") : "";
@@ -329,7 +329,7 @@ const UpdateSectore = (props) => {
       }
 
       const response = await axios.put(
-        `http://localhost:3000/update-sectore/${productId}`,
+        `https://airlineplan.com/update-sectore/${productId}`,
         productData,
         { headers: { "Content-Type": "application/json", "x-access-token": `${localStorage.getItem("accessToken")}` } }
       );
