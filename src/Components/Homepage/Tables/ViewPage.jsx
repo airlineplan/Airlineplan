@@ -10,7 +10,7 @@ const TIMEZONES = [
   'UTC-12:00', 'UTC-11:45', 'UTC-11:30', 'UTC-11:15', 'UTC-11:00', 'UTC-10:45', 'UTC-10:30', 'UTC-10:15', 'UTC-10:00', 'UTC-9:45', 'UTC-9:30', 'UTC-9:15', 'UTC-9:00', 'UTC-8:45', 'UTC-8:30', 'UTC-8:15', 'UTC-8:00', 'UTC-7:45', 'UTC-7:30', 'UTC-7:15', 'UTC-7:00', 'UTC-6:45', 'UTC-6:30', 'UTC-6:15', 'UTC-6:00', 'UTC-5:45', 'UTC-5:30', 'UTC-5:15', 'UTC-5:00', 'UTC-4:45', 'UTC-4:30', 'UTC-4:15', 'UTC-4:00', 'UTC-3:45', 'UTC-3:30', 'UTC-3:15', 'UTC-3:00', 'UTC-2:45', 'UTC-2:30', 'UTC-2:15', 'UTC-2:00', 'UTC-1:45', 'UTC-1:30', 'UTC-1:15', 'UTC-1:00', 'UTC-0:45', 'UTC-0:30', 'UTC-0:15', 'UTC+0:00', 'UTC+0:15', 'UTC+0:30', 'UTC+0:45', 'UTC+1:00', 'UTC+1:15', 'UTC+1:30', 'UTC+1:45', 'UTC+2:00', 'UTC+2:15', 'UTC+2:30', 'UTC+2:45', 'UTC+3:00', 'UTC+3:15', 'UTC+3:30', 'UTC+3:45', 'UTC+4:00', 'UTC+4:15', 'UTC+4:30', 'UTC+4:45', 'UTC+5:00', 'UTC+5:15', 'UTC+5:30', 'UTC+5:45', 'UTC+6:00', 'UTC+6:15', 'UTC+6:30', 'UTC+6:45', 'UTC+7:00', 'UTC+7:15', 'UTC+7:30', 'UTC+7:45', 'UTC+8:00', 'UTC+8:15', 'UTC+8:30', 'UTC+8:45', 'UTC+9:00', 'UTC+9:15', 'UTC+9:30', 'UTC+9:45', 'UTC+10:00', 'UTC+10:15', 'UTC+10:30', 'UTC+10:45', 'UTC+11:00', 'UTC+11:15', 'UTC+11:30', 'UTC+11:45', 'UTC+12:00'
 ];
 
-// Configuration for dynamic left-hand columns (Matches exact screenshot functionality)
+// Configuration for dynamic left-hand columns
 const MODE_COLUMNS = {
   Rotations: [{ key: 'rot', label: 'Rotation #' }, { key: 'variant', label: 'Variant' }],
   Sectors: [{ key: 'sector', label: 'Sector' }],
@@ -61,7 +61,6 @@ const calculateTruePosition = (flightDate, std, bt, timelineStartStr, localTimez
 };
 
 // --- FORMATTERS ---
-// Format to exact screenshot match: "10-Dec-23"
 const formatWeekDisplay = (dateStr) => {
   if (!dateStr) return "";
   const d = new Date(dateStr);
@@ -69,11 +68,11 @@ const formatWeekDisplay = (dateStr) => {
   return `${parts[0]}-${parts[1]}-${parts[2]}`; 
 };
 
+// Formats as "Monday | 16 Feb 26"
 const formatDateHeader = (dateObj) => {
   if (!dateObj) return "";
   return dateObj.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: '2-digit' }).replace(/,/g, ' |');
 };
-
 
 // --- SUB-COMPONENTS ---
 const TableInput = ({ name, value, onChange, placeholder }) => (
@@ -95,7 +94,7 @@ const FlightBar = ({ flight, timelineStart, mode, timezone }) => {
     flight.date,
     flight.std,
     flight.bt,
-    timelineStart, // Uses Monday start date
+    timelineStart,
     flight.localTimezone || "UTC+5:30",
     timezone
   );
@@ -106,21 +105,22 @@ const FlightBar = ({ flight, timelineStart, mode, timezone }) => {
 
   return (
     <div
-      className="absolute top-1/2 -translate-y-1/2 h-6 bg-[#e8a3d8] dark:bg-fuchsia-600/80 rounded-sm flex items-center justify-center text-[10px] font-bold text-slate-900 dark:text-white shadow-sm overflow-hidden whitespace-nowrap px-1"
+      className="absolute top-1/2 -translate-y-1/2 h-6 bg-[#e8a3d8] dark:bg-fuchsia-600/80 rounded-sm flex items-center justify-center text-[10px] font-bold text-slate-900 dark:text-white shadow-sm overflow-hidden whitespace-nowrap px-1 z-20"
       style={{ left: pos.left, width: pos.width }}
       title={`${blockLabel} | STD: ${flight.std} - BT: ${flight.bt}`}
     >
       <span className="truncate">{blockLabel}</span>
-      {flight.connectionRight && <div className="absolute -bottom-3 right-0 w-3 h-4 bg-emerald-700 border border-slate-900 z-10" />}
-      {flight.connectionLeft && <div className="absolute -bottom-3 left-0 w-3 h-4 bg-emerald-700 border border-slate-900 z-10" />}
+      {flight.connectionRight && <div className="absolute -bottom-3 right-0 w-3 h-4 bg-emerald-700 border border-slate-900 z-30" />}
+      {flight.connectionLeft && <div className="absolute -bottom-3 left-0 w-3 h-4 bg-emerald-700 border border-slate-900 z-30" />}
     </div>
   );
 };
 
+// Render 7 columns in the background to match the header days
 const TimelineGrid = () => (
-  <div className="absolute inset-0 flex pointer-events-none">
+  <div className="absolute inset-0 flex pointer-events-none z-0">
     {[...Array(7)].map((_, i) => (
-      <div key={i} className="flex-1 border-r border-slate-300 dark:border-slate-700/50 border-dashed last:border-0" />
+      <div key={i} className="flex-1 border-r border-slate-200 dark:border-slate-800 last:border-0" />
     ))}
   </div>
 );
@@ -132,7 +132,7 @@ const ViewPage = () => {
   const [timezone, setTimezone] = useState("UTC+5:30");
   
   const [weeks, setWeeks] = useState([]);
-  const [weekStart, setWeekStart] = useState(""); // The selected Sunday
+  const [weekStart, setWeekStart] = useState(""); 
   
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -140,7 +140,6 @@ const ViewPage = () => {
   const [filters, setFilters] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "Up" });
 
-  // 1. Fetch available Sundays and set to LATEST week by default
   useEffect(() => {
     const fetchWeeks = async () => {
       try {
@@ -151,7 +150,6 @@ const ViewPage = () => {
 
         if (res.data?.weeks?.length) {
           setWeeks(res.data.weeks);
-          // Set to the latest Sunday as requested
           setWeekStart(res.data.weeks[res.data.weeks.length - 1]); 
         }
       } catch (err) {
@@ -162,13 +160,11 @@ const ViewPage = () => {
     fetchWeeks();
   }, []);
 
-  // 2. Reset filters/sort when mode changes
   useEffect(() => {
     setFilters({});
     setSortConfig({ key: null, direction: "Up" });
   }, [mode]);
 
-  // 3. Fetch Data
   useEffect(() => {
     if (!weekStart) return;
 
@@ -241,36 +237,37 @@ const ViewPage = () => {
   const timelineStart = useMemo(() => {
     if (!weekStart) return null;
     const start = new Date(weekStart);
-    start.setDate(start.getDate() - 6); // Subtract 6 days to get Monday
+    start.setDate(start.getDate() - 6); 
     return start;
   }, [weekStart]);
 
-  const timelineEnd = useMemo(() => {
-    if (!weekStart) return null;
-    return new Date(weekStart); // The Sunday
-  }, [weekStart]);
+  // Generate Array of 7 Days for the new Timeline Header
+  const weekDays = useMemo(() => {
+    if (!timelineStart) return [];
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date(timelineStart);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+  }, [timelineStart]);
 
-
-  // --- Virtualization ---
   const parentRef = useRef(null);
   const rowVirtualizer = useVirtualizer({
     count: processedData.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 48, // Compact 48px row height to match screenshot density
+    estimateSize: () => 48,
     overscan: 10,
   });
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 p-2 sm:p-4 rounded-xl relative text-slate-800 dark:text-slate-200">
 
-      {/* 1. Header Legend */}
       <div className="flex justify-end mb-2">
          <div className="flex items-center gap-2 bg-yellow-200 text-yellow-900 text-[10px] font-semibold px-2 py-1 border border-yellow-400">
           Connections highlighted with end of rectangle
         </div>
       </div>
 
-      {/* 2. Control Header */}
       <div className="flex flex-wrap items-center gap-6 pb-4 border-b border-slate-300 dark:border-slate-700 shrink-0">
 
         <div className="flex items-center gap-2">
@@ -311,7 +308,6 @@ const ViewPage = () => {
           </select>
         </div>
 
-        {/* Compact Dropdown displaying exactly 10-Dec-23 */}
         <div className="flex items-center gap-2">
           <label className="text-sm font-semibold">Week</label>
           <select
@@ -345,6 +341,7 @@ const ViewPage = () => {
 
           {/* TIMELINE HEADER */}
           <div className="flex border-b-2 border-slate-800 dark:border-slate-500 bg-white dark:bg-slate-900 shrink-0">
+            
             {/* Left Header Section - DYNAMIC FILTER + SORT */}
             <div className="w-64 shrink-0 flex items-end border-r-2 border-slate-400 bg-slate-50 dark:bg-slate-800/90 pb-1">
               {MODE_COLUMNS[mode].map((col) => (
@@ -370,20 +367,24 @@ const ViewPage = () => {
               ))}
             </div>
 
-            {/* Right Timeline Date Headers */}
+            {/* Right Timeline Date Headers (7 Exact Columns) */}
             <div className="flex-1 flex">
-              <div className="flex-1 border-r border-slate-300 dark:border-slate-700 flex flex-col justify-end text-xs font-medium">
-                <div className="text-center px-2 py-0.5 border-b border-slate-300">
-                  {timelineStart ? formatDateHeader(timelineStart) : ""}
-                </div>
-                <div className="px-2 py-0.5 text-left text-[10px]">0:01</div>
-              </div>
-              <div className="flex-1 flex flex-col justify-end text-xs font-medium">
-                <div className="text-center px-2 py-0.5 border-b border-slate-300">
-                  {timelineEnd ? formatDateHeader(timelineEnd) : ""}
-                </div>
-                <div className="px-2 py-0.5 text-right text-[10px]">00:00</div>
-              </div>
+              {weekDays.length > 0 ? (
+                weekDays.map((day, idx) => (
+                  <div key={idx} className="flex-1 border-r border-slate-300 dark:border-slate-700 last:border-0 flex flex-col justify-end text-xs font-medium bg-slate-50 dark:bg-slate-800/50">
+                    <div className="text-center px-1 py-1 border-b border-slate-300 dark:border-slate-700 truncate">
+                      {formatDateHeader(day)}
+                    </div>
+                    {/* Time labels below each day */}
+                    <div className="flex justify-between px-1 py-0.5 text-[9px] text-slate-500 bg-white dark:bg-slate-900">
+                      <span>00:01</span>
+                      <span>23:59</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-xs text-slate-500">Loading timeline...</div>
+              )}
             </div>
           </div>
 
