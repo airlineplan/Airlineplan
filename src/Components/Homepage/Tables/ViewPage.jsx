@@ -23,11 +23,17 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-const parseUTCOffsetToMinutes = (tz) => {
+function parseUTCOffsetToMinutes(tz) {
   const sign = tz.includes("+") ? 1 : -1;
-  const [hours, minutes] = tz.replace("UTC", "").replace("+", "").replace("-", "").split(":").map(Number);
+  const [hours, minutes] = tz
+    .replace("UTC", "")
+    .replace("+", "")
+    .replace("-", "")
+    .split(":")
+    .map(Number);
+
   return sign * ((hours || 0) * 60 + (minutes || 0));
-};
+}
 
 const calculateTruePosition = (flightDate, std, bt, timelineStartStr, localTimezone, viewTimezone) => {
   if (!flightDate || !std || !bt || !timelineStartStr) return { left: "0%", width: "0%" };
