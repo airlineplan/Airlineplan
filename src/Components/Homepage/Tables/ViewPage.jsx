@@ -10,7 +10,7 @@ const TIMEZONES = [
   'UTC-12:00', 'UTC-11:45', 'UTC-11:30', 'UTC-11:15', 'UTC-11:00', 'UTC-10:45', 'UTC-10:30', 'UTC-10:15', 'UTC-10:00', 'UTC-9:45', 'UTC-9:30', 'UTC-9:15', 'UTC-9:00', 'UTC-8:45', 'UTC-8:30', 'UTC-8:15', 'UTC-8:00', 'UTC-7:45', 'UTC-7:30', 'UTC-7:15', 'UTC-7:00', 'UTC-6:45', 'UTC-6:30', 'UTC-6:15', 'UTC-6:00', 'UTC-5:45', 'UTC-5:30', 'UTC-5:15', 'UTC-5:00', 'UTC-4:45', 'UTC-4:30', 'UTC-4:15', 'UTC-4:00', 'UTC-3:45', 'UTC-3:30', 'UTC-3:15', 'UTC-3:00', 'UTC-2:45', 'UTC-2:30', 'UTC-2:15', 'UTC-2:00', 'UTC-1:45', 'UTC-1:30', 'UTC-1:15', 'UTC-1:00', 'UTC-0:45', 'UTC-0:30', 'UTC-0:15', 'UTC+0:00', 'UTC+0:15', 'UTC+0:30', 'UTC+0:45', 'UTC+1:00', 'UTC+1:15', 'UTC+1:30', 'UTC+1:45', 'UTC+2:00', 'UTC+2:15', 'UTC+2:30', 'UTC+2:45', 'UTC+3:00', 'UTC+3:15', 'UTC+3:30', 'UTC+3:45', 'UTC+4:00', 'UTC+4:15', 'UTC+4:30', 'UTC+4:45', 'UTC+5:00', 'UTC+5:15', 'UTC+5:30', 'UTC+5:45', 'UTC+6:00', 'UTC+6:15', 'UTC+6:30', 'UTC+6:45', 'UTC+7:00', 'UTC+7:15', 'UTC+7:30', 'UTC+7:45', 'UTC+8:00', 'UTC+8:15', 'UTC+8:30', 'UTC+8:45', 'UTC+9:00', 'UTC+9:15', 'UTC+9:30', 'UTC+9:45', 'UTC+10:00', 'UTC+10:15', 'UTC+10:30', 'UTC+10:45', 'UTC+11:00', 'UTC+11:15', 'UTC+11:30', 'UTC+11:45', 'UTC+12:00'
 ];
 
-// Configuration for dynamic left-hand columns
+// Configuration for dynamic left-hand columns (Matches exact screenshot functionality)
 const MODE_COLUMNS = {
   Rotations: [{ key: 'rot', label: 'Rotation #' }, { key: 'variant', label: 'Variant' }],
   Sectors: [{ key: 'sector', label: 'Sector' }],
@@ -23,8 +23,14 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-const calculateTruePosition = (flightDate, std, bt, weekStartStr, localTimezone, viewTimezone) => {
-  if (!flightDate || !std || !bt || !weekStartStr) return { left: "0%", width: "0%" };
+const parseUTCOffsetToMinutes = (tz) => {
+  const sign = tz.includes("+") ? 1 : -1;
+  const [hours, minutes] = tz.replace("UTC", "").replace("+", "").replace("-", "").split(":").map(Number);
+  return sign * ((hours || 0) * 60 + (minutes || 0));
+};
+
+const calculateTruePosition = (flightDate, std, bt, timelineStartStr, localTimezone, viewTimezone) => {
+  if (!flightDate || !std || !bt || !timelineStartStr) return { left: "0%", width: "0%" };
 
   const totalMinutesWeek = 7 * 24 * 60;
   const localOffset = parseUTCOffsetToMinutes(localTimezone);
@@ -37,7 +43,7 @@ const calculateTruePosition = (flightDate, std, bt, weekStartStr, localTimezone,
   const flightUTC = new Date(flightLocal.getTime() - localOffset * 60000);
   const flightInViewTZ = new Date(flightUTC.getTime() + viewOffset * 60000);
 
-  const weekStart = new Date(weekStartStr);
+  const weekStart = new Date(timelineStartStr);
   weekStart.setHours(0, 0, 0, 0);
 
   const elapsedMinutes = (flightInViewTZ - weekStart) / (1000 * 60);
@@ -54,11 +60,20 @@ const calculateTruePosition = (flightDate, std, bt, weekStartStr, localTimezone,
   };
 };
 
-const parseUTCOffsetToMinutes = (tz) => {
-  const sign = tz.includes("+") ? 1 : -1;
-  const [hours, minutes] = tz.replace("UTC", "").replace("+", "").replace("-", "").split(":").map(Number);
-  return sign * ((hours || 0) * 60 + (minutes || 0));
+// --- FORMATTERS ---
+// Format to exact screenshot match: "10-Dec-23"
+const formatWeekDisplay = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const parts = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).split(' ');
+  return `${parts[0]}-${parts[1]}-${parts[2]}`; 
 };
+
+const formatDateHeader = (dateObj) => {
+  if (!dateObj) return "";
+  return dateObj.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: '2-digit' }).replace(/,/g, ' |');
+};
+
 
 // --- SUB-COMPONENTS ---
 const TableInput = ({ name, value, onChange, placeholder }) => (
@@ -69,18 +84,18 @@ const TableInput = ({ name, value, onChange, placeholder }) => (
       value={value || ""}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full h-7 px-2 py-1 text-[11px] bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 transition-all"
+      className="w-full h-6 px-1.5 py-1 text-[10px] bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
     />
-    <Search size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+    <Search size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 pointer-events-none" />
   </div>
 );
 
-const FlightBar = ({ flight, weekStart, mode, timezone }) => {
+const FlightBar = ({ flight, timelineStart, mode, timezone }) => {
   const pos = calculateTruePosition(
     flight.date,
     flight.std,
     flight.bt,
-    weekStart,
+    timelineStart, // Uses Monday start date
     flight.localTimezone || "UTC+5:30",
     timezone
   );
@@ -116,18 +131,16 @@ const ViewPage = () => {
   const [stationCode, setStationCode] = useState("DEL");
   const [timezone, setTimezone] = useState("UTC+5:30");
   
-  // API Driven Weeks
   const [weeks, setWeeks] = useState([]);
-  const [weekStart, setWeekStart] = useState("");
+  const [weekStart, setWeekStart] = useState(""); // The selected Sunday
   
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Filter & Sort State
   const [filters, setFilters] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "Up" });
 
-  // 1. Fetch available Sundays from Master Table
+  // 1. Fetch available Sundays and set to LATEST week by default
   useEffect(() => {
     const fetchWeeks = async () => {
       try {
@@ -138,7 +151,8 @@ const ViewPage = () => {
 
         if (res.data?.weeks?.length) {
           setWeeks(res.data.weeks);
-          setWeekStart(res.data.weeks[0]); // Default to the first available Sunday
+          // Set to the latest Sunday as requested
+          setWeekStart(res.data.weeks[res.data.weeks.length - 1]); 
         }
       } catch (err) {
         console.error("Failed to fetch weeks", err);
@@ -148,13 +162,13 @@ const ViewPage = () => {
     fetchWeeks();
   }, []);
 
-  // 2. Reset filters and sorting when mode changes
+  // 2. Reset filters/sort when mode changes
   useEffect(() => {
     setFilters({});
     setSortConfig({ key: null, direction: "Up" });
   }, [mode]);
 
-  // 3. Fetch Timeline Data when dependencies change
+  // 3. Fetch Data
   useEffect(() => {
     if (!weekStart) return;
 
@@ -167,11 +181,7 @@ const ViewPage = () => {
           params: { mode, station: stationCode, weekStart, viewTimezone: timezone }
         });
 
-        if (response.data && response.data.rows) {
-          setData(response.data.rows);
-        } else {
-          setData([]);
-        }
+        setData(response.data?.rows || []);
       } catch (error) {
         console.error("Error fetching view data", error);
       } finally {
@@ -182,7 +192,6 @@ const ViewPage = () => {
     fetchData();
   }, [mode, stationCode, weekStart, timezone]);
 
-  // --- Handlers for Filtering & Sorting ---
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
@@ -195,11 +204,9 @@ const ViewPage = () => {
     }));
   };
 
-  // --- Processed Data (Filtered & Sorted on Frontend) ---
   const processedData = useMemo(() => {
     let result = [...data];
 
-    // Apply Filters
     Object.keys(filters).forEach((key) => {
       const filterValue = filters[key]?.toLowerCase();
       if (filterValue) {
@@ -210,7 +217,6 @@ const ViewPage = () => {
       }
     });
 
-    // Apply Sorting
     if (sortConfig.key) {
       result.sort((a, b) => {
         const valA = a.leftColumn?.[sortConfig.key] || "";
@@ -231,164 +237,134 @@ const ViewPage = () => {
     return result;
   }, [data, filters, sortConfig]);
 
-  // --- VIRTUALIZATION SETUP ---
-  const parentRef = useRef(null);
+  // --- Date Math for UI (Monday Start, Sunday End) ---
+  const timelineStart = useMemo(() => {
+    if (!weekStart) return null;
+    const start = new Date(weekStart);
+    start.setDate(start.getDate() - 6); // Subtract 6 days to get Monday
+    return start;
+  }, [weekStart]);
 
+  const timelineEnd = useMemo(() => {
+    if (!weekStart) return null;
+    return new Date(weekStart); // The Sunday
+  }, [weekStart]);
+
+
+  // --- Virtualization ---
+  const parentRef = useRef(null);
   const rowVirtualizer = useVirtualizer({
     count: processedData.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 56, // 56px matches the h-14 Tailwind class we use for rows
-    overscan: 10, // Buffer items to render outside the viewport
+    estimateSize: () => 48, // Compact 48px row height to match screenshot density
+    overscan: 10,
   });
 
-  // UI Date Helpers
-  const getEndOfWeek = (startStr) => {
-    if (!startStr) return "";
-    const end = new Date(startStr);
-    end.setDate(end.getDate() + 6);
-    return end;
-  };
-
-  const endOfWeek = getEndOfWeek(weekStart);
-
-  const formatDateHeader = (dateStr) => {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: '2-digit' }).replace(/,/g, ' |');
-  };
-
-  const formatDropdownDate = (dateStr) => {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
-
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900 p-4 rounded-2xl relative">
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900 p-2 sm:p-4 rounded-xl relative text-slate-800 dark:text-slate-200">
 
-      {/* 1. Control Header */}
-      <div className="flex flex-wrap items-center gap-6 pb-6 border-b border-slate-200 dark:border-slate-800 shrink-0">
-
-        {/* Mode Selector */}
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-semibold text-slate-600 dark:text-slate-400">Mode</label>
-          <div className="relative">
-            <select
-              className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm rounded-lg pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-            >
-              <option value="Rotations">Rotations</option>
-              <option value="Sectors">Sectors</option>
-              <option value="Station">Station</option>
-              <option value="Aircraft">Aircraft</option>
-            </select>
-            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* Dynamic Station Input */}
-        {mode === "Station" && (
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-semibold text-slate-600 dark:text-slate-400">Station</label>
-            <div className="relative">
-              <MapPin size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                type="text"
-                value={stationCode}
-                onChange={(e) => setStationCode(e.target.value.toUpperCase())}
-                className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm rounded-lg pl-8 pr-3 py-1.5 w-24 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Timezone */}
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-semibold text-slate-600 dark:text-slate-400">Timezone</label>
-          <div className="relative">
-            <Globe2 size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-            <select
-              value={timezone}
-              onChange={(e) => setTimezone(e.target.value)}
-              className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm rounded-lg pl-8 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-            >
-              {TIMEZONES.map((tz) => (
-                <option key={tz} value={tz}>{tz}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* Week Start Picker (API Driven Sunday Dropdown) */}
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-semibold text-slate-600 dark:text-slate-400">Week</label>
-          <div className="relative">
-            <Calendar size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-            <select
-              value={weekStart}
-              onChange={(e) => setWeekStart(e.target.value)}
-              className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm rounded-lg pl-8 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer max-h-60 overflow-y-auto"
-              disabled={weeks.length === 0}
-            >
-              {weeks.length === 0 ? (
-                <option value="">Loading weeks...</option>
-              ) : (
-                weeks.map((wk, idx) => (
-                  <option key={idx} value={wk}>
-                    {formatDropdownDate(wk)}
-                  </option>
-                ))
-              )}
-            </select>
-            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-          </div>
-        </div>
-
-        {/* Info Legend */}
-        <div className="ml-auto flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 text-xs font-medium px-3 py-1.5 rounded-md border border-yellow-200 dark:border-yellow-700/50 hidden sm:flex">
-          <div className="w-2 h-2 bg-emerald-700 border border-slate-900 inline-block" />
+      {/* 1. Header Legend */}
+      <div className="flex justify-end mb-2">
+         <div className="flex items-center gap-2 bg-yellow-200 text-yellow-900 text-[10px] font-semibold px-2 py-1 border border-yellow-400">
           Connections highlighted with end of rectangle
         </div>
       </div>
 
-      {/* Loading Overlay */}
+      {/* 2. Control Header */}
+      <div className="flex flex-wrap items-center gap-6 pb-4 border-b border-slate-300 dark:border-slate-700 shrink-0">
+
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-semibold">Mode</label>
+          <select
+            className="appearance-none bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-sm rounded px-2 py-1 w-28 cursor-pointer"
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
+          >
+            <option value="Rotations">Rotations</option>
+            <option value="Sectors">Sectors</option>
+            <option value="Station">Station</option>
+            <option value="Aircraft">Aircraft</option>
+          </select>
+        </div>
+
+        {mode === "Station" && (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={stationCode}
+              onChange={(e) => setStationCode(e.target.value.toUpperCase())}
+              className="bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-sm rounded px-2 py-1 w-20 uppercase"
+            />
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-semibold">Timezone</label>
+          <select
+            value={timezone}
+            onChange={(e) => setTimezone(e.target.value)}
+            className="appearance-none bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-sm rounded px-2 py-1 w-32 cursor-pointer"
+          >
+            {TIMEZONES.map((tz) => (
+              <option key={tz} value={tz}>{tz}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Compact Dropdown displaying exactly 10-Dec-23 */}
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-semibold">Week</label>
+          <select
+            value={weekStart}
+            onChange={(e) => setWeekStart(e.target.value)}
+            className="appearance-none bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-sm rounded px-2 py-1 w-28 cursor-pointer"
+            disabled={weeks.length === 0}
+          >
+            {weeks.length === 0 ? (
+              <option value="">Loading...</option>
+            ) : (
+              weeks.map((wk, idx) => (
+                <option key={idx} value={wk}>
+                  {formatWeekDisplay(wk)}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+      </div>
+
       {loading && (
         <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 z-50 flex items-center justify-center backdrop-blur-sm rounded-2xl">
-          <div className="flex items-center gap-3 bg-white dark:bg-slate-800 px-6 py-3 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700">
-            <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-            <span className="text-indigo-600 dark:text-indigo-400 font-medium">Loading Timeline...</span>
-          </div>
+          <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
-      {/* 2. Main Data View - Structure adjusted for Virtualization */}
-      <div className="flex-1 overflow-x-auto mt-4 custom-scrollbar flex flex-col">
-        <div className="min-w-[1200px] flex-1 flex flex-col">
+      {/* 3. Main Data View */}
+      <div className="flex-1 overflow-x-auto mt-2 custom-scrollbar flex flex-col">
+        <div className="min-w-[1000px] flex-1 flex flex-col">
 
-          {/* TIMELINE HEADER (Static/Outside Scroll Container) */}
-          <div className="flex border-b border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shrink-0">
-            {/* Left Header Section */}
-            <div className="w-64 shrink-0 flex items-stretch border-r border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90">
+          {/* TIMELINE HEADER */}
+          <div className="flex border-b-2 border-slate-800 dark:border-slate-500 bg-white dark:bg-slate-900 shrink-0">
+            {/* Left Header Section - DYNAMIC FILTER + SORT */}
+            <div className="w-64 shrink-0 flex items-end border-r-2 border-slate-400 bg-slate-50 dark:bg-slate-800/90 pb-1">
               {MODE_COLUMNS[mode].map((col) => (
-                <div key={col.key} className="flex-1 px-3 py-2 flex flex-col gap-1 border-r last:border-0 border-slate-300 dark:border-slate-700">
+                <div key={col.key} className="flex-1 px-2 flex flex-col gap-1 border-r border-slate-300 dark:border-slate-700 last:border-0">
+                   <div className="text-[9px] text-slate-500 font-semibold mb-[-2px]">Filter + Sort</div>
                   <div
-                    className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                    className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-xs font-bold uppercase"
                     onClick={() => handleSort(col.key)}
                   >
                     {col.label}
                     {sortConfig.key === col.key ? (
-                      sortConfig.direction === "Up" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                      sortConfig.direction === "Up" ? <ArrowUp size={10} /> : <ArrowDown size={10} />
                     ) : (
-                      <ArrowUp size={12} className="opacity-0 hover:opacity-30 transition-opacity" />
+                      <ArrowUp size={10} className="opacity-0 hover:opacity-30" />
                     )}
                   </div>
                   <TableInput
                     name={col.key}
                     value={filters[col.key]}
                     onChange={handleFilterChange}
-                    placeholder="Filter..."
                   />
                 </div>
               ))}
@@ -396,26 +372,26 @@ const ViewPage = () => {
 
             {/* Right Timeline Date Headers */}
             <div className="flex-1 flex">
-              <div className="flex-1 border-r border-slate-300 dark:border-slate-700 flex flex-col justify-center text-xs font-medium text-slate-600 dark:text-slate-400">
-                <div className="text-left px-2 py-1 border-b border-slate-200 dark:border-slate-700/50">
-                  {weekStart ? formatDateHeader(weekStart) : "Loading..."}
+              <div className="flex-1 border-r border-slate-300 dark:border-slate-700 flex flex-col justify-end text-xs font-medium">
+                <div className="text-center px-2 py-0.5 border-b border-slate-300">
+                  {timelineStart ? formatDateHeader(timelineStart) : ""}
                 </div>
-                <div className="px-2 py-0.5">00:01</div>
+                <div className="px-2 py-0.5 text-left text-[10px]">0:01</div>
               </div>
-              <div className="flex-1 flex flex-col justify-center text-xs font-medium text-slate-600 dark:text-slate-400 text-right">
-                <div className="px-2 py-1 border-b border-slate-200 dark:border-slate-700/50">
-                  {endOfWeek ? formatDateHeader(endOfWeek) : "Loading..."}
+              <div className="flex-1 flex flex-col justify-end text-xs font-medium">
+                <div className="text-center px-2 py-0.5 border-b border-slate-300">
+                  {timelineEnd ? formatDateHeader(timelineEnd) : ""}
                 </div>
-                <div className="px-2 py-0.5">00:00</div>
+                <div className="px-2 py-0.5 text-right text-[10px]">00:00</div>
               </div>
             </div>
           </div>
 
-          {/* VIRTUALIZED DATA ROWS CONTAINER */}
+          {/* VIRTUALIZED DATA ROWS */}
           <div ref={parentRef} className="flex-1 overflow-y-auto custom-scrollbar relative">
             {processedData.length === 0 && !loading ? (
-              <div className="h-32 flex items-center justify-center text-slate-500 dark:text-slate-400 text-sm font-medium border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/20">
-                {data.length === 0 ? "No flights found for this selection." : "No flights match your filter criteria."}
+              <div className="h-32 flex items-center justify-center text-slate-500 text-sm font-medium">
+                No flights match your criteria.
               </div>
             ) : (
               <div
@@ -438,13 +414,13 @@ const ViewPage = () => {
                         height: `${virtualRow.size}px`,
                         transform: `translateY(${virtualRow.start}px)`,
                       }}
-                      className="flex border-b border-slate-100 dark:border-slate-800/50 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group"
+                      className="flex border-b border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
                     >
                       {/* Left Metadata Column */}
-                      <div className="w-64 shrink-0 flex items-stretch border-r border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-800 dark:text-slate-200 bg-white group-hover:bg-slate-50 dark:bg-slate-900 dark:group-hover:bg-slate-800/30 relative z-10">
+                      <div className="w-64 shrink-0 flex items-stretch border-r border-slate-300 dark:border-slate-700 text-xs font-medium bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 relative z-10">
                         {MODE_COLUMNS[mode].map((col) => (
                           <div key={col.key} className="flex-1 flex items-center px-3 border-r last:border-0 border-slate-200 dark:border-slate-700/50 truncate">
-                            {row.leftColumn?.[col.key] || "-"}
+                            {row.leftColumn?.[col.key] || ""}
                           </div>
                         ))}
                       </div>
@@ -456,7 +432,7 @@ const ViewPage = () => {
                           <FlightBar
                             key={i}
                             flight={flight}
-                            weekStart={weekStart}
+                            timelineStart={timelineStart}
                             mode={mode}
                             timezone={timezone}
                           />
