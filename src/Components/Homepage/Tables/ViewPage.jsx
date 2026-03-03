@@ -71,7 +71,7 @@ const formatWeekDisplay = (dateStr) => {
   if (!dateStr) return "";
   const d = new Date(dateStr);
   const parts = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).split(' ');
-  return `${parts[0]}-${parts[1]}-${parts[2]}`; 
+  return `${parts[0]}-${parts[1]}-${parts[2]}`;
 };
 
 // Formats as "Monday | 16 Feb 26"
@@ -104,7 +104,7 @@ const FlightBar = ({ flight, timelineStart, mode, timezone }) => {
     flight.localTimezone || "UTC+5:30",
     timezone
   );
-  
+
   let blockLabel = "";
   if (mode === "Rotations" || mode === "Aircraft") blockLabel = flight.sector || `${flight.depStn}-${flight.arrStn}`;
   if (mode === "Sectors" || mode === "Station") blockLabel = flight.variant || "N/A";
@@ -136,15 +136,42 @@ const ViewPage = () => {
   const [mode, setMode] = useState("Rotations");
   const [stationCode, setStationCode] = useState("DEL");
   const [timezone, setTimezone] = useState("UTC+5:30");
-  
+
   const [weeks, setWeeks] = useState([]);
-  const [weekStart, setWeekStart] = useState(""); 
-  
+  const [weekStart, setWeekStart] = useState("");
+
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const [filters, setFilters] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "Up" });
+  const [creatingConnections, setCreatingConnections] = useState(false);
+
+  const handleCreateConnections = async () => {
+    try {
+      setCreatingConnections(true);
+
+      const accessToken = localStorage.getItem("accessToken");
+
+      // 1️⃣ Create connections
+      await axios.get("https://airlineplan.com/createConnections", {
+        headers: { "x-access-token": accessToken }
+      });
+
+      // 2️⃣ After completion → reload current view data
+      const response = await axios.get("https://airlineplan.com/view-page-data", {
+        headers: { "x-access-token": accessToken },
+        params: { mode, station: stationCode, weekStart, viewTimezone: timezone }
+      });
+
+      setData(response.data?.rows || []);
+
+    } catch (error) {
+      console.error("Error creating connections", error);
+    } finally {
+      setCreatingConnections(false);
+    }
+  };
 
   useEffect(() => {
     const fetchWeeks = async () => {
@@ -156,7 +183,7 @@ const ViewPage = () => {
 
         if (res.data?.weeks?.length) {
           setWeeks(res.data.weeks);
-          setWeekStart(res.data.weeks[res.data.weeks.length - 1]); 
+          setWeekStart(res.data.weeks[res.data.weeks.length - 1]);
         }
       } catch (err) {
         console.error("Failed to fetch weeks", err);
@@ -223,9 +250,9 @@ const ViewPage = () => {
       result.sort((a, b) => {
         const valA = a.leftColumn?.[sortConfig.key] || "";
         const valB = b.leftColumn?.[sortConfig.key] || "";
-        
+
         if (typeof valA === "number" && typeof valB === "number") {
-            return sortConfig.direction === "Up" ? valA - valB : valB - valA;
+          return sortConfig.direction === "Up" ? valA - valB : valB - valA;
         }
 
         if (sortConfig.direction === "Up") {
@@ -241,11 +268,11 @@ const ViewPage = () => {
 
   // --- Date Math for UI (Monday Start, Sunday End) ---
   const timelineStart = useMemo(() => {
-  if (!weekStart) return null;
-  const start = new Date(weekStart);
-  start.setHours(0, 0, 0, 0);
-  return start;
-}, [weekStart]);
+    if (!weekStart) return null;
+    const start = new Date(weekStart);
+    start.setHours(0, 0, 0, 0);
+    return start;
+  }, [weekStart]);
 
   // Generate Array of 7 Days for the new Timeline Header
   const weekDays = useMemo(() => {
@@ -269,9 +296,18 @@ const ViewPage = () => {
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 p-2 sm:p-4 rounded-xl relative text-slate-800 dark:text-slate-200">
 
       <div className="flex justify-end mb-2">
-         <div className="flex items-center gap-2 bg-yellow-200 text-yellow-900 text-[10px] font-semibold px-2 py-1 border border-yellow-400">
-          Connections highlighted with end of rectangle
-        </div>
+        <button
+          onClick={handleCreateConnections}
+          disabled={creatingConnections}
+          className={cn(
+            "px-3 py-1.5 text-xs font-semibold rounded-md border transition-all duration-200",
+            creatingConnections
+              ? "bg-slate-300 text-slate-600 border-slate-400 cursor-not-allowed"
+              : "bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700"
+          )}
+        >
+          {creatingConnections ? "Processing..." : "Create Connections"}
+        </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-6 pb-4 border-b border-slate-300 dark:border-slate-700 shrink-0">
@@ -343,58 +379,58 @@ const ViewPage = () => {
 
       {/* 3. Main Data View */}
       <div className="flex-1 mt-2 flex flex-col">
-  <div className="flex-1 overflow-auto custom-scrollbar">
-    <div className="min-w-[1000px] flex flex-col">
+        <div className="flex-1 overflow-auto custom-scrollbar">
+          <div className="min-w-[1000px] flex flex-col">
 
-          {/* TIMELINE HEADER */}
-          <div className="flex border-b-2 border-slate-800 dark:border-slate-500 bg-white dark:bg-slate-900 shrink-0">
-            
-            {/* Left Header Section - DYNAMIC FILTER + SORT */}
-            <div className="w-64 shrink-0 flex items-end border-r-2 border-slate-400 bg-slate-50 dark:bg-slate-800/90 pb-1">
-              {MODE_COLUMNS[mode].map((col) => (
-                <div key={col.key} className="flex-1 px-2 flex flex-col gap-1 border-r border-slate-300 dark:border-slate-700 last:border-0">
-                   <div className="text-[9px] text-slate-500 font-semibold mb-[-2px]">Filter + Sort</div>
-                  <div
-                    className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-xs font-bold uppercase"
-                    onClick={() => handleSort(col.key)}
-                  >
-                    {col.label}
-                    {sortConfig.key === col.key ? (
-                      sortConfig.direction === "Up" ? <ArrowUp size={10} /> : <ArrowDown size={10} />
-                    ) : (
-                      <ArrowUp size={10} className="opacity-0 hover:opacity-30" />
-                    )}
-                  </div>
-                  <TableInput
-                    name={col.key}
-                    value={filters[col.key]}
-                    onChange={handleFilterChange}
-                  />
-                </div>
-              ))}
-            </div>
+            {/* TIMELINE HEADER */}
+            <div className="flex border-b-2 border-slate-800 dark:border-slate-500 bg-white dark:bg-slate-900 shrink-0">
 
-            {/* Right Timeline Date Headers (7 Exact Columns) */}
-            <div className="flex-1 flex">
-              {weekDays.length > 0 ? (
-                weekDays.map((day, idx) => (
-                  <div key={idx} className="flex-1 border-r border-slate-300 dark:border-slate-700 last:border-0 flex flex-col justify-end text-xs font-medium bg-slate-50 dark:bg-slate-800/50">
-                    <div className="text-center px-1 py-1 border-b border-slate-300 dark:border-slate-700 truncate">
-                      {formatDateHeader(day)}
+              {/* Left Header Section - DYNAMIC FILTER + SORT */}
+              <div className="w-64 shrink-0 flex items-end border-r-2 border-slate-400 bg-slate-50 dark:bg-slate-800/90 pb-1">
+                {MODE_COLUMNS[mode].map((col) => (
+                  <div key={col.key} className="flex-1 px-2 flex flex-col gap-1 border-r border-slate-300 dark:border-slate-700 last:border-0">
+                    <div className="text-[9px] text-slate-500 font-semibold mb-[-2px]">Filter + Sort</div>
+                    <div
+                      className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-xs font-bold uppercase"
+                      onClick={() => handleSort(col.key)}
+                    >
+                      {col.label}
+                      {sortConfig.key === col.key ? (
+                        sortConfig.direction === "Up" ? <ArrowUp size={10} /> : <ArrowDown size={10} />
+                      ) : (
+                        <ArrowUp size={10} className="opacity-0 hover:opacity-30" />
+                      )}
                     </div>
-                    {/* Time labels below each day */}
-                    <div className="flex justify-between px-1 py-0.5 text-[9px] text-slate-500 bg-white dark:bg-slate-900">
-                      <span>00:01</span>
-                      <span>23:59</span>
-                    </div>
+                    <TableInput
+                      name={col.key}
+                      value={filters[col.key]}
+                      onChange={handleFilterChange}
+                    />
                   </div>
-                ))
-              ) : (
-                <div className="flex-1 flex items-center justify-center text-xs text-slate-500">Loading timeline...</div>
-              )}
+                ))}
+              </div>
+
+              {/* Right Timeline Date Headers (7 Exact Columns) */}
+              <div className="flex-1 flex">
+                {weekDays.length > 0 ? (
+                  weekDays.map((day, idx) => (
+                    <div key={idx} className="flex-1 border-r border-slate-300 dark:border-slate-700 last:border-0 flex flex-col justify-end text-xs font-medium bg-slate-50 dark:bg-slate-800/50">
+                      <div className="text-center px-1 py-1 border-b border-slate-300 dark:border-slate-700 truncate">
+                        {formatDateHeader(day)}
+                      </div>
+                      {/* Time labels below each day */}
+                      <div className="flex justify-between px-1 py-0.5 text-[9px] text-slate-500 bg-white dark:bg-slate-900">
+                        <span>00:01</span>
+                        <span>23:59</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-xs text-slate-500">Loading timeline...</div>
+                )}
+              </div>
             </div>
           </div>
-</div>
           {/* VIRTUALIZED DATA ROWS */}
           <div ref={parentRef} className="flex-1 overflow-y-auto custom-scrollbar relative">
             {processedData.length === 0 && !loading ? (
