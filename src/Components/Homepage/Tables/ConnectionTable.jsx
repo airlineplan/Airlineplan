@@ -3,8 +3,8 @@ import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { 
-  Link2, ChevronDown, Check, RefreshCw 
+import {
+  Link2, ChevronDown, Check, RefreshCw
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -171,11 +171,13 @@ const ConnectionTable = () => {
   const [dropdownOptions, setDropdownOptions] = useState({
     from: [], to: [], sector: [], variant: [], userTag1: [], userTag2: [],
   });
+  const [isInitialized, setIsInitialized] = useState(false);
+  const hasInitialized = useRef(false);
 
   // 🔥 FIX: Store the entire object in state, just like DashboardTable.jsx
-  const [selectedValues, setSelectedValues] = useState({ 
-    label: singleSelectLabelOptions[2], 
-    periodicity: singleSelectPeriodicityOptions[3] 
+  const [selectedValues, setSelectedValues] = useState({
+    label: singleSelectLabelOptions[2],
+    periodicity: singleSelectPeriodicityOptions[3]
   });
 
   const [filters, setFilters] = useState({
@@ -198,11 +200,64 @@ const ConnectionTable = () => {
     getDropdownData();
   }, []);
 
+  const createAndLoadConnections = async () => {
+    try {
+      setLoading(true);
+
+      const accessToken = localStorage.getItem("accessToken");
+
+      // 1️⃣ Create connections first
+      await axios.get("https://airlineplan.com/createConnections", {
+        headers: { "x-access-token": accessToken },
+      });
+
+      // 2️⃣ After creation, fetch them
+      await fetchConnections();
+
+    } catch (error) {
+      console.error("Error creating connections:", error);
+      toast.error("Failed to process connections");
+      setLoading(false);
+    }
+  };
+
+  const fetchConnections = async () => {
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+
+      const params = {
+        label: selectedValues.label.value,
+        periodicity: selectedValues.periodicity.value,
+        from: filters.from.map(f => f.value),
+        to: filters.to.map(f => f.value),
+        sector: filters.sector.map(f => f.value),
+        variant: filters.variant.map(f => f.value),
+        userTag1: filters.userTag1.map(f => f.value),
+        userTag2: filters.userTag2.map(f => f.value),
+      };
+
+      const response = await axios.get(
+        "https://airlineplan.com/getConnections",
+        {
+          params,
+          headers: { "x-access-token": accessToken },
+        }
+      );
+
+      setData(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error("Error fetching connections:", error);
+      toast.error("Failed to load connection data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
       const accessToken = localStorage.getItem("accessToken");
-  
+
       // 🔥 FIX: Pass the state objects directly. Axios GET will correctly stringify them.
       const params = {
         label: selectedValues.label,
@@ -214,12 +269,12 @@ const ConnectionTable = () => {
         userTag1: filters.userTag1,
         userTag2: filters.userTag2
       };
-  
-      const response = await axios.get('https://airlineplan.com/createConnections', {
+
+      const response = await axios.get('https://airlineplan.com/getConnections', {
         params,
         headers: { 'x-access-token': accessToken },
       });
-  
+
       setData(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -228,10 +283,25 @@ const ConnectionTable = () => {
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
-    fetchData();
-  }, [selectedValues, filters]);
+    const init = async () => {
+      if (hasInitialized.current) return;
+      hasInitialized.current = true;
+
+      await createAndLoadConnections();   // wait for creation
+      setIsInitialized(true);             // allow future fetches
+    };
+
+    init();
+  }, []);
+
+  // When filters change, only fetch (don't recreate)
+  useEffect(() => {
+    if (!isInitialized) return;   // 🚀 block until creation done
+
+    fetchConnections();
+  }, [selectedValues, filters, isInitialized]);
 
   const handleFilterChange = (key, selected) => {
     setFilters(prev => ({ ...prev, [key]: selected }));
@@ -242,7 +312,7 @@ const ConnectionTable = () => {
   };
 
   // --- RENDER HELPERS ---
-  
+
   const formatHeaderDate = (inputDate) => {
     if (!inputDate) return " ---------            ";
     const date = new Date(inputDate);
@@ -263,10 +333,10 @@ const ConnectionTable = () => {
 
   return (
     <div className="w-full h-full p-6 space-y-6 bg-slate-50 dark:bg-slate-950 min-h-screen font-sans">
-      
+
       {/* HEADER & FILTERS */}
       <div className="flex flex-col gap-6 relative z-50">
-        
+
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="flex gap-4">
             <SingleSelectDropdown
@@ -298,7 +368,7 @@ const ConnectionTable = () => {
 
       {/* TABLE SECTION */}
       <div className="relative z-10 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col min-h-[400px]">
-        
+
         {/* Table Content */}
         <div className="flex-1 overflow-x-auto custom-scrollbar relative">
           {loading ? (
@@ -313,35 +383,49 @@ const ConnectionTable = () => {
                   <th className="sticky left-0 z-20 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur border-b border-r border-slate-300 dark:border-slate-700 p-4 min-w-[280px] shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)]">
                     {/* Empty top-left cell */}
                   </th>
-                  
+
                   {/* Dynamic Date Columns */}
                   {data.map((col, idx) => (
                     <th key={idx} className="bg-slate-50/90 dark:bg-slate-800/90 border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[120px] text-center text-sm font-bold text-slate-800 dark:text-slate-200">
                       {formatHeaderDate(col?.endDate)}
                     </th>
                   ))}
-                  
+
                   {data.length === 0 && (
                     <th className="p-4 text-center text-slate-400 font-normal italic">No data to display</th>
                   )}
                 </tr>
               </thead>
-              
+
               <tbody className="bg-white/50 dark:bg-slate-900/50">
                 {TABLE_ROWS.map((row, rowIdx) => (
                   <tr key={`row-${rowIdx}`} className="group hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-colors">
-                    
+
                     {/* Row Label */}
                     <td className="sticky left-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-r border-b border-slate-200 dark:border-slate-800 p-3 pl-4 text-sm font-semibold text-slate-700 dark:text-slate-200 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] group-hover:bg-indigo-50/90 dark:group-hover:bg-indigo-900/90 transition-colors">
                       {row.label}
                     </td>
-                    
+
                     {/* Dynamic Data Cells */}
-                    {data.map((colData, colIdx) => (
-                      <td key={colIdx} className="p-3 border-r border-b border-slate-200 dark:border-slate-800 text-center text-sm text-slate-600 dark:text-slate-400 tabular-nums font-medium">
-                        {colData[row.dataKey] ? colData[row.dataKey] : " "}
-                      </td>
-                    ))}
+                    {data.map((colData, colIdx) => {
+                      const rawValue = colData[row.dataKey];
+
+                      const formattedValue =
+                        rawValue !== null &&
+                          rawValue !== undefined &&
+                          rawValue !== ""
+                          ? Number(rawValue).toFixed(2)
+                          : " ";
+
+                      return (
+                        <td
+                          key={colIdx}
+                          className="p-3 border-r border-b border-slate-200 dark:border-slate-800 text-center text-sm text-slate-600 dark:text-slate-400 tabular-nums font-medium"
+                        >
+                          {formattedValue}
+                        </td>
+                      );
+                    })}
 
                     {data.length === 0 && <td className="border-b border-slate-200 dark:border-slate-800"></td>}
                   </tr>
@@ -351,7 +435,7 @@ const ConnectionTable = () => {
           )}
         </div>
       </div>
-      
+
       <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
