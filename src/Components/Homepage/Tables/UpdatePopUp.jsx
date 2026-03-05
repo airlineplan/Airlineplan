@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../../../apiConfig";
 import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
 import { ToastContainer, toast } from "react-toastify";
@@ -16,7 +16,7 @@ function cn(...inputs) {
 // --- UI COMPONENTS ---
 const Button = ({ children, variant = "primary", className, loading, icon: Icon, ...props }) => {
   const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed";
-  
+
   const variants = {
     primary: "bg-gradient-to-r from-indigo-500 to-cyan-500 text-white hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02]",
     secondary: "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm",
@@ -42,7 +42,7 @@ const InputGroup = ({ label, error, children }) => (
     </label>
     {children}
     {error && (
-      <motion.span 
+      <motion.span
         initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
         className="text-xs text-red-500 font-medium leading-tight"
       >
@@ -76,7 +76,7 @@ const UpdatePopUp = (props) => {
   const [remarks1, setRemarks1] = useState("");
   const [remarks2, setRemarks2] = useState("");
   const [message, setMessage] = useState("");
-  
+
   const [loading, setLoading] = useState(false);
 
   const [flightError, setFlightError] = useState("");
@@ -255,7 +255,7 @@ const UpdatePopUp = (props) => {
   const fetchData = async () => {
     if (isBulkUpdate) return;
     try {
-      const response = await axios.get(`https://airlineplan.com/products/${DataId}`);
+      const response = await api.get(`/products/${DataId}`);
       const item = response.data;
 
       // Adapted for native HTML5 Date inputs (requires YYYY-MM-DD)
@@ -287,10 +287,10 @@ const UpdatePopUp = (props) => {
   function isValidProductData(productData) {
     for (const key in productData) {
       if (productData.hasOwnProperty(key) && (productData[key] !== '' && productData[key] !== null && productData[key] !== undefined)) {
-        return true; 
+        return true;
       }
     }
-    return false; 
+    return false;
   }
 
   function removeEmptyFields(productData) {
@@ -332,14 +332,12 @@ const UpdatePopUp = (props) => {
       console.log('At least one field is not empty, null, or undefined.');
     } else {
       toast.error("All fields are empty");
-      return; 
+      return;
     }
 
     if (productId) {
       setLoading(true);
-      axios.put(`https://airlineplan.com/update-data/${productId}`, productData, {
-          headers: { 'x-access-token': `${localStorage.getItem('accessToken')}`, 'Content-Type': 'application/json' },
-        })
+      api.put(`/update-data/${productId}`, productData)
         .then((response) => {
           const data = response.data;
           setLoading(false);
@@ -378,8 +376,8 @@ const UpdatePopUp = (props) => {
         icon={PenLine}
         onClick={() => {
           if (!props.checkedRows || props.checkedRows.length === 0) {
-             toast.warning("Please select at least one row to update.");
-             return;
+            toast.warning("Please select at least one row to update.");
+            return;
           }
           handleUpdateOpen();
           fetchData();
@@ -400,7 +398,7 @@ const UpdatePopUp = (props) => {
               onClick={() => { setOpenUpdate(false); setLoading(false); }}
               className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
             />
-            
+
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -408,7 +406,7 @@ const UpdatePopUp = (props) => {
               onKeyDown={handleKeyDown}
               className="fixed inset-0 m-auto z-50 w-full max-w-5xl h-fit max-h-[90vh] overflow-y-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 custom-scrollbar"
             >
-              
+
               {/* Header */}
               <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
                 <div>
@@ -421,7 +419,7 @@ const UpdatePopUp = (props) => {
                     </p>
                   )}
                 </div>
-                <button 
+                <button
                   onClick={() => { setOpenUpdate(false); setLoading(false); }}
                   className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
                 >
@@ -431,7 +429,7 @@ const UpdatePopUp = (props) => {
 
               {/* Form Grid - Fixed horizontal layout with CSS Grid */}
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="Flight" error={flightError}>
                     <input className={baseInputStyles} value={flight} onChange={handleFlight} placeholder="Flight number" />

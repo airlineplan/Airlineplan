@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../apiConfig';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Lock, Mail, CheckCircle2, ArrowRight, 
-  Loader2, Plane, Globe 
+import {
+  Lock, Mail, CheckCircle2, ArrowRight,
+  Loader2, Plane, Globe
 } from 'lucide-react';
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // Assuming you have this component
-import TermsAndConditionsModal from '../Components/Homepage/TermsAndConditionsModal'; 
+import TermsAndConditionsModal from '../Components/Homepage/TermsAndConditionsModal';
 // Ensure path is correct
-import backgroundPic from "../assets/Images/bglogin.jpeg"; 
+import backgroundPic from "../assets/Images/bglogin.jpeg";
 
 // --- UI COMPONENTS ---
 
@@ -35,7 +36,7 @@ const InputField = ({ label, icon: Icon, type = "text", ...props }) => (
 );
 
 const FeatureItem = ({ text, delay }) => (
-  <motion.div 
+  <motion.div
     initial={{ opacity: 0, x: -20 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay, duration: 0.5 }}
@@ -71,13 +72,13 @@ export default function Loginpage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await fetch('https://airlineplan.com/user-login', {
+      const response = await fetch(`${API_BASE_URL}/user-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
       const data = await response.json();
-      
+
       if (response.ok) {
         localStorage.setItem('accessToken', data.token);
         toast.success(data.message || "Login successful!");
@@ -104,10 +105,10 @@ export default function Loginpage() {
 
   return (
     <div className="min-h-screen w-full relative font-sans flex items-center justify-center p-4 lg:p-8 overflow-hidden bg-black">
-      
+
       {/* --- FULL SCREEN BACKGROUND --- */}
       <div className="absolute inset-0 z-0">
-        <motion.div 
+        <motion.div
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
           transition={{ duration: 10, ease: "easeOut" }}
@@ -124,19 +125,19 @@ export default function Loginpage() {
       </div>
 
       {/* --- CENTRAL TRANSPARENT CARD --- */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
         // Removed background color, removed blur, just layout
         className="relative z-20 w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 min-h-[650px]"
       >
-        
+
         {/* LEFT PANEL: Features & Info */}
         <div className="p-8 lg:p-12 text-white flex flex-col justify-between relative">
-          
+
           <div className="relative z-10">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center gap-3 mb-8"
@@ -147,14 +148,14 @@ export default function Loginpage() {
               <span className="text-xl font-bold tracking-wide drop-shadow-md">Airlineplan</span>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
               className="mb-8"
             >
               <h1 className="text-3xl font-bold mb-3 text-white drop-shadow-lg">
-                Plan and Operationalize with complete visibility of all commercial, operational and financial factors. <br/>
+                Plan and Operationalize with complete visibility of all commercial, operational and financial factors. <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 to-cyan-200 drop-shadow-sm">
                   Review and analyze historical data for insights.
                 </span>
@@ -181,32 +182,32 @@ export default function Loginpage() {
         {/* RIGHT PANEL: Login Form */}
         {/* Added a very subtle background tint just to group the form elements visually */}
         <div className="p-8 lg:p-12 flex flex-col justify-center bg-black/20 lg:bg-transparent rounded-3xl lg:backdrop-blur-none border border-white/10 lg:border-none m-4 lg:m-0">
-          
+
           <div className="max-w-md mx-auto w-full">
             <div className="mb-8 text-center lg:text-left">
               <h2 className="text-2xl font-bold text-white tracking-tight flex items-center justify-center lg:justify-start gap-2 drop-shadow-lg">
-                <Globe className="text-indigo-300 hidden lg:block" size={24} /> 
+                <Globe className="text-indigo-300 hidden lg:block" size={24} />
                 Welcome Back
               </h2>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-6">
-              <InputField 
-                label="Email Address" 
-                icon={Mail} 
-                placeholder="name@company.com" 
+              <InputField
+                label="Email Address"
+                icon={Mail}
+                placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoFocus
               />
-              
+
               <div>
-                <InputField 
-                  label="Password" 
-                  icon={Lock} 
-                  type="password" 
-                  placeholder="••••••••" 
+                <InputField
+                  label="Password"
+                  icon={Lock}
+                  type="password"
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -251,11 +252,11 @@ export default function Loginpage() {
 
             {/* Footer Links - Route Economics has been removed from here */}
             <div className="mt-8 pt-6 border-t border-white/20 flex flex-wrap justify-center gap-4 lg:gap-6">
-               <div className="text-xs text-indigo-200 hover:text-white transition-colors cursor-pointer drop-shadow-sm">
-                 <TermsAndConditionsModal />
-               </div>
-               <div className="text-indigo-200/50 text-xs">•</div>
-               <Link to="/contact" className="text-xs text-indigo-200 hover:text-white transition-colors drop-shadow-sm">Contact Support</Link>
+              <div className="text-xs text-indigo-200 hover:text-white transition-colors cursor-pointer drop-shadow-sm">
+                <TermsAndConditionsModal />
+              </div>
+              <div className="text-indigo-200/50 text-xs">•</div>
+              <Link to="/contact" className="text-xs text-indigo-200 hover:text-white transition-colors drop-shadow-sm">Contact Support</Link>
             </div>
 
           </div>

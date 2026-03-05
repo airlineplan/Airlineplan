@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { API_BASE_URL } from '../apiConfig';
 import { motion } from 'framer-motion';
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -44,16 +45,16 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   const navigate = useNavigate();
 
   // --- HANDLERS ---
   const handleSignup = async (event) => {
     event.preventDefault();
     setLoading(true);
-    
+
     try {
-      const response = await fetch('https://airlineplan.com/user-signup', {
+      const response = await fetch(`${API_BASE_URL}/user-signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -80,7 +81,7 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-950 font-sans p-4 relative overflow-hidden selection:bg-indigo-500/30">
-      
+
       {/* --- BACKGROUND AMBIENCE --- */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none z-0"></div>
       <div className="absolute top-[-10%] left-[-10%] z-0 m-auto h-[400px] w-[400px] rounded-full bg-indigo-500 opacity-20 blur-[120px] pointer-events-none"></div>
@@ -94,7 +95,7 @@ export default function Signup() {
         className="w-full max-w-md relative z-10"
       >
         <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-2xl border border-white/20 dark:border-slate-800 rounded-3xl shadow-2xl p-8 sm:p-10">
-          
+
           {/* Header */}
           <div className="flex flex-col items-center text-center mb-8">
             <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-500 shadow-lg shadow-indigo-500/30 mb-4">
@@ -107,7 +108,7 @@ export default function Signup() {
 
           {/* Form */}
           <form onSubmit={handleSignup} className="space-y-5">
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <InputField
                 label="First Name"
@@ -180,8 +181,8 @@ export default function Signup() {
           <div className="mt-8 text-center">
             <p className="text-sm text-slate-600 dark:text-slate-400">
               Already have an account?{' '}
-              <Link 
-                to="/" 
+              <Link
+                to="/"
                 className="font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
               >
                 Sign in

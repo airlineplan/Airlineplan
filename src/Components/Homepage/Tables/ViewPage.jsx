@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { ChevronDown, Calendar, Globe2, MapPin, Search, ArrowUp, ArrowDown } from "lucide-react";
-import axios from "axios";
+import api from "../../../apiConfig";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -154,13 +154,10 @@ const ViewPage = () => {
       const accessToken = localStorage.getItem("accessToken");
 
       // 1️⃣ Create connections
-      await axios.get("https://airlineplan.com/createConnections", {
-        headers: { "x-access-token": accessToken }
-      });
+      await api.get("/createConnections");
 
       // 2️⃣ After completion → reload current view data
-      const response = await axios.get("https://airlineplan.com/view-page-data", {
-        headers: { "x-access-token": accessToken },
+      const response = await api.get("/view-page-data", {
         params: { mode, station: stationCode, weekStart, viewTimezone: timezone }
       });
 
@@ -177,9 +174,7 @@ const ViewPage = () => {
     const fetchWeeks = async () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const res = await axios.get("https://airlineplan.com/master-weeks", {
-          headers: { "x-access-token": accessToken }
-        });
+        const res = await api.get("/master-weeks");
 
         if (res.data?.weeks?.length) {
           setWeeks(res.data.weeks);
@@ -205,8 +200,7 @@ const ViewPage = () => {
       setLoading(true);
       try {
         const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("https://airlineplan.com/view-page-data", {
-          headers: { "x-access-token": accessToken },
+        const response = await api.get("/view-page-data", {
           params: { mode, station: stationCode, weekStart, viewTimezone: timezone }
         });
 

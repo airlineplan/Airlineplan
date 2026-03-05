@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import axios from "axios";
+import api from "../../../apiConfig";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -302,9 +302,8 @@ const ListTable = () => {
   useEffect(() => {
     const getDropdownData = async () => {
       try {
-        const response = await axios.get(
-          `https://airlineplan.com/dashboard/populateDropDowns`,
-          { headers: { "x-access-token": localStorage.getItem("accessToken") } }
+        const response = await api.get(
+          `/dashboard/populateDropDowns`
         );
         if (response.data) {
           setDropdownOptions(prev => ({
@@ -331,10 +330,9 @@ const ListTable = () => {
       setLoading(true);
       const accessToken = localStorage.getItem("accessToken");
 
-      const response = await axios.post(
-        'https://airlineplan.com/list-page-data',
-        filters,
-        { headers: { 'x-access-token': accessToken } }
+      const response = await api.post(
+        '/list-page-data',
+        filters
       );
 
       const flightsData = response.data.flights || response.data || [];
@@ -655,11 +653,11 @@ const ListTable = () => {
             <thead>
               <tr>
                 <th className="sticky left-0 z-20 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[250px] shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] text-xs font-bold uppercase text-slate-500">
-                  {filters.periodicity.label === "Annually" ? "Year" : 
-                   filters.periodicity.label === "Quarterly" ? "Quarter" : 
-                   filters.periodicity.label === "Monthly" ? "Month" : 
-                   filters.periodicity.label === "Weekly" ? "Week" : 
-                   "Day"}
+                  {filters.periodicity.label === "Annually" ? "Year" :
+                    filters.periodicity.label === "Quarterly" ? "Quarter" :
+                      filters.periodicity.label === "Monthly" ? "Month" :
+                        filters.periodicity.label === "Weekly" ? "Week" :
+                          "Day"}
                 </th>
                 {tableColumns.map((col, idx) => (
                   <th key={idx} className="bg-slate-50/90 dark:bg-slate-800/90 border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[100px] text-center text-sm font-bold text-slate-800 dark:text-slate-200">

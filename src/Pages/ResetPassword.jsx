@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import api from "../apiConfig";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -27,11 +27,10 @@ const InputField = ({ label, icon: Icon, type = "text", error, ...props }) => (
 
       <input
         type={type}
-        className={`block w-full pl-10 pr-3 py-3 bg-slate-950/40 border rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-slate-950/60 transition-all placeholder:text-white/20 backdrop-blur-sm shadow-inner ${
-          error
+        className={`block w-full pl-10 pr-3 py-3 bg-slate-950/40 border rounded-xl text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-slate-950/60 transition-all placeholder:text-white/20 backdrop-blur-sm shadow-inner ${error
             ? "border-red-500/50 focus:border-red-500"
             : "border-white/10 focus:border-indigo-500/50"
-        }`}
+          }`}
         {...props}
       />
     </div>
@@ -109,8 +108,8 @@ const ResetPassword = (props) => {
     const payload = { ...inputField, ...props };
 
     try {
-      const response = await axios.post(
-        "https://airlineplan.com/change-passowrd",
+      const response = await api.post(
+        "/change-passowrd",
         payload
       );
 

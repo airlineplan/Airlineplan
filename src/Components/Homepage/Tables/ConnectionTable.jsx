@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import api from "../../../apiConfig";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -188,9 +188,8 @@ const ConnectionTable = () => {
   useEffect(() => {
     const getDropdownData = async () => {
       try {
-        const response = await axios.get(
-          `https://airlineplan.com/dashboard/populateDropDowns`,
-          { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
+        const response = await api.get(
+          `/dashboard/populateDropDowns`
         );
         setDropdownOptions(response.data);
       } catch (error) {
@@ -207,9 +206,7 @@ const ConnectionTable = () => {
       const accessToken = localStorage.getItem("accessToken");
 
       // 1️⃣ Create connections first
-      await axios.get("https://airlineplan.com/createConnections", {
-        headers: { "x-access-token": accessToken },
-      });
+      await api.get("/createConnections");
 
       // 2️⃣ After creation, fetch them
       await fetchConnections();
@@ -236,11 +233,10 @@ const ConnectionTable = () => {
         userTag2: filters.userTag2.map(f => f.value),
       };
 
-      const response = await axios.get(
-        "https://airlineplan.com/getConnections",
+      const response = await api.get(
+        "/getConnections",
         {
           params,
-          headers: { "x-access-token": accessToken },
         }
       );
 
@@ -270,9 +266,8 @@ const ConnectionTable = () => {
         userTag2: filters.userTag2
       };
 
-      const response = await axios.get('https://airlineplan.com/getConnections', {
+      const response = await api.get('/getConnections', {
         params,
-        headers: { 'x-access-token': accessToken },
       });
 
       setData(Array.isArray(response.data) ? response.data : []);

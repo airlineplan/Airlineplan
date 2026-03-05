@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../apiConfig';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  Send, User, Mail, MessageSquare, 
-  Loader2, Type, MapPin, Phone, ArrowLeft 
+import {
+  Send, User, Mail, MessageSquare,
+  Loader2, Type, MapPin, Phone, ArrowLeft
 } from 'lucide-react';
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -42,7 +42,7 @@ const InputField = ({ label, icon: Icon, type = "text", multiline = false, ...pr
 );
 
 const ContactInfoItem = ({ icon: Icon, text, subtext }) => (
-  <motion.div 
+  <motion.div
     initial={{ opacity: 0, x: -20 }}
     animate={{ opacity: 1, x: 0 }}
     // Removed hover background, added text shadow for readability
@@ -77,9 +77,9 @@ export default function Contact() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
-      await axios.post('https://airlineplan.com/send-contactEmail', formData);
+      await api.post('/send-contactEmail', formData);
       toast.success('Message sent successfully!');
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
@@ -93,10 +93,10 @@ export default function Contact() {
   return (
     // Changed bg-slate-900 to bg-black as base
     <div className="min-h-screen w-full relative font-sans flex items-center justify-center p-4 lg:p-8 overflow-hidden bg-black">
-      
+
       {/* --- FULL SCREEN BACKGROUND --- */}
       <div className="absolute inset-0 z-0">
-        <motion.div 
+        <motion.div
           initial={{ scale: 1.05 }}
           animate={{ scale: 1 }}
           transition={{ duration: 10, ease: "easeOut" }}
@@ -114,24 +114,24 @@ export default function Contact() {
 
       {/* --- CENTRAL TRANSPARENT CONTAINER --- */}
       {/* Removed all background colors, blurs, shadows, and borders from the main container */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="relative z-20 w-full max-w-6xl grid grid-cols-1 lg:grid-cols-5 rounded-3xl overflow-hidden min-h-[600px]"
       >
-        
+
         {/* LEFT PANEL: Info (Takes 2 columns) */}
         {/* Removed border-r */}
         <div className="lg:col-span-2 p-8 lg:p-12 text-white flex flex-col justify-between relative">
-          
+
           {/* Top Content */}
           <div className="relative z-10">
             <Link to="/" className="inline-flex items-center text-indigo-200 hover:text-white transition-colors mb-8 text-xs font-bold uppercase tracking-widest group drop-shadow-sm">
               <ArrowLeft size={14} className="mr-2 group-hover:-translate-x-1 transition-transform" /> Back to Home
             </Link>
 
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
@@ -146,20 +146,20 @@ export default function Contact() {
             </motion.div>
 
             <div className="space-y-4">
-              <ContactInfoItem 
-                icon={Mail} 
-                text="Email Us" 
-                subtext="admin@airlineplan.com" 
+              <ContactInfoItem
+                icon={Mail}
+                text="Email Us"
+                subtext="admin@airlineplan.com"
               />
-              <ContactInfoItem 
-                icon={MapPin} 
-                text="Visit Us" 
-                subtext="Noida, Uttar Pradesh, India" 
+              <ContactInfoItem
+                icon={MapPin}
+                text="Visit Us"
+                subtext="Noida, Uttar Pradesh, India"
               />
-              <ContactInfoItem 
-                icon={Phone} 
-                text="Call Us" 
-                subtext="Mon-Fri from 9am to 6pm" 
+              <ContactInfoItem
+                icon={Phone}
+                text="Call Us"
+                subtext="Mon-Fri from 9am to 6pm"
               />
             </div>
           </div>
@@ -174,11 +174,11 @@ export default function Contact() {
 
         {/* RIGHT PANEL: Form (Takes 3 columns) */}
         <div className="lg:col-span-3 p-8 lg:p-12 flex flex-col justify-center bg-transparent">
-          
+
           <div className="max-w-lg mx-auto w-full">
             <div className="mb-8">
               <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2 drop-shadow-md">
-                <MessageSquare className="text-indigo-400" size={24} /> 
+                <MessageSquare className="text-indigo-400" size={24} />
                 Send us a message
               </h2>
               <p className="text-indigo-100/80 mt-2 text-sm drop-shadow-sm">
@@ -188,42 +188,42 @@ export default function Contact() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <InputField 
-                  label="Full Name" 
+                <InputField
+                  label="Full Name"
                   name="name"
-                  icon={User} 
-                  placeholder="John Doe" 
+                  icon={User}
+                  placeholder="John Doe"
                   value={formData.name}
                   onChange={handleInputChange}
                   required
                 />
-                <InputField 
-                  label="Email Address" 
+                <InputField
+                  label="Email Address"
                   name="email"
-                  icon={Mail} 
+                  icon={Mail}
                   type="email"
-                  placeholder="john@company.com" 
+                  placeholder="john@company.com"
                   value={formData.email}
                   onChange={handleInputChange}
                   required
                 />
               </div>
 
-              <InputField 
-                label="Subject" 
+              <InputField
+                label="Subject"
                 name="subject"
-                icon={Type} 
-                placeholder="Briefly describe your inquiry..." 
+                icon={Type}
+                placeholder="Briefly describe your inquiry..."
                 value={formData.subject}
                 onChange={handleInputChange}
                 required
               />
 
-              <InputField 
-                label="Message" 
+              <InputField
+                label="Message"
                 name="message"
-                icon={MessageSquare} 
-                placeholder="Tell us how we can help..." 
+                icon={MessageSquare}
+                placeholder="Tell us how we can help..."
                 value={formData.message}
                 onChange={handleInputChange}
                 multiline
@@ -243,7 +243,7 @@ export default function Contact() {
                     </>
                   ) : (
                     <>
-                      Send Message 
+                      Send Message
                       <Send className="ml-2 h-4 w-4" />
                     </>
                   )}

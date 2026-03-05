@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../../../apiConfig";
 import { motion, AnimatePresence } from "framer-motion";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -59,12 +59,12 @@ const AddSector = (props) => {
   const [gcd, setGCD] = useState("");
   const [acftType, setACFTType] = useState("");
   const [variant, setVariant] = useState("");
-  
+
   // Added STD & STA states required for calculation
-  const [std, setStd] = useState(""); 
+  const [std, setStd] = useState("");
   const [bt, setBlockTime] = useState("");
-  const [sta, setSta] = useState(""); 
-  
+  const [sta, setSta] = useState("");
+
   const [paxCapacity, setPaxCapacity] = useState("");
   const [CargoCapT, setCargoCapT] = useState("");
   const [paxLF, setPaxLfPercent] = useState("");
@@ -72,7 +72,7 @@ const AddSector = (props) => {
   const [fromDt, setFromDt] = useState("");
   const [toDt, setToDt] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   // Stations Data for TZ Calculation
   const [stationsData, setStationsData] = useState([]);
 
@@ -94,9 +94,7 @@ const AddSector = (props) => {
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const response = await axios.get("https://airlineplan.com/get-stationData", {
-          headers: { "x-access-token": localStorage.getItem("accessToken") },
-        });
+        const response = await api.get("/get-stationData");
         if (response.data && response.data.data) {
           setStationsData(response.data.data);
         }
@@ -133,11 +131,11 @@ const AddSector = (props) => {
         let totalMins = (stdH * 60 + stdM) + (btH * 60 + btM) + (arrTzMins - depTzMins);
 
         // Wrap around 24 hours (1440 minutes)
-        totalMins = ((totalMins % 1440) + 1440) % 1440; 
+        totalMins = ((totalMins % 1440) + 1440) % 1440;
 
         const staH = Math.floor(totalMins / 60);
         const staM = totalMins % 60;
-        
+
         setSta(`${String(staH).padStart(2, '0')}:${String(staM).padStart(2, '0')}`);
       }
     }
@@ -270,11 +268,10 @@ const AddSector = (props) => {
 
     try {
       setLoading(true);
-      const response = await axios.post(
-        "https://airlineplan.com/add-sector",
+      const response = await api.post(
+        "/add-sector",
         // Included std and sta in the payload
-        { sector1, sector2, acftType, variant, std, bt, sta, gcd, paxCapacity, CargoCapT, paxLF, cargoLF, fromDt, toDt },
-        { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
+        { sector1, sector2, acftType, variant, std, bt, sta, gcd, paxCapacity, CargoCapT, paxLF, cargoLF, fromDt, toDt }
       );
 
       if (response.status === 201) {

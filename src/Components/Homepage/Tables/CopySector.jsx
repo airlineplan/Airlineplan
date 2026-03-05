@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../../../apiConfig";
 import dayjs from "dayjs";
 import { motion, AnimatePresence } from "framer-motion";
 import { ToastContainer, toast } from "react-toastify";
@@ -16,7 +16,7 @@ function cn(...inputs) {
 // --- UI COMPONENTS ---
 const Button = ({ children, variant = "primary", className, loading, ...props }) => {
   const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed";
-  
+
   const variants = {
     primary: "bg-gradient-to-r from-indigo-500 to-cyan-500 text-white hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02]",
     ghost: "bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800",
@@ -39,7 +39,7 @@ const InputGroup = ({ label, error, children }) => (
     </label>
     {children}
     {error && (
-      <motion.span 
+      <motion.span
         initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
         className="text-xs text-red-500 font-medium leading-tight"
       >
@@ -60,12 +60,12 @@ const CopySector = (props) => {
   const [gcd, setGCD] = useState("");
   const [acftType, setACFTType] = useState("");
   const [variant, setVariant] = useState("");
-  
+
   // Added STD & STA states required for calculation
-  const [std, setStd] = useState(""); 
+  const [std, setStd] = useState("");
   const [bt, setBlockTime] = useState("");
   const [sta, setSta] = useState("");
-  
+
   const [paxCapacity, setPaxCapacity] = useState("");
   const [CargoCapT, setCargoCapT] = useState("");
   const [paxLF, setPaxLfPercent] = useState("");
@@ -73,7 +73,7 @@ const CopySector = (props) => {
   const [fromDt, setFromDt] = useState("");
   const [toDt, setToDt] = useState("");
   const [loading, setLoading] = useState(false);
-  
+
   // Stations Data for STA Calculation
   const [stationsData, setStationsData] = useState([]);
 
@@ -95,9 +95,7 @@ const CopySector = (props) => {
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const response = await axios.get("https://airlineplan.com/get-stationData", {
-          headers: { "x-access-token": localStorage.getItem("accessToken") },
-        });
+        const response = await api.get("/get-stationData");
         if (response.data && response.data.data) {
           setStationsData(response.data.data);
         }
@@ -111,7 +109,7 @@ const CopySector = (props) => {
   // --- ENGINE: Auto-Calculate STA ---
   useEffect(() => {
     if (std && bt && sector1 && sector2 && stationsData.length > 0) {
-      
+
       const depStationConfig = stationsData.find(s => s.stationName === sector1);
       const arrStationConfig = stationsData.find(s => s.stationName === sector2);
 
@@ -135,11 +133,11 @@ const CopySector = (props) => {
         let totalMins = (stdH * 60 + stdM) + (btH * 60 + btM) + (arrTzMins - depTzMins);
 
         // Wrap around 24 hours (1440 minutes)
-        totalMins = ((totalMins % 1440) + 1440) % 1440; 
+        totalMins = ((totalMins % 1440) + 1440) % 1440;
 
         const staH = Math.floor(totalMins / 60);
         const staM = totalMins % 60;
-        
+
         setSta(`${String(staH).padStart(2, '0')}:${String(staM).padStart(2, '0')}`);
       }
     }
@@ -159,22 +157,22 @@ const CopySector = (props) => {
       return;
     }
     try {
-      const response = await axios.get(`https://airlineplan.com/sectorsbyid/${DataId}`);
+      const response = await api.get(`/sectorsbyid/${DataId}`);
       const item = response.data;
-      
+
       setFromDt(item?.fromDt ? moment(item.fromDt).format("YYYY-MM-DD") : "");
       setToDt(item?.toDt ? moment(item.toDt).format("YYYY-MM-DD") : "");
-      
+
       setSector1(item.sector1 || "");
       setSector2(item.sector2 || "");
       setACFTType(item.acftType || "");
       setVariant(item.variant || "");
-      
+
       // Ensure we pull std and sta if they exist in the backend
       setStd(item.std || "");
       setBlockTime(item.bt || "");
       setSta(item.sta || "");
-      
+
       setPaxCapacity(item.paxCapacity || "");
       setCargoCapT(item.CargoCapT || "");
       setPaxLfPercent(item.paxLF || "");
@@ -305,11 +303,10 @@ const CopySector = (props) => {
 
     try {
       setLoading(true);
-      const response = await axios.post(
-        "https://airlineplan.com/add-sector",
+      const response = await api.post(
+        "/add-sector",
         // Included std and sta in the payload to match AddSector & UpdateSectore
-        { sector1, sector2, acftType, variant, std, bt, sta, gcd, paxCapacity, CargoCapT, paxLF, cargoLF, fromDt, toDt },
-        { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
+        { sector1, sector2, acftType, variant, std, bt, sta, gcd, paxCapacity, CargoCapT, paxLF, cargoLF, fromDt, toDt }
       );
 
       if (response.status === 201) {
@@ -355,7 +352,7 @@ const CopySector = (props) => {
         }}
         className="wmanage air-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-2"
       >
-         Copy
+        Copy
       </button>
 
       {/* MODAL / DIALOG */}
@@ -369,7 +366,7 @@ const CopySector = (props) => {
               onClick={() => { setOpenCopyModal(false); props.setAdd(true); setLoading(false); }}
               className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
             />
-            
+
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -377,13 +374,13 @@ const CopySector = (props) => {
               onKeyDown={handleKeyDown}
               className="fixed inset-0 m-auto z-50 w-full max-w-4xl h-fit max-h-[90vh] overflow-y-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-8 custom-scrollbar"
             >
-              
+
               {/* Header */}
               <div className="flex justify-between items-center mb-8 pb-4 border-b border-slate-200 dark:border-slate-800">
                 <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
                   Copy Sector Data
                 </h3>
-                <button 
+                <button
                   onClick={() => { setOpenCopyModal(false); props.setAdd(true); setLoading(false); }}
                   className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
                 >
@@ -393,7 +390,7 @@ const CopySector = (props) => {
 
               {/* Form Grid - Organized to fit STD, BT, and STA smoothly */}
               <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="Dep Stn" error={sector1Error}>
                     <input className={baseInputStyles} name="sector1" required value={sector1} placeholder="VI89" onChange={handleSector1} />

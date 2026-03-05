@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import api from "../../../apiConfig";
 import * as XLSX from 'xlsx';
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
@@ -190,9 +190,8 @@ const DashboardTable = (props) => {
   useEffect(() => {
     const getDropdownData = async () => {
       try {
-        const response = await axios.get(
-          `https://airlineplan.com/dashboard/populateDropDowns`,
-          { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
+        const response = await api.get(
+          `/dashboard/populateDropDowns`
         );
 
         if (response.data && typeof response.data === 'object') {
@@ -223,9 +222,8 @@ const DashboardTable = (props) => {
         setSelectedValues(updatedValues);
       }
 
-      const response = await axios.get('https://airlineplan.com/dashboard', {
+      const response = await api.get('/dashboard', {
         params: updatedValues,
-        headers: { 'x-access-token': accessToken },
       });
 
       if (Array.isArray(response.data)) {

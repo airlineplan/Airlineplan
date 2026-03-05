@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import axios from "axios";
+import api from "../../../apiConfig";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -154,9 +154,7 @@ const AddNetwork = ({ setAdd }) => {
   useEffect(() => {
     const fetchStations = async () => {
       try {
-        const response = await axios.get("https://airlineplan.com/get-stationData", {
-          headers: { "x-access-token": localStorage.getItem("accessToken") },
-        });
+        const response = await api.get("/get-stationData");
         if (response.data && response.data.data) {
           setStationsData(response.data.data);
         }
@@ -167,9 +165,7 @@ const AddNetwork = ({ setAdd }) => {
 
     const fetchDropdowns = async () => {
       try {
-        const response = await axios.get("https://airlineplan.com/dashboard/populateDropDowns", {
-          headers: { "x-access-token": localStorage.getItem("accessToken") },
-        });
+        const response = await api.get("/dashboard/populateDropDowns");
         if (response.data) {
           setDropdownData({
             from: response.data.from || [],
@@ -329,9 +325,7 @@ const AddNetwork = ({ setAdd }) => {
     setLoading(true);
     try {
       const payload = { ...formData, domINTL: formData.domINTL.toLowerCase(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone };
-      const response = await axios.post("https://airlineplan.com/add-Data", payload, {
-        headers: { "x-access-token": localStorage.getItem("accessToken"), "Content-Type": "application/json" },
-      });
+      const response = await api.post("/add-Data", payload);
 
       if (response.status === 201 || response.status === 200) {
         toast.success("Record added successfully!");

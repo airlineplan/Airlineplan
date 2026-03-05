@@ -1,15 +1,15 @@
 import React, { useState } from "react";
-import axios from "axios";
+import api from "../apiConfig";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Key, Mail, Send, Loader2, ArrowLeft, Lock 
+import {
+  Key, Mail, Send, Loader2, ArrowLeft, Lock
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // Ensure this path matches your project
-import backgroundPic from "../assets/Images/bglogin.jpeg"; 
+import backgroundPic from "../assets/Images/bglogin.jpeg";
 import ResetPassword from "./ResetPassword";
 
 // --- UI COMPONENTS ---
@@ -48,14 +48,7 @@ const ForgatePassword = () => {
 
     try {
       setLoading(true);
-      const url = "https://airlineplan.com/send-email";
-      const options = {
-        method: "POST",
-        url: url,
-        data: { email: email },
-      };
-      
-      const response = await axios(options);
+      const response = await api.post("/send-email", { email: email });
       const record = response.data;
 
       if (record.statusText === "Success") {
@@ -76,10 +69,10 @@ const ForgatePassword = () => {
 
   return (
     <div className="min-h-screen w-full relative font-sans flex items-center justify-center p-4 overflow-hidden bg-slate-900">
-      
+
       {/* --- FULL SCREEN BACKGROUND --- */}
       <div className="absolute inset-0 z-0">
-        <motion.div 
+        <motion.div
           initial={{ scale: 1.1 }}
           animate={{ scale: 1 }}
           transition={{ duration: 10, ease: "easeOut" }}
@@ -97,10 +90,10 @@ const ForgatePassword = () => {
 
       {/* --- CONTENT CONTAINER --- */}
       <div className="relative z-20 w-full max-w-md">
-        
+
         <AnimatePresence mode="wait">
           {showForm ? (
-            <motion.div 
+            <motion.div
               key="request-form"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -120,7 +113,7 @@ const ForgatePassword = () => {
 
               {/* Form */}
               <div className="space-y-6">
-                <InputField 
+                <InputField
                   label="Email Address"
                   icon={Mail}
                   placeholder="name@company.com"
@@ -165,13 +158,13 @@ const ForgatePassword = () => {
               transition={{ duration: 0.4 }}
               className="bg-slate-950/30 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden p-6"
             >
-               {/* Passing props to your existing ResetPassword component.
+              {/* Passing props to your existing ResetPassword component.
                   Note: Ensure ResetPassword handles its own styling or is compatible 
                   with being inside this dark container.
                */}
-               <div className="text-white">
-                 <ResetPassword email={email} setShowForm={setShowForm} />
-               </div>
+              <div className="text-white">
+                <ResetPassword email={email} setShowForm={setShowForm} />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

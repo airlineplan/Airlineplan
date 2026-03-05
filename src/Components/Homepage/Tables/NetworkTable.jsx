@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import axios from "axios";
+import api from "../../../apiConfig";
 import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
@@ -145,10 +145,7 @@ export default function NetworkTable() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("https://airlineplan.com/get-data", {
-          headers: { "x-access-token": accessToken },
-        });
+        const response = await api.get("/get-data");
         setNetworkTableData(response.data || []);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -237,12 +234,9 @@ export default function NetworkTable() {
     if (!isConfirmed) return;
 
     try {
-      const accessToken = localStorage.getItem("accessToken");
-
       // Make sure your URL points to your actual API (localhost or render based on your environment)
-      const response = await axios.delete("https://airlineplan.com/delete", {
+      const response = await api.delete("/delete", {
         data: { ids: checkedRows }, // This injects the payload into the request body
-        headers: { "x-access-token": accessToken }
       });
 
       if (response.data && response.data.message === "Data deleted successfully") {
@@ -271,11 +265,9 @@ export default function NetworkTable() {
     setLoading(true);
 
     try {
-      const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.post("https://airlineplan.com/importUser", formData, {
+      const response = await api.post("/importUser", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
-          "x-access-token": accessToken
         },
       });
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../../../apiConfig";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -90,10 +90,7 @@ const MainPage = () => {
 
   const fetchFlightsData = async (page = 1, limit = 10) => {
     try {
-      const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.get(`https://airlineplan.com/flight?page=${page}&limit=${limit}`, {
-        headers: { "x-access-token": accessToken },
-      });
+      const response = await api.get(`/flight?page=${page}&limit=${limit}`);
       setFlightsData(response.data.data);
       setTotalFlights(response.data.total);
     } catch (error) {

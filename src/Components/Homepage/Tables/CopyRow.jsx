@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import api from "../../../apiConfig";
 import dayjs from "dayjs";
 import { motion, AnimatePresence } from "framer-motion";
 import { ToastContainer, toast } from "react-toastify";
@@ -151,9 +151,7 @@ export default function CopyRow(props) {
   useEffect(() => {
     const fetchDropdowns = async () => {
       try {
-        const response = await axios.get("https://airlineplan.com/dashboard/populateDropDowns", {
-          headers: { "x-access-token": localStorage.getItem("accessToken") },
-        });
+        const response = await api.get("/dashboard/populateDropDowns");
         if (response.data) {
           setDropdownData({
             from: response.data.from || [],
@@ -298,7 +296,7 @@ export default function CopyRow(props) {
   const DataId = props?.checkedRows?.[0];
   const fetchData = async () => {
     try {
-      const response = await axios.get(`https://airlineplan.com/products/${DataId}`);
+      const response = await api.get(`/products/${DataId}`);
       const item = response.data;
       setFlight(item.flight || "");
       setDepStn(item.depStn || "");
@@ -339,13 +337,12 @@ export default function CopyRow(props) {
     try {
       setLoading(true);
       const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const response = await axios.post(
-        "https://airlineplan.com/add-Data",
+      const response = await api.post(
+        "/add-Data",
         {
           flight, depStn, std, bt, sta, arrStn, variant, effFromDt, effToDt,
           dow, domINTL, userTag1, userTag2, remarks1, timeZone, remarks2,
-        },
-        { headers: { "x-access-token": `${localStorage.getItem("accessToken")}`, "Content-Type": "application/json" } }
+        }
       );
 
       if (response.status === 201 || response.status === 200) {
@@ -447,13 +444,13 @@ export default function CopyRow(props) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="STD (LT)">
-                     <input className={baseInputStyles} required type="time" value={std} onChange={handleSTD} />
+                    <input className={baseInputStyles} required type="time" value={std} onChange={handleSTD} />
                   </InputGroup>
                   <InputGroup label="BT">
                     <input className={baseInputStyles} required type="time" value={bt} onChange={handleBT} />
                   </InputGroup>
                   <InputGroup label="STA (LT)">
-                     <input className={baseInputStyles} type="time" value={sta} onChange={handleSTA} />
+                    <input className={baseInputStyles} type="time" value={sta} onChange={handleSTA} />
                   </InputGroup>
                 </div>
 

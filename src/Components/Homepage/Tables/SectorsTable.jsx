@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import axios from "axios";
+import api from "../../../apiConfig";
 import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
@@ -106,10 +106,7 @@ const SectorsTable = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const accessToken = localStorage.getItem("accessToken");
-        const response = await axios.get("https://airlineplan.com/sectors", {
-          headers: { "x-access-token": accessToken },
-        });
+        const response = await api.get("/sectors");
         setSectorsTableData(response.data || []);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -126,9 +123,7 @@ const SectorsTable = () => {
     if (!window.confirm("Are you sure you want to delete this data?")) return;
 
     try {
-      const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.delete("https://airlineplan.com/delete-sector", {
-        headers: { "x-access-token": accessToken },
+      const response = await api.delete("/delete-sector", {
         data: { ids: checkedRows },
       });
 

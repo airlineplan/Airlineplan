@@ -21,7 +21,7 @@ import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import AddIcon from "@mui/icons-material/Add";
 import DriveFolderUploadOutlinedIcon from "@mui/icons-material/DriveFolderUploadOutlined";
 import CloseIcon from "@mui/icons-material/Close";
-import axios from "axios";
+import api from "../../../apiConfig";
 import moment from "moment";
 import { useEffect } from "react";
 import UpdatePopUp from "./UpdatePopUp";
@@ -206,8 +206,8 @@ const NetworkTable = () => {
     const formData = new FormData();
     formData.append("file", selectedFile);
 
-    axios
-      .post("https://airlineplan.com/importUser", formData, {
+    api
+      .post("/importUser", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -228,7 +228,7 @@ const NetworkTable = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get("https://airlineplan.com/get-data");
+        const response = await api.get("/get-data");
         setNetworkTableData(response.data);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -248,11 +248,10 @@ const NetworkTable = () => {
     }
 
     try {
-      const response = await axios.delete(
-        "https://airlineplan.com/delete",
+      const response = await api.delete(
+        "/delete",
         {
-          data: { ids: checkedRows },       
-          headers: { "x-access-token": accessToken }
+          data: { ids: checkedRows }
         }
       );
 

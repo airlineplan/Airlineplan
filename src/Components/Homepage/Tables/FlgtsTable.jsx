@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import axios from "axios";
+import api from "../../../apiConfig";
 import moment from "moment";
 import debounce from "lodash.debounce";
 import { motion, AnimatePresence } from "framer-motion";
@@ -92,10 +92,9 @@ const FlgtsTable = ({ isMaster = true }) => {
         );
         const requestBody = { ...activeFilters, page, limit };
 
-        const response = await axios.post(
-          "https://airlineplan.com/searchflights",
-          requestBody,
-          { headers: { "x-access-token": accessToken, "Content-Type": "application/json" } }
+        const response = await api.post(
+          "/searchflights",
+          requestBody
         );
 
         setFlgtsTableData(response.data.data || []);
@@ -129,10 +128,8 @@ const FlgtsTable = ({ isMaster = true }) => {
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.get("https://airlineplan.com/downloadFLGTs", {
-        responseType: "blob",
-        headers: { "x-access-token": accessToken },
+      const response = await api.get("/downloadFLGTs", {
+        responseType: "blob"
       });
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -174,31 +171,31 @@ const FlgtsTable = ({ isMaster = true }) => {
 
   const renderCell = (row, col) => {
     const val = row[col.key];
-    
+
     // Ignore empty/null cells
     if (val === undefined || val === null || val === "") return "";
 
     if (col.isDate) return moment(val).format("DD-MMM-YY");
-    
+
     // Fix: Convert decimal hours (e.g. 1.5) to HH:MM (e.g. 1:30) for FT
     if (col.formatAsTime) {
       const floatVal = parseFloat(val);
       if (isNaN(floatVal)) return val;
-      
+
       let hours = Math.trunc(floatVal);
       let mins = Math.round((floatVal - hours) * 60);
-      
+
       // Handle edge case where rounding pushes minutes to 60
       if (mins === 60) {
-          hours += 1;
-          mins = 0;
+        hours += 1;
+        mins = 0;
       }
       return `${hours}:${mins.toString().padStart(2, '0')}`;
     }
 
     if (col.isFloat) return parseFloat(val).toFixed(2);
     if (col.isInt) return parseInt(val, 10);
-    
+
     return val;
   };
 
