@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge";
 import {
   LogOut, Plane, Network, Map,
   RotateCw, LayoutDashboard, Link2,
-  RadioTower, Globe, TrendingUp, List, Eye // <-- Added 'Eye' icon for View tab
+  RadioTower, Globe, TrendingUp, List, Eye, Plus, ClipboardList, Navigation
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -21,10 +21,11 @@ import ConnectionTable from "./ConnectionTable";
 import StationsTable from "./StationsTable";
 import Rotations from "./Rotations";
 import ListTable from "./ListTable";
-import ThemeToggle from "../ThemeToggle"; 
-import ViewPage from "./ViewPage";  // <-- Added import for your new View component
+import ThemeToggle from "../ThemeToggle";
+import ViewPage from "./ViewPage";
+import AssignmentTable from "./AssignmentTable";
+import FleetTable from "./FleetTable";
 
-// Ensure this import matches your actual Route Economics component path/name
 import AircraftRoute from "../../../Pages/AircraftRoute";
 
 // --- UTILITIES ---
@@ -33,43 +34,24 @@ function cn(...inputs) {
 }
 
 // --- CONSTANTS ---
-// Shifted the IDs down by 1 starting from Dashboard to fit View at id: 5
 const TABS = [
   { id: 0, label: "Network", icon: Network, component: NetworkTable },
   { id: 1, label: "Sectors", icon: Map, component: SectorsTable },
   { id: 2, label: "Stations", icon: RadioTower, component: StationsTable },
   { id: 3, label: "Rotations", icon: RotateCw, component: Rotations },
   { id: 4, label: "FLGTs", icon: Plane, component: FlgtsTable },
-  { id: 5, label: "View", icon: Eye, component: ViewPage }, // <-- NEW TAB
+  { id: 5, label: "View", icon: Eye, component: ViewPage },
   { id: 6, label: "Dashboard", icon: LayoutDashboard, component: DashboardTable },
   { id: 7, label: "List", icon: List, component: ListTable },
   { id: 8, label: "Connections", icon: Link2, component: ConnectionTable },
-  { id: 9, label: "Route Economics", icon: TrendingUp, component: AircraftRoute },
+  { id: 9, label: "Assignment", icon: ClipboardList, component: AssignmentTable },
+  { id: 10, label: "Fleet", icon: Navigation, component: FleetTable },
+  { id: 11, label: "Route Economics", icon: TrendingUp, component: AircraftRoute },
 ];
 
 // --- COMPONENTS ---
 
-const NavItem = ({ tab, isActive, onClick }) => (
-  <button
-    onClick={onClick}
-    className={cn(
-      "relative px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2 z-10 whitespace-nowrap",
-      isActive
-        ? "text-white"
-        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100/50 dark:hover:bg-slate-800/50"
-    )}
-  >
-    {isActive && (
-      <motion.div
-        layoutId="activeTab"
-        className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-cyan-600 rounded-lg shadow-lg shadow-indigo-500/30 -z-10"
-        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-      />
-    )}
-    <tab.icon size={16} className={cn("relative z-10", isActive ? "text-white" : "opacity-70")} />
-    <span className="relative z-10">{tab.label}</span>
-  </button>
-);
+// NavItem removed since we are using a dropdown list now
 
 const LogoutButton = ({ onClick }) => (
   <button
@@ -88,30 +70,24 @@ const MainPage = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [flightsData, setFlightsData] = useState(null);
   const [totalFlights, setTotalFlights] = useState(0);
-
-  // State to track soft reloads seamlessly
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Auth Check
+
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
     if (!accessToken) {
       navigate("/");
     } else if (window.location.pathname !== "/homepage") {
-      // Only navigate to homepage if not already there, preventing weird loops
       navigate("/homepage", { replace: true });
     }
   }, [navigate]);
 
-  // Listen for 'refreshData' events to remount the active component 
-  // without triggering a 404 browser refresh
   useEffect(() => {
     const handleSoftReload = () => setRefreshKey((prev) => prev + 1);
     window.addEventListener("refreshData", handleSoftReload);
     return () => window.removeEventListener("refreshData", handleSoftReload);
   }, []);
 
-  // Fetch Data (Preserved Logic)
   const fetchFlightsData = async (page = 1, limit = 10) => {
     try {
       const accessToken = localStorage.getItem("accessToken");
@@ -126,12 +102,11 @@ const MainPage = () => {
     }
   };
 
-  // Initial Fetch for specific tabs if needed
   useEffect(() => {
-    if (activeStep === 4) { // 4 is FLGTs tab
+    if (activeStep === 4) {
       fetchFlightsData();
     }
-  }, [activeStep, refreshKey]); // Added refreshKey here too!
+  }, [activeStep, refreshKey]);
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
@@ -156,16 +131,44 @@ const MainPage = () => {
 
           {/* Top Mobile Row / Left Desktop Area */}
           <div className="flex items-center justify-between w-full xl:w-auto">
-            {/* Logo / Title */}
-            <div className="flex items-center gap-3 min-w-fit">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
-                <Globe className="text-white" size={24} />
+            <div className="flex items-center gap-4">
+              {/* Navigation Menu (Hover + Icon) */}
+              <div className="group relative z-[100]">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shadow-sm border border-slate-200 dark:border-slate-700">
+                  <Plus className="text-slate-700 dark:text-slate-300 transition-transform duration-300 group-hover:rotate-90" size={24} />
+                </div>
+
+                {/* Dropdown Menu */}
+                <div className="absolute top-full left-0 mt-2 w-56 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl opacity-0 invisible min-h-0 scale-95 group-hover:scale-100 group-hover:opacity-100 group-hover:visible transition-all duration-300 origin-top-left flex flex-col p-2 gap-1 z-50">
+                  {TABS.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveStep(tab.id)}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 w-full text-left",
+                        activeStep === tab.id
+                          ? "bg-gradient-to-r from-indigo-500/10 to-cyan-500/10 text-indigo-600 dark:text-indigo-400"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      )}
+                    >
+                      <tab.icon size={18} className={cn(activeStep === tab.id ? "text-indigo-600 dark:text-indigo-400" : "opacity-70")} />
+                      <span>{tab.label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
-                  Airlineplan
-                </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Planning, Operations & Analysis</p>
+
+              {/* Logo / Title */}
+              <div className="flex items-center gap-3 min-w-fit shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
+                  <Globe className="text-white" size={24} />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
+                    Airlineplan
+                  </h1>
+                  <p className="hidden md:block text-xs text-slate-500 dark:text-slate-400 font-medium">Planning, Operations & Analysis</p>
+                </div>
               </div>
             </div>
 
@@ -176,20 +179,8 @@ const MainPage = () => {
             </div>
           </div>
 
-          {/* Tab Navigation */}
-          <nav className="flex items-center gap-1 overflow-x-auto pb-2 xl:pb-0 w-full xl:w-auto px-2 custom-scrollbar">
-            {TABS.map((tab) => (
-              <NavItem
-                key={tab.id}
-                tab={tab}
-                isActive={activeStep === tab.id}
-                onClick={() => setActiveStep(tab.id)}
-              />
-            ))}
-          </nav>
-
           {/* Desktop Controls (Visible only >= xl) */}
-          <div className="hidden xl:flex items-center gap-4 min-w-fit pl-4 border-l border-slate-200 dark:border-slate-800 shrink-0">
+          <div className="hidden xl:flex flex-1 items-center justify-end gap-4 min-w-fit shrink-0">
             <ThemeToggle />
             <div className="text-right hidden 2xl:block">
               <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Admin User</p>
@@ -204,7 +195,7 @@ const MainPage = () => {
         <main className="flex-1 relative">
           <AnimatePresence mode="wait">
             <motion.div
-              key={`${activeStep}-${refreshKey}`} // Changing refreshKey recreates this component
+              key={`${activeStep}-${refreshKey}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
