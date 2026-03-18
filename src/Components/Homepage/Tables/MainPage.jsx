@@ -25,6 +25,8 @@ import ThemeToggle from "../ThemeToggle";
 import ViewPage from "./ViewPage";
 import AssignmentTable from "./AssignmentTable";
 import FleetTable from "./FleetTable";
+import MaintenanceTable from "./MaintenanceTable";
+
 
 import AircraftRoute from "../../../Pages/AircraftRoute";
 
@@ -46,7 +48,8 @@ const TABS = [
   { id: 8, label: "Connections", icon: Link2, component: ConnectionTable },
   { id: 9, label: "Assignment", icon: ClipboardList, component: AssignmentTable },
   { id: 10, label: "Fleet", icon: Navigation, component: FleetTable },
-  { id: 11, label: "Route Economics", icon: TrendingUp, component: AircraftRoute },
+  { id: 11, label: "Maintenance", icon: RadioTower, component: MaintenanceTable },
+  { id: 12, label: "Route Economics", icon: TrendingUp, component: AircraftRoute },
 ];
 
 // --- COMPONENTS ---
