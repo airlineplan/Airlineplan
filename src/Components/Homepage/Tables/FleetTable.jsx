@@ -1,99 +1,118 @@
-import React, { useState } from "react";
-import { Upload, Calendar, Search, Filter, Info } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Upload, Calendar, Search, Filter, Info, Plus, Save, Trash2 } from "lucide-react";
+import moment from "moment";
 
-// Mock data directly derived from the example image
-const MOCK_ASSETS = [
-    {
-        sno: 1, category: "Aircraft", type: "A320ceo", variant: "A320-214", sn: "4120", regn: "VT-DKU",
-        entry: "8 Oct 25", exit: "16 Oct 25", titled: "", ownership: "Operating lease", mtow: "77000", status: "Active",
-        schedule: [
-            { date: "14 Oct 25", status: "assigned", label: "0" },
-            { date: "15 Oct 25", status: "maintenance", label: "C-check" },
-            { date: "16 Oct 25", status: "maintenance", label: "C-check" },
-            { date: "17 Oct 25", status: "assigned", label: "1" },
-            { date: "18 Oct 25", status: "assigned", label: "2" },
-            { date: "19 Oct 25", status: "available", label: "Available" },
-            { date: "20 Oct 25", status: "available", label: "Available" },
-        ]
-    },
-    {
-        sno: 2, category: "Engine", type: "CFM56-5B", variant: "5B6", sn: "685912", regn: "VT-DKU #1",
-        entry: "", exit: "", titled: "", ownership: "", mtow: "", status: "",
-        schedule: [
-            { date: "14 Oct 25", status: "assigned", label: "" },
-            { date: "15 Oct 25", status: "maintenance", label: "C-check" },
-            { date: "16 Oct 25", status: "maintenance", label: "C-check" },
-            { date: "17 Oct 25", status: "assigned", label: "" },
-            { date: "18 Oct 25", status: "assigned", label: "" },
-            { date: "19 Oct 25", status: "available", label: "" },
-            { date: "20 Oct 25", status: "available", label: "" },
-        ]
-    },
-    {
-        sno: 3, category: "Engine", type: "CFM56-5B", variant: "5B6", sn: "685911", regn: "VT-DKU #2",
-        entry: "", exit: "", titled: "", ownership: "", mtow: "", status: "",
-        schedule: [
-            { date: "14 Oct 25", status: "available", label: "Available" },
-            { date: "15 Oct 25", status: "available", label: "Available" },
-            { date: "16 Oct 25", status: "available", label: "Available" },
-            { date: "17 Oct 25", status: "available", label: "Available" },
-            { date: "18 Oct 25", status: "available", label: "Available" },
-            { date: "19 Oct 25", status: "available", label: "Available" },
-            { date: "20 Oct 25", status: "available", label: "Available" },
-        ]
-    },
-    {
-        sno: 4, category: "APU", type: "131-9A", variant: "", sn: "2910", regn: "VT-DKU",
-        entry: "", exit: "", titled: "", ownership: "", mtow: "", status: "",
-        schedule: [
-            { date: "14 Oct 25", status: "assigned", label: "" },
-            { date: "15 Oct 25", status: "maintenance", label: "C-check" },
-            { date: "16 Oct 25", status: "maintenance", label: "C-check" },
-            { date: "17 Oct 25", status: "assigned", label: "" },
-            { date: "18 Oct 25", status: "assigned", label: "" },
-            { date: "19 Oct 25", status: "maintenance", label: "C-check" },
-            { date: "20 Oct 25", status: "maintenance", label: "C-check" },
-        ]
-    },
-    {
-        sno: 5, category: "Engine", type: "CFM56-5B", variant: "5B6", sn: "685782", regn: "",
-        entry: "10 Oct 25", exit: "17 Oct 25", titled: "Spare", ownership: "Operating lease", mtow: "", status: "",
-        schedule: [
-            { date: "14 Oct 25", status: "maintenance", label: "C-check" },
-            { date: "15 Oct 25", status: "maintenance", label: "C-check" },
-            { date: "16 Oct 25", status: "available", label: "Available" },
-            { date: "17 Oct 25", status: "available", label: "Available" },
-            { date: "18 Oct 25", status: "available", label: "Available" },
-            { date: "19 Oct 25", status: "assigned", label: "Assigned" },
-            { date: "20 Oct 25", status: "maintenance", label: "Maintenance" },
-        ]
-    },
-];
-
-const DATES = ["14 Oct 25", "15 Oct 25", "16 Oct 25", "17 Oct 25", "18 Oct 25", "19 Oct 25", "20 Oct 25"];
+// Helper to generate dates for the schedule view
+const generateDates = (startDate, count = 7) => {
+    return Array.from({ length: count }).map((_, i) =>
+        moment(startDate).add(i, 'days').format("DD MMM YY")
+    );
+};
 
 const MONTHS = ["October 2025", "November 2025", "December 2025"];
+const CATEGORIES = ["Aircraft", "Engine", "APU", "Other"];
+const STATUSES = ["Active", "Available", "Assigned", "Maintenance", "Retired"];
+// Added Ownership Types
+const OWNERSHIP_TYPES = ["Owned with no lien", "Operating lease", "Finance lease", "Wet lease"];
 
 const getStatusColor = (status) => {
-    switch (status) {
-        case "available":
-            return "bg-orange-200 dark:bg-orange-900/40 text-orange-900 dark:text-orange-200 border-orange-300 dark:border-orange-800";
-        case "assigned":
-            return "bg-[#8de08d] dark:bg-green-900/40 text-green-900 dark:text-green-200 border-green-400 dark:border-green-800"; // matches image green
-        case "maintenance":
-            return "bg-stone-500 dark:bg-stone-700 text-white dark:text-stone-200 border-stone-600 dark:border-stone-600"; // matches image grey
-        default:
-            return "bg-transparent";
-    }
+    const s = status?.toLowerCase() || "";
+    if (s.includes("available")) return "bg-orange-200 dark:bg-orange-900/40 text-orange-900 border-orange-300";
+    if (s.includes("assigned") || s === "1" || s === "2" || s === "0") return "bg-[#8de08d] dark:bg-green-900/40 text-green-900 border-green-400";
+    if (s.includes("maintenance") || s.includes("check")) return "bg-stone-500 dark:bg-stone-700 text-white border-stone-600";
+    return "bg-transparent";
 };
 
 const FleetTable = () => {
     const [selectedMonth, setSelectedMonth] = useState(MONTHS[0]);
     const [searchTerm, setSearchTerm] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Base schedule dates
+    const [scheduleDates, setScheduleDates] = useState(generateDates("2025-10-14", 7));
+
+    // Dynamic State for Assets (Start with one empty row)
+    const [assets, setAssets] = useState([
+        {
+            id: Date.now(),
+            category: "Aircraft", type: "", variant: "", sn: "", regn: "",
+            entry: "", exit: "", titled: "", ownership: "", mtow: "", status: "Available",
+            schedule: Array(7).fill({ status: "available", label: "" })
+        }
+    ]);
+
+    // Handle Input Changes for Asset Details
+    const handleInputChange = (id, field, value) => {
+        setAssets(prev => prev.map(asset =>
+            asset.id === id ? { ...asset, [field]: value } : asset
+        ));
+    };
+
+    // Handle Schedule Cell Changes (for entering C-checks, etc.)
+    const handleScheduleChange = (assetId, dayIndex, value) => {
+        setAssets(prev => prev.map(asset => {
+            if (asset.id !== assetId) return asset;
+            const newSchedule = [...asset.schedule];
+            // Auto-detect status based on user input
+            let newStatus = "available";
+            if (value.toLowerCase().includes("check") || value.toLowerCase().includes("maint")) newStatus = "maintenance";
+            else if (value !== "") newStatus = "assigned";
+
+            newSchedule[dayIndex] = { label: value, status: newStatus };
+            return { ...asset, schedule: newSchedule };
+        }));
+    };
+
+    const handleAddRow = () => {
+        setAssets([...assets, {
+            id: Date.now(),
+            category: "Aircraft", type: "", variant: "", sn: "", regn: "",
+            entry: "", exit: "", titled: "", ownership: "", mtow: "", status: "Available",
+            schedule: Array(7).fill({ status: "available", label: "" })
+        }]);
+    };
+
+    const handleDeleteRow = (id) => {
+        if (assets.length > 1) {
+            setAssets(assets.filter(a => a.id !== id));
+        }
+    };
+
+    // Save to Backend (Placeholder for your API call)
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            // Filter out empty rows (where user hasn't typed an SN yet)
+            const validAssets = assets.filter(a => a.sn && a.sn.trim() !== "");
+
+            if (validAssets.length === 0) {
+                alert("No valid assets to save. Please enter at least a Serial Number.");
+                setIsSaving(false);
+                return;
+            }
+
+            // await api.post("/fleet/bulk-save", { fleetData: validAssets });
+            alert("Fleet data saved successfully!");
+
+            // Optional: Re-fetch the data to get the true MongoDB _ids
+            // fetchFleetData(); 
+        } catch (error) {
+            console.error("Error saving fleet", error);
+            alert(error.response?.data?.message || "Failed to save fleet data.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const filteredAssets = assets.filter(a =>
+        a.regn.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.sn.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.type.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900 rounded-xl">
-            {/* Header section with actions */}
+        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900 rounded-xl font-sans">
+            {/* Header section */}
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                     <div>
@@ -101,166 +120,156 @@ const FleetTable = () => {
                             Fleet Status & Asset Management
                         </h2>
                         <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-                            Graphical display of fleet entries, exits, and daily availability.
+                            Editable display of fleet entries, exits, and daily availability.
                         </p>
                     </div>
                     <div className="flex gap-3">
-                        <button className="flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                            <Filter size={16} />
-                            Filter
+                        <button className="flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition-colors">
+                            <Upload size={16} /> Import
                         </button>
-                        <button className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20 transition-all">
-                            <Upload size={18} />
-                            Import Fleet Data
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all disabled:opacity-70"
+                        >
+                            <Save size={18} /> {isSaving ? "Saving..." : "Save Fleet Data"}
                         </button>
                     </div>
                 </div>
 
-                {/* Toolbar Context */}
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    {/* Search */}
+                {/* Toolbar */}
+                <div className="flex flex-col md:flex-row justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="relative w-full md:w-80">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <input
                             type="text"
-                            placeholder="Search by Regn, SN, or Type..."
+                            placeholder="Search Regn, SN, Type..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:text-slate-200"
+                            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none dark:text-white"
                         />
                     </div>
 
-                    {/* Month selector and Legend */}
-                    <div className="flex items-center gap-6 w-full md:w-auto">
-                        <div className="flex items-center gap-2">
-                            <Calendar size={18} className="text-slate-500" />
-                            <select
-                                value={selectedMonth}
-                                onChange={e => setSelectedMonth(e.target.value)}
-                                className="bg-transparent text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer"
-                            >
-                                {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
-                            </select>
-                        </div>
-                        <div className="h-6 w-px bg-slate-300 dark:bg-slate-700 hidden md:block"></div>
-                        <div className="flex items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 rounded-sm bg-orange-200 dark:bg-orange-800 border border-orange-300 dark:border-orange-700"></span> Available
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 rounded-sm bg-[#8de08d] dark:bg-green-800 border border-green-400 dark:border-green-700"></span> Assigned
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 rounded-sm bg-stone-500 dark:bg-stone-600 border border-stone-600 dark:border-stone-500"></span> Maintenance
-                            </div>
-                        </div>
+                    <div className="flex items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-orange-200 border-orange-300 border"></span> Available</div>
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-[#8de08d] border-green-400 border"></span> Assigned</div>
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-stone-500 border-stone-600 border"></span> Maintenance</div>
                     </div>
                 </div>
             </div>
 
-            {/* Table wrapper - Horizontal scrolling */}
+            {/* Table Area */}
             <div className="flex-1 overflow-auto p-6">
                 <div className="inline-flex min-w-full border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm">
 
-                    {/* Frozen Left Pane (Asset Details) */}
-                    <div className="flex-shrink-0 sticky left-0 z-20 bg-white dark:bg-slate-800 border-r-2 border-slate-300 dark:border-slate-600 shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.1)_inset]">
+                    {/* Left Pane: Asset Details */}
+                    <div className="flex-shrink-0 sticky left-0 z-20 bg-white dark:bg-slate-800 border-r-2 border-slate-300 shadow-xl">
                         {/* Headers */}
-                        <div className="flex font-semibold text-slate-700 dark:text-slate-200 text-xs bg-[#f4e6fa] dark:bg-fuchsia-900/30 border-b border-slate-200 dark:border-slate-700">
-                            <div className="w-12 p-3 border-r border-slate-200 dark:border-slate-700 text-center">S.No</div>
-                            <div className="w-28 p-3 border-r border-slate-200 dark:border-slate-700">Asset category</div>
-                            <div className="w-28 p-3 border-r border-slate-200 dark:border-slate-700">Asset type</div>
-                            <div className="w-28 p-3 border-r border-slate-200 dark:border-slate-700">Asset variant</div>
-                            <div className="w-24 p-3 border-r border-slate-200 dark:border-slate-700">Asset SN</div>
-                            <div className="w-28 p-3 border-r border-slate-200 dark:border-slate-700">Asset Regn</div>
-                            <div className="w-24 p-3 border-r border-slate-200 dark:border-slate-700">Fleet entry</div>
-                            <div className="w-24 p-3 border-r border-slate-200 dark:border-slate-700">Fleet exit</div>
-                            <div className="w-24 p-3 border-r border-slate-200 dark:border-slate-700">Titled/Spare</div>
-                            <div className="w-32 p-3 border-r border-slate-200 dark:border-slate-700">Ownership</div>
-                            <div className="w-24 p-3 border-r border-slate-200 dark:border-slate-700 text-right">MTOW (Kg)</div>
-                            <div className="w-28 p-3">Status today</div>
+                        <div className="flex font-semibold text-slate-700 dark:text-slate-200 text-[11px] uppercase tracking-wider bg-[#f4e6fa] dark:bg-fuchsia-900/30 border-b border-slate-200">
+                            <div className="w-10 p-2 border-r text-center">#</div>
+                            <div className="w-28 p-2 border-r">Category</div>
+                            <div className="w-24 p-2 border-r">Type</div>
+                            <div className="w-24 p-2 border-r">Variant</div>
+                            <div className="w-24 p-2 border-r">Asset SN *</div>
+                            <div className="w-24 p-2 border-r">Regn</div>
+                            <div className="w-28 p-2 border-r">Entry Dt</div>
+                            <div className="w-28 p-2 border-r">Exit Dt</div>
+                            <div className="w-24 p-2 border-r">Title/Spare</div>
+                            <div className="w-32 p-2 border-r">Ownership</div>
+                            <div className="w-24 p-2 border-r text-right">MTOW</div>
+                            <div className="w-28 p-2 border-r">Status</div>
+                            <div className="w-10 p-2"></div>
                         </div>
 
-                        {/* Rows */}
+                        {/* Editable Rows */}
                         <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                            {MOCK_ASSETS.map((asset) => (
-                                <div key={asset.sno} className="flex text-xs text-slate-800 dark:text-slate-300 bg-[#fbf5fd] dark:bg-fuchsia-900/10 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-900/20 transition-colors">
-                                    <div className="w-12 p-3 border-r border-slate-200 dark:border-slate-700 text-center font-medium">{asset.sno}</div>
-                                    <div className="w-28 p-3 border-r border-slate-200 dark:border-slate-700">{asset.category}</div>
-                                    <div className="w-28 p-3 border-r border-slate-200 dark:border-slate-700">{asset.type}</div>
-                                    <div className="w-28 p-3 border-r border-slate-200 dark:border-slate-700">{asset.variant}</div>
-                                    <div className="w-24 p-3 border-r border-slate-200 dark:border-slate-700">{asset.sn}</div>
-                                    <div className="w-28 p-3 border-r border-slate-200 dark:border-slate-700 font-medium text-slate-900 dark:text-slate-100">{asset.regn}</div>
-                                    <div className="w-24 p-3 border-r border-slate-200 dark:border-slate-700">{asset.entry}</div>
-                                    <div className="w-24 p-3 border-r border-slate-200 dark:border-slate-700">{asset.exit}</div>
-                                    <div className="w-24 p-3 border-r border-slate-200 dark:border-slate-700">{asset.titled}</div>
-                                    <div className="w-32 p-3 border-r border-slate-200 dark:border-slate-700">{asset.ownership}</div>
-                                    <div className="w-24 p-3 border-r border-slate-200 dark:border-slate-700 text-right">{asset.mtow}</div>
-                                    <div className="w-28 p-3">{asset.status}</div>
+                            {filteredAssets.map((asset, index) => (
+                                <div key={asset.id} className="flex text-xs text-slate-800 dark:text-slate-200 bg-[#fbf5fd] dark:bg-fuchsia-900/10 hover:bg-white transition-colors">
+                                    <div className="w-10 p-2 border-r flex items-center justify-center font-medium text-slate-500">{index + 1}</div>
+                                    <div className="w-28 p-1 border-r">
+                                        <select value={asset.category} onChange={e => handleInputChange(asset.id, "category", e.target.value)} className="w-full h-full bg-transparent outline-none">
+                                            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="w-24 p-1 border-r"><input type="text" value={asset.type} onChange={e => handleInputChange(asset.id, "type", e.target.value)} className="w-full h-full bg-transparent outline-none px-1" placeholder="e.g. A320" /></div>
+                                    <div className="w-24 p-1 border-r"><input type="text" value={asset.variant} onChange={e => handleInputChange(asset.id, "variant", e.target.value)} className="w-full h-full bg-transparent outline-none px-1" /></div>
+                                    <div className="w-24 p-1 border-r"><input type="text" value={asset.sn} onChange={e => handleInputChange(asset.id, "sn", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 font-bold text-emerald-600" required /></div>
+                                    <div className="w-24 p-1 border-r"><input type="text" value={asset.regn} onChange={e => handleInputChange(asset.id, "regn", e.target.value.toUpperCase())} className="w-full h-full bg-transparent outline-none px-1 uppercase font-semibold" placeholder="VT-XXX" /></div>
+                                    <div className="w-28 p-1 border-r"><input type="date" value={asset.entry} onChange={e => handleInputChange(asset.id, "entry", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 text-[11px]" /></div>
+                                    <div className="w-28 p-1 border-r"><input type="date" value={asset.exit} onChange={e => handleInputChange(asset.id, "exit", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 text-[11px]" /></div>
+                                    <div className="w-24 p-1 border-r"><input type="text" value={asset.titled} onChange={e => handleInputChange(asset.id, "titled", e.target.value)} className="w-full h-full bg-transparent outline-none px-1" /></div>
+
+                                    {/* UPDATED: Ownership is now a dropdown */}
+                                    <div className="w-32 p-1 border-r">
+                                        <select value={asset.ownership} onChange={e => handleInputChange(asset.id, "ownership", e.target.value)} className="w-full h-full bg-transparent outline-none px-1">
+                                            <option value="" disabled className="text-gray-400">Select Lease</option>
+                                            {OWNERSHIP_TYPES.map(o => <option key={o} value={o}>{o}</option>)}
+                                        </select>
+                                    </div>
+
+                                    <div className="w-24 p-1 border-r"><input type="number" value={asset.mtow} onChange={e => handleInputChange(asset.id, "mtow", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 text-right" /></div>
+                                    <div className="w-28 p-1 border-r">
+                                        <select value={asset.status} onChange={e => handleInputChange(asset.id, "status", e.target.value)} className="w-full h-full bg-transparent outline-none">
+                                            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="w-10 p-1 flex items-center justify-center">
+                                        <button onClick={() => handleDeleteRow(asset.id)} className="text-red-400 hover:text-red-600 transition-colors"><Trash2 size={14} /></button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                        {/* Footer Notes from image */}
-                        <div className="p-3 bg-white dark:bg-slate-800 text-xs text-slate-500 dark:text-slate-400 max-w-lg mt-2 space-y-1">
-                            <div><span className="font-medium">User enterable fields</span>: (May preceed Fleet entry, May succeed Fleet exit)</div>
-                            <div>- Available: No flight assigned for the date</div>
-                            <div>- Assigned: Flight(s) assigned for the date</div>
-                            <div>- Scheduled maintenance</div>
+
+                        {/* Add Row Button */}
+                        <div className="p-2 border-t border-slate-200 bg-slate-50 dark:bg-slate-800">
+                            <button onClick={handleAddRow} className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors px-2 py-1">
+                                <Plus size={14} /> Add Asset Row
+                            </button>
                         </div>
                     </div>
 
-                    {/* Scrollable Right Pane (Dates/Schedule) */}
+                    {/* Right Pane: Schedule/Ground Days */}
                     <div className="flex-grow flex flex-col">
-                        {/* Date Headers */}
-                        <div className="flex flex-col bg-[#fae6da] dark:bg-orange-900/30 border-b border-slate-200 dark:border-slate-700">
-                            {/* Top level grouping info row - minimal as per image */}
-                            <div className="flex text-xs font-semibold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700">
-                                {DATES.map((date, i) => (
-                                    <div key={`header-g-${i}`} className="w-32 p-2 px-3 border-r border-slate-200 dark:border-slate-700 text-center opacity-0 select-none">
-                                        -
-                                    </div>
-                                ))}
-                            </div>
-                            {/* Actual Dates */}
-                            <div className="flex text-xs font-semibold text-slate-800 dark:text-slate-100 pb-0.5">
-                                {DATES.map((date, i) => (
-                                    <div key={`date-${i}`} className="w-32 p-2 px-3 border-r border-slate-300 dark:border-slate-600 text-center whitespace-nowrap">
+                        <div className="flex flex-col bg-[#fae6da] dark:bg-orange-900/30 border-b border-slate-200">
+                            <div className="flex text-xs font-semibold text-slate-800 dark:text-slate-100 pb-0.5 pt-6">
+                                {scheduleDates.map((date, i) => (
+                                    <div key={`date-${i}`} className="w-32 p-2 px-3 border-r border-slate-300 text-center whitespace-nowrap">
                                         {date}
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        {/* Schedule Rows */}
                         <div className="divide-y divide-slate-200 dark:divide-slate-700">
-                            {MOCK_ASSETS.map((asset) => (
-                                <div key={`sched-${asset.sno}`} className="flex">
+                            {filteredAssets.map((asset) => (
+                                <div key={`sched-${asset.id}`} className="flex h-8">
                                     {asset.schedule.map((day, idx) => {
                                         const classes = getStatusColor(day.status);
                                         return (
-                                            <div
-                                                key={`day-${idx}`}
-                                                className={`w-32 p-2 border-r border-b ${classes} text-xs truncate text-center flex items-center justify-center transition-opacity hover:opacity-90`}
-                                            >
-                                                {day.label}
+                                            <div key={`day-${idx}`} className={`w-32 border-r border-b ${classes} transition-all`}>
+                                                <input
+                                                    type="text"
+                                                    value={day.label}
+                                                    onChange={(e) => handleScheduleChange(asset.id, idx, e.target.value)}
+                                                    placeholder="-"
+                                                    className="w-full h-full bg-transparent outline-none text-center text-xs placeholder:text-black/20 dark:placeholder:text-white/20 focus:bg-white/50 dark:focus:bg-black/20"
+                                                />
                                             </div>
                                         );
                                     })}
                                 </div>
                             ))}
                         </div>
-
-                        {/* Extra spacer rows to match height if needed */}
-                        <div className="flex-1 min-h-[100px] border-l border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50" />
+                        <div className="flex-1 min-h-[40px] border-l border-slate-200 bg-slate-50/50" />
                     </div>
-
                 </div>
             </div>
 
-            {/* Legend / Info bar at bottom */}
-            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 rounded-b-xl flex items-center justify-between">
-                <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 rounded-b-xl flex justify-between">
+                <div className="text-xs text-slate-500 flex items-center gap-2">
                     <Info size={14} />
-                    <span>This grid is auto-populated based on Master table FH, BH and Departure metric logic. Month is dynamically selectable.</span>
+                    <span>Type "C-check" or "Maintenance" in the schedule grid to register ground days.</span>
                 </div>
             </div>
         </div>
