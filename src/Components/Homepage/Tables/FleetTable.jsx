@@ -12,16 +12,13 @@ const getStatusColor = (status, category) => {
     const s = status?.toLowerCase() || "";
 
     // 1. ABSOLUTE OVERRIDE: If it is on ground/maintenance, it is ALWAYS Gray.
-    // This applies irrespective of assignment or category.
     if (s.includes("maintenance") || s.includes("check") || s.includes("ground")) {
-        return "bg-stone-500 dark:bg-stone-700 text-white border-stone-600 font-semibold text-[10px]";
+        return "bg-stone-500 dark:bg-stone-700 text-white border-stone-600 font-medium text-[10px]";
     }
 
     // 2. Aircraft Specific Colors
     if (category === "Aircraft") {
-        // Condition 1: No assignment -> Green with "0"
         if (s === "available-aircraft" || s === "0") return "bg-[#8de08d] dark:bg-green-900/40 text-green-900 border-green-400 font-bold";
-        // Condition 2: Assigned -> Default color (transparent background)
         if (s === "aircraft-assigned") return "bg-transparent text-slate-800 dark:text-slate-200 border-slate-300 font-semibold";
     }
 
@@ -32,7 +29,6 @@ const getStatusColor = (status, category) => {
     return "bg-transparent";
 };
 
-// Generates an array of formatted date strings for the selected month
 const generateDatesForMonth = (monthYearStr) => {
     if (!monthYearStr) return [];
     const startOfMonth = moment(monthYearStr, "MMMM YYYY").startOf('month');
@@ -51,7 +47,6 @@ const FleetTable = () => {
     const [scheduleDates, setScheduleDates] = useState([]);
     const [metricsData, setMetricsData] = useState({});
 
-    // Dynamic State for Assets 
     const [assets, setAssets] = useState([
         {
             id: Date.now(),
@@ -61,7 +56,6 @@ const FleetTable = () => {
         }
     ]);
 
-    // Initial Fetch: Get Available Months
     useEffect(() => {
         const fetchMonths = async () => {
             try {
@@ -85,7 +79,6 @@ const FleetTable = () => {
         fetchMonths();
     }, []);
 
-    // Fetch Date grid & Aircraft Metrics when selected month changes
     useEffect(() => {
         if (selectedMonth) {
             setScheduleDates(generateDatesForMonth(selectedMonth));
@@ -102,21 +95,20 @@ const FleetTable = () => {
         }
     };
 
-    // Handle Input Changes for Left Pane Details
     const handleInputChange = (id, field, value) => {
         setAssets(prev => prev.map(asset =>
             asset.id === id ? { ...asset, [field]: value } : asset
         ));
     };
 
-    // Handle Manual Input in the Right Pane Grid (For Engines, APUs, Other)
     const handleScheduleChange = (assetId, dateStr, value) => {
         setAssets(prev => prev.map(asset => {
             if (asset.id !== assetId) return asset;
 
-            // Auto-detect status based on user input
             let newStatus = "available";
-            if (value.toLowerCase().includes("check") || value.toLowerCase().includes("maint") || value.toLowerCase().includes("ground")) {
+            const valLower = value.toLowerCase();
+            // Automatically turn gray if user types words related to ground days
+            if (valLower.includes("check") || valLower.includes("maint") || valLower.includes("ground") || valLower.includes("event")) {
                 newStatus = "maintenance";
             } else if (value !== "") {
                 newStatus = "assigned";
@@ -319,27 +311,38 @@ const FleetTable = () => {
                             {filteredAssets.map((asset) => (
                                 <div key={`sched-${asset.id}`} className="flex h-8">
                                     {scheduleDates.map((date) => {
-                                        // Pull manually entered data by default (For Engines, APU, etc.)
+                                        // Pull manually entered data by default
                                         let dayData = asset.schedule[date] || { status: "available", label: "" };
                                         let cellTitle = "";
                                         let isReadOnly = false;
+                                        const snStr = String(asset.sn).trim();
 
-                                        // Override Logic ONLY for Aircraft (Backend Metrics Check)
+                                        // AIRCRAFT LOGIC: Full overrides (Assignments + Maintenance)
                                         if (asset.category === "Aircraft" && asset.sn) {
                                             isReadOnly = true;
-                                            const snStr = String(asset.sn).trim();
                                             const metric = metricsData[snStr]?.[date];
 
                                             if (metric) {
                                                 dayData = { status: metric.status, label: metric.label };
 
-                                                // Only show assignment metrics if it's NOT a maintenance day
                                                 if (metric.status === "aircraft-assigned" && !metric.status.includes("maintenance")) {
                                                     cellTitle = `Block Hrs: ${metric.bh?.toFixed(2)}\nFlight Hrs: ${metric.fh?.toFixed(2)}\nDepartures: ${metric.dep}`;
+                                                } else if (metric.status.includes("maintenance")) {
+                                                    cellTitle = `Ground Event: ${metric.label}`;
                                                 }
                                             } else {
-                                                // Not assigned, not in ground table
                                                 dayData = { status: "available-aircraft", label: "0" };
+                                            }
+                                        }
+                                        // ENGINE / APU LOGIC: Inherit Maintenance from attached Aircraft
+                                        else if (asset.sn) {
+                                            const metric = metricsData[snStr]?.[date];
+
+                                            // If the backend mapped a maintenance event to this Engine/APU SN, override the manual input
+                                            if (metric && metric.status.includes("maintenance")) {
+                                                dayData = { status: metric.status, label: metric.label };
+                                                isReadOnly = true;
+                                                cellTitle = `Inherited Ground Event: ${metric.label}`;
                                             }
                                         }
 
@@ -357,7 +360,7 @@ const FleetTable = () => {
                                                     readOnly={isReadOnly}
                                                     onChange={(e) => handleScheduleChange(asset.id, date, e.target.value)}
                                                     placeholder="-"
-                                                    className={`w-full h-full bg-transparent outline-none text-center text-[11px] placeholder:text-black/20 dark:placeholder:text-white/20 focus:bg-white/50 dark:focus:bg-black/20 ${isReadOnly ? "cursor-default select-none" : ""}`}
+                                                    className={`w-full h-full bg-transparent outline-none text-center px-1 text-[10px] text-ellipsis placeholder:text-black/20 dark:placeholder:text-white/20 focus:bg-white/50 dark:focus:bg-black/20 ${isReadOnly ? "cursor-default select-none" : ""}`}
                                                 />
                                             </div>
                                         );
