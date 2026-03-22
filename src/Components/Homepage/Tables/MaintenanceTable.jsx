@@ -1,294 +1,429 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
-    Info, Search, Plus, Save, RefreshCw,
-    Settings, History, Package, Calendar as CalendarIcon,
-    ArrowRight, Download, Edit2, Play, Loader2
+    Calculator, Settings, Download, Edit, RefreshCw, Layers,
+    Search, ArrowUp, ArrowDown
 } from "lucide-react";
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
 
-function cn(...inputs) {
-    return twMerge(clsx(inputs));
-}
+// --- DUMMY DATA STRUCTURES (Replace with API Response later) ---
 
-// --- SUB-COMPONENTS ---
-const SectionCard = ({ title, children, actions }) => (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col h-full">
-        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
-            <h3 className="font-semibold text-sm text-slate-700 dark:text-slate-200">{title}</h3>
-            <div className="flex items-center gap-2">{actions}</div>
-        </div>
-        <div className="flex-1 overflow-auto p-0">{children}</div>
+const dummyMaintenanceData = [
+    { id: 1, msn: "4120", pn: "", sn: "", titled: "", tsn: "25104.45", csn: "12855", dsn: "3285", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "", allDisplay: "All display only" },
+    { id: 2, msn: "685911", pn: "", sn: "", titled: "VT-DKU #2", tsn: "20841.10", csn: "10275", dsn: "3285", tso: "746.50", cso: "315", dso: "40", tsr: "", csr: "10275", dsr: "", allDisplay: "" },
+    { id: 3, msn: "685912", pn: "", sn: "", titled: "VT-DKU #1", tsn: "19376.80", csn: "9914", dsn: "3285", tso: "19376.80", cso: "9914", dso: "", tsr: "", csr: "9914", dsr: "", allDisplay: "" },
+];
+
+const dummyTargetData = [
+    {
+        id: 1, targetLabel: "ABC", targetMsn: "685782", targetPn: "CFM56-5B", targetSn: "685782", category: "Run-down", date: "12/Oct/25",
+        tsn: "", csn: "", dsn: "", tso: "7150", cso: "3850", dso: "", tsr: "", csr: "3850", dsr: "",
+        fTsn: "", fCsn: "", fDsn: "", fTso: "2.27", fCso: "-3", fDso: "",
+        highlights: ["tso", "cso"] // Specify which keys should have yellow background
+    },
+    {
+        id: 2, targetLabel: "DEF", targetMsn: "685912", targetPn: "CFM56-5B", targetSn: "685912", category: "Conserve", date: "13/Oct/25",
+        tsn: "19385", csn: "9800", dsn: "", tso: "", cso: "9900", dso: "", tsr: "", csr: "", dsr: "",
+        fTsn: "3.52", fCsn: "-116", fDsn: "", fTso: "", fCso: "-16", fDso: "",
+        highlights: ["csn", "cso"]
+    },
+];
+
+const dummyCalendarData = [
+    {
+        id: 1, calLabel: "XYZ", lineBase: "Base", calMsn: "4120", schEvent: "C-check", calPn: "A320ceo", snBn: "4120",
+        eTsn: "", eCsn: "12860", eDsn: "3300", eTso: "", eCso: "", eDso: "", eTsr: "", eCsr: "", eDsr: "",
+        lastOccurre: "14 Oct 25", nextEstima: "15 Nov 26\n19 Nov 26", downDays: "3", avgDownda: "5", occurrence: "2", soTsr: "0",
+        highlights: ["eCsn", "eDsn"] // Specify which keys should have green background
+    }
+];
+
+// --- COMPONENTS ---
+const TableInput = ({ name, value, onChange, placeholder }) => (
+    <div className="relative group mt-1">
+        <input
+            type="text"
+            name={name}
+            value={value || ""}
+            onChange={onChange}
+            placeholder={placeholder}
+            className="w-full h-7 px-2 py-1 text-[11px] bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 transition-all font-normal"
+        />
+        <Search size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
     </div>
 );
 
-const MaintenanceTable = () => {
-    // State management for API data
-    const [dashboardData, setDashboardData] = useState({
-        aircraft: [],
-        utilisation: [],
-        status: [],
-        rotables: []
-    });
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
+const MaintenanceDashboard = () => {
+    const [selectedDate, setSelectedDate] = useState("2025-10-12");
 
-    // Fetch data on component mount
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                setIsLoading(true);
-                // Retrieve your JWT token (adjust according to your auth setup)
-                const token = localStorage.getItem("token");
+    // Dynamic State for Tables (Initialize with dummy data, replace with API later)
+    const [maintenanceData, setMaintenanceData] = useState(dummyMaintenanceData);
+    const [targetData, setTargetData] = useState(dummyTargetData);
+    const [calendarData, setCalendarData] = useState(dummyCalendarData);
 
-                // Ensure the URL matches your backend route exactly
-                const response = await fetch("/api/user/maintenance-dashboard", {
-                    method: "GET",
-                    headers: {
-                        "Authorization": `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    }
-                });
+    // State for Sorting and Filtering
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: "Up" });
+    const [filters, setFilters] = useState({});
 
-                if (!response.ok) throw new Error("Failed to fetch maintenance data");
+    const handleFilterChange = (e) => {
+        const { name, value } = e.target;
+        setFilters(prev => ({ ...prev, [name]: value }));
+    };
 
-                const result = await response.json();
+    const handleSort = (key) => {
+        setSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === "Up" ? "Down" : "Up"
+        }));
+    };
 
-                if (result.success) {
-                    setDashboardData(result.data);
-                } else {
-                    throw new Error(result.message);
-                }
-            } catch (err) {
-                console.error(err);
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
+    // Helper function to apply dynamic sorting and filtering to any dataset
+    const getProcessedData = (dataset) => {
+        let processed = [...dataset];
+
+        // Apply Filters
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== "") {
+                processed = processed.filter(row =>
+                    row[key] !== undefined &&
+                    String(row[key]).toLowerCase().includes(String(value).toLowerCase())
+                );
             }
-        };
+        });
 
-        fetchDashboardData();
-    }, []);
+        // Apply Sorting
+        if (sortConfig.key) {
+            processed.sort((a, b) => {
+                let valA = a[sortConfig.key] || "";
+                let valB = b[sortConfig.key] || "";
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-full min-h-[400px]">
-                <Loader2 className="animate-spin text-indigo-600" size={32} />
+                // Handle numeric sorting if applicable
+                if (!isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB))) {
+                    valA = parseFloat(valA);
+                    valB = parseFloat(valB);
+                }
+
+                if (valA < valB) return sortConfig.direction === "Up" ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === "Up" ? 1 : -1;
+                return 0;
+            });
+        }
+
+        return processed;
+    };
+
+    const filteredMaintenanceData = useMemo(() => getProcessedData(maintenanceData), [maintenanceData, filters, sortConfig]);
+    const filteredTargetData = useMemo(() => getProcessedData(targetData), [targetData, filters, sortConfig]);
+    const filteredCalendarData = useMemo(() => getProcessedData(calendarData), [calendarData, filters, sortConfig]);
+
+    // Helper to render sortable/filterable column headers
+    const renderHeader = (label, key, minWidth = "min-w-[100px]") => (
+        <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 align-top bg-slate-100 dark:bg-slate-800/90">
+            <div className={`flex flex-col gap-1 ${minWidth}`}>
+                <div
+                    className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-semibold text-slate-700 dark:text-slate-300 group"
+                    onClick={() => handleSort(key)}
+                >
+                    {label}
+                    {sortConfig.key === key ? (
+                        sortConfig.direction === "Up" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                    ) : (
+                        <ArrowUp size={12} className="opacity-0 group-hover:opacity-30 transition-opacity" />
+                    )}
+                </div>
+                <TableInput
+                    name={key}
+                    value={filters[key]}
+                    onChange={handleFilterChange}
+                    placeholder="Filter..."
+                />
             </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="p-4 bg-red-50 text-red-600 rounded-lg m-4">
-                <p className="font-bold">Error loading dashboard:</p>
-                <p>{error}</p>
-            </div>
-        );
-    }
+        </th>
+    );
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
-            {/* Top Controls Bar */}
-            <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 sticky top-0 z-10">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400">
-                        Maintenance Dashboard
-                    </h2>
-                    <button className="flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold shadow-lg shadow-green-500/20 transition-all active:scale-95 uppercase tracking-wider">
-                        <Play size={16} fill="currentColor" /> Compute
-                    </button>
-                </div>
+        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900 rounded-xl font-sans overflow-auto custom-scrollbar p-6 gap-8">
 
-                <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-3 py-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-colors border border-indigo-200 dark:border-indigo-800">
-                        Set/Reset Status
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-1.5 text-xs text-orange-600 dark:text-orange-400 font-semibold hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-md transition-colors border border-orange-200 dark:border-orange-800">
-                        Set/Reset Targets
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors border border-slate-200 dark:border-slate-700">
-                        Major Rotables
-                    </button>
-                    <div className="w-px h-6 bg-slate-200 dark:bg-slate-800 mx-2" />
-                    <button className="p-2 text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
-                        <Download size={20} />
-                    </button>
+            {/* Header Section */}
+            <div className="flex flex-col gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+                <div className="flex items-start justify-between">
+                    <div>
+                        <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400">
+                            Maintenance Logic Dashboard
+                        </h2>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 flex items-center gap-2">
+                            Application runs maintenance logic on updated data tables on click of 'Compute'
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-3">
+                        <button className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all">
+                            <Calculator size={16} /> Compute
+                        </button>
+                        <div className="flex flex-col gap-2 text-xs font-medium">
+                            <button className="flex items-center gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded transition-colors w-full text-left">
+                                <Settings size={14} /> Set/Reset Maintenance status
+                            </button>
+                            <button className="flex items-center gap-2 text-green-600 hover:text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-3 py-1.5 rounded transition-colors w-full text-left">
+                                <RefreshCw size={14} /> Set/Reset Target status
+                            </button>
+                            <button className="flex items-center gap-2 text-purple-600 hover:text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 px-3 py-1.5 rounded transition-colors w-full text-left">
+                                <Layers size={14} /> Major rotables movement
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-auto p-4 space-y-6">
-
-                {/* Row 1: Aircraft Owning & Current Status Overview */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    <div className="lg:col-span-4 flex flex-col gap-6">
-                        <SectionCard title="Aircraft Owning">
-                            <table className="w-full text-xs">
-                                <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-800">
-                                    <tr>
-                                        <th className="p-2 text-left text-slate-500 uppercase">MSN</th>
-                                        <th className="p-2 text-left text-slate-500 uppercase">Pos 1 ESN</th>
-                                        <th className="p-2 text-left text-slate-500 uppercase">Pos 2 ESN</th>
-                                        <th className="p-2 text-left text-slate-500 uppercase">APUN</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {dashboardData.aircraft.map((ac, idx) => (
-                                        <tr key={ac._id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                            <td className="p-2 font-medium text-slate-700 dark:text-slate-200">{ac.msn}</td>
-                                            {/* Mapping array of engines to pos1 and pos2. If your populated schema returns actual string IDs, this handles it */}
-                                            <td className="p-2 text-slate-600 dark:text-slate-400">{ac.engines?.[0] || 'N/A'}</td>
-                                            <td className="p-2 text-slate-600 dark:text-slate-400">{ac.engines?.[1] || 'N/A'}</td>
-                                            <td className="p-2 text-slate-600 dark:text-slate-400">{ac.apu || 'N/A'}</td>
-                                        </tr>
-                                    ))}
-                                    {dashboardData.aircraft.length === 0 && (
-                                        <tr><td colSpan="4" className="p-4 text-center text-slate-400">No aircraft found</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </SectionCard>
-
-                        {/* Utilisation Assumptions Card remains largely static UI for inputs */}
-                        <SectionCard title="Utilisation Assumptions (/day)">
-                            {/* Form inputs omitted for brevity, keep your exact layout here */}
-                            <div className="p-4 flex flex-col gap-4">
-                                <div className="text-xs text-slate-500">Form inputs here...</div>
-                            </div>
-                        </SectionCard>
+            {/* TABLE 1: Maintenance Status */}
+            <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-end">
+                    <div className="flex items-center gap-3">
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">User selects a date:</span>
+                        <input
+                            type="date"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs px-2 py-1 rounded"
+                        />
                     </div>
-
-                    <div className="lg:col-span-8">
-                        <SectionCard title="Current Maintenance Status Overview">
-                            <table className="w-full text-xs">
-                                <thead className="bg-[#fae6da] dark:bg-orange-900/30 border-b border-slate-200 dark:border-slate-800">
-                                    <tr>
-                                        <th className="p-2 text-left text-slate-700 dark:text-slate-200">Target ID (MSN/SN)</th>
-                                        <th className="p-2 text-left text-slate-700 dark:text-slate-200">Date</th>
-                                        <th className="p-2 text-right text-slate-700 dark:text-slate-200">TSN</th>
-                                        <th className="p-2 text-right text-slate-700 dark:text-slate-200">CSN</th>
-                                        <th className="p-2 text-right text-slate-700 dark:text-slate-200">DSN</th>
-                                        <th className="p-2 text-right text-slate-700 dark:text-slate-200">Daily Hrs/Cyc</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {dashboardData.utilisation.map((row, idx) => (
-                                        <tr key={row._id || idx} className="hover:bg-orange-50 dark:hover:bg-orange-900/10">
-                                            <td className="p-2 font-medium">{row.targetId}</td>
-                                            <td className="p-2">{new Date(row.date).toLocaleDateString()}</td>
-                                            <td className="p-2 text-right">{row.tsn?.toFixed(2) || '---'}</td>
-                                            <td className="p-2 text-right">{row.csn || '---'}</td>
-                                            <td className="p-2 text-right">{row.dsn || '---'}</td>
-                                            <td className="p-2 text-right text-slate-500">{row.hours}h / {row.cycles}c</td>
-                                        </tr>
-                                    ))}
-                                    {dashboardData.utilisation.length === 0 && (
-                                        <tr><td colSpan="6" className="p-4 text-center text-slate-400">No utilisation data found</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </SectionCard>
-                    </div>
+                    <span className="text-[10px] text-slate-500 italic text-right max-w-sm">
+                        For each MSN/ESN+PN+SN/BN, metrics can be set/reset only.<br />Metrics for all other dates (historical/forecast) will be (re)calculated.
+                    </span>
                 </div>
 
-                {/* Row 2: Target Maintenance Status */}
-                <SectionCard title="Target Maintenance Status (Forecast)">
-                    <table className="w-full text-xs text-left border-collapse">
-                        <thead className="bg-slate-100/90 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-800 uppercase tracking-widest text-[10px] font-black">
-                            {/* Keep your complex header layout */}
-                            <tr>
-                                <th className="p-2 border-r border-slate-200 dark:border-slate-800">Label</th>
-                                <th className="p-2 border-r border-slate-200 dark:border-slate-800">Asset</th>
-                                <th className="p-2 border-r border-slate-200 dark:border-slate-800">Category</th>
-                                <th className="p-2 border-r border-slate-200 dark:border-slate-800">Target Date</th>
-                                <th className="p-2 border-r border-slate-200 dark:border-slate-800 text-center" colSpan="3">Forecasted Status</th>
-                                <th className="p-2 text-center" colSpan="4">Targets</th>
+                <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm">
+                    <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
+                        <thead>
+                            <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300">
+                                {renderHeader("MSN/ESN", "msn")}
+                                {renderHeader("PN", "pn")}
+                                {renderHeader("SN/BN", "sn")}
+                                {renderHeader("Titled/Spare", "titled")}
+                                <th colSpan={9} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Maintenance status</th>
+                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-semibold align-bottom">All display</th>
                             </tr>
-                            <tr className="bg-slate-50/50 dark:bg-slate-900 shadow-inner">
-                                <th className="p-2 border-r border-slate-200 dark:border-slate-800"></th>
-                                <th className="p-2 border-r border-slate-200 dark:border-slate-800"></th>
-                                <th className="p-2 border-r border-slate-200 dark:border-slate-800"></th>
-                                <th className="p-2 border-r border-slate-200 dark:border-slate-800"></th>
-                                <th className="p-2 text-right border-r border-slate-200 dark:border-slate-800 text-blue-600 dark:text-blue-400">TSN</th>
-                                <th className="p-2 text-right border-r border-slate-200 dark:border-slate-800 text-blue-600 dark:text-blue-400">CSN</th>
-                                <th className="p-2 text-right border-r border-slate-200 dark:border-slate-800 text-blue-600 dark:text-blue-400">DSN</th>
-                                <th className="p-2 text-right border-r border-slate-200 dark:border-slate-800 text-green-600 dark:text-green-400">TSRplmt</th>
-                                <th className="p-2 text-right border-r border-slate-200 dark:border-slate-800 text-green-600 dark:text-green-400">CSRplmt</th>
-                                <th className="p-2 text-right border-r border-slate-200 dark:border-slate-800 text-green-600 dark:text-green-400">DSRplmt</th>
-                                <th className="p-2 text-right text-green-600 dark:text-green-400">SO/TSRtrt</th>
+                            <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSO/TSRtrtr</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSO/CSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSO/DSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSRplmt</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {dashboardData.status.map((row, idx) => (
-                                <tr key={row._id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                    <td className="p-2 font-bold text-slate-800 dark:text-slate-100 border-r border-slate-100 dark:border-slate-800">{row.label || "---"}</td>
-                                    <td className="p-2 border-r border-slate-100 dark:border-slate-800">
-                                        <div className="flex flex-col">
-                                            <span className="font-medium text-slate-700 dark:text-slate-200">{row.targetId}</span>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
+                            {filteredMaintenanceData.map((row) => (
+                                <tr key={`maint-${row.id}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.msn}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.pn}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.sn}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.titled}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.tsn}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.csn}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.dsn}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.tso}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.cso}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.dso}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.tsr}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.csr}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.dsr}</td>
+                                    <td className={`p-2 ${row.allDisplay ? "text-slate-400 italic text-[10px]" : ""}`}>{row.allDisplay}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* TABLE 2: Target Maintenance Status */}
+            <div className="flex flex-col gap-2 pt-4">
+                <div className="flex justify-between items-end">
+                    <span className="text-[10px] text-slate-500 italic">Label is not user enterable on this page</span>
+                    <button className="flex items-center gap-1 px-3 py-1 border border-slate-300 dark:border-slate-600 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <Download size={12} /> Download
+                    </button>
+                </div>
+
+                <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm">
+                    <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
+                        <thead>
+                            <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300">
+                                {renderHeader("Label", "targetLabel", "min-w-[80px]")}
+                                {renderHeader("MSN/ESN", "targetMsn")}
+                                {renderHeader("PN", "targetPn")}
+                                {renderHeader("SN/BN", "targetSn")}
+                                {renderHeader("Category", "category")}
+                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-semibold align-bottom">Date</th>
+                                <th colSpan={9} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Target maintenance status</th>
+                                <th colSpan={6} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-[#f4e6fa] dark:bg-fuchsia-900/30">Target value-forecasted value on target date</th>
+                            </tr>
+                            <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSO/TSRtrtr</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSO/CSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSO/DSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSO/TSRtrtr</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSO/CSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSO/DSRtrt</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
+                            {filteredTargetData.map((row) => {
+                                const ylStyle = "font-bold bg-yellow-200 dark:bg-yellow-900/60 text-yellow-900 dark:text-yellow-100";
+                                const isHighlighted = (colName) => row.highlights?.includes(colName) ? ylStyle : "";
+
+                                return (
+                                    <tr key={`target-${row.id}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-medium">{row.targetLabel}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.targetMsn}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 font-mono">{row.targetPn}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.targetSn}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.category}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.date}</td>
+
+                                        {/* Target Maintenance Status */}
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("tsn")}`}>{row.tsn}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("csn")}`}>{row.csn}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("dsn")}`}>{row.dsn}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("tso")}`}>{row.tso}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("cso")}`}>{row.cso}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("dso")}`}>{row.dso}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("tsr")}`}>{row.tsr}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("csr")}`}>{row.csr}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("dsr")}`}>{row.dsr}</td>
+
+                                        {/* Forecasted */}
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fTsn}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fCsn}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fDsn}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fTso}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fCso}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fDso}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* TABLE 3: Calendar Inputs */}
+            <div className="flex flex-col gap-2 pt-4">
+                <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                    Calendar inputs, down time and post event maintenance status
+                </h3>
+                <span className="text-[10px] text-slate-500 italic mb-1">Label is user enterable</span>
+
+                <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm">
+                    <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
+                        <thead>
+                            <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300">
+                                {renderHeader("Label", "calLabel", "min-w-[80px]")}
+                                {renderHeader("Line/Base/Shop", "lineBase")}
+                                {renderHeader("MSN/ESN", "calMsn")}
+                                {renderHeader("Sch.Mx.Event", "schEvent")}
+                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 align-top">
+                                    <div className="flex flex-col gap-1 min-w-[100px]">
+                                        <div className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-semibold group" onClick={() => handleSort('calPn')}>
+                                            PN
+                                            {sortConfig.key === 'calPn' ? (
+                                                sortConfig.direction === "Up" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                                            ) : (
+                                                <ArrowUp size={12} className="opacity-0 group-hover:opacity-30 transition-opacity" />
+                                            )}
                                         </div>
-                                    </td>
-                                    <td className="p-2 border-r border-slate-100 dark:border-slate-800">
-                                        <span className={cn(
-                                            "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase",
-                                            row.category === "Run-down" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                        )}>
-                                            {row.category || "Normal"}
-                                        </span>
-                                    </td>
-                                    <td className="p-2 border-r border-slate-100 dark:border-slate-800 text-slate-500 whitespace-nowrap">
-                                        {row.date ? new Date(row.date).toLocaleDateString() : '---'}
-                                    </td>
-                                    <td className="p-2 text-right border-r border-slate-100 dark:border-slate-800 font-mono text-blue-600 dark:text-blue-400">{row.tsn || '---'}</td>
-                                    <td className="p-2 text-right border-r border-slate-100 dark:border-slate-800 font-mono text-blue-600 dark:text-blue-400">{row.csn || '---'}</td>
-                                    <td className="p-2 text-right border-r border-slate-100 dark:border-slate-800 font-mono text-blue-600 dark:text-blue-400">{row.dsn || '---'}</td>
-                                    <td className="p-2 text-right border-r border-slate-100 dark:border-slate-800 font-mono text-green-600 dark:text-green-400">{row.tsrPlmt || '---'}</td>
-                                    <td className="p-2 text-right border-r border-slate-100 dark:border-slate-800 font-mono text-green-600 dark:text-green-400">{row.csrPlmt || '---'}</td>
-                                    <td className="p-2 text-right border-r border-slate-100 dark:border-slate-800 font-mono text-green-600 dark:text-green-400">{row.dsrPlmt || '---'}</td>
-                                    <td className="p-2 text-right font-mono bg-orange-50 dark:bg-orange-900/10 text-orange-600 dark:text-orange-400 font-bold">{row.soTsrtrt || '---'}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </SectionCard>
-
-                {/* Row 3: Major Rotables Movements */}
-                <SectionCard title="Major Rotables Movements" actions={
-                    <>
-                        <button className="p-1 px-2 text-[10px] font-bold uppercase bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">Edit</button>
-                        <button className="p-1 px-2 text-[10px] font-bold uppercase bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">Update</button>
-                    </>
-                }>
-                    <table className="w-full text-xs text-left">
-                        <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-800 text-[10px] uppercase font-bold text-slate-500">
-                            <tr>
-                                <th className="p-2">Date (EoD)</th>
-                                <th className="p-2">PN</th>
-                                <th className="p-2">MSN</th>
-                                <th className="p-2">ACFT Reg</th>
-                                <th className="p-2">Position</th>
-                                <th className="p-2 text-red-600">Removed SN</th>
-                                <th className="p-2 text-green-600">Installed SN</th>
+                                        <TableInput name="calPn" value={filters.calPn} onChange={handleFilterChange} placeholder="Filter..." />
+                                        <span className="text-[9px] font-normal text-slate-500 mt-1">Checkbox (apply to all SN)</span>
+                                    </div>
+                                </th>
+                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-semibold align-bottom">SN/BN</th>
+                                <th colSpan={9} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-green-100/50 dark:bg-green-900/20">Earliest of, every</th>
+                                <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center">Date</th>
+                                <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Next occurrence</th>
+                                <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-[#f4e6fa] dark:bg-fuchsia-900/30">Beyond next occurrence</th>
+                            </tr>
+                            <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSO/TSRtrtr</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSO/CSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSO/DSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">Last occurre</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">Next estima</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">Down days</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">Avg Downda</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">Occurrence</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700">SO/TSRtrt</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {dashboardData.rotables.map((row, idx) => (
-                                <tr key={row._id || idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                    <td className="p-2 text-slate-500">{new Date(row.date).toLocaleDateString()}</td>
-                                    <td className="p-2">{row.pn}</td>
-                                    <td className="p-2 font-medium">{row.msn}</td>
-                                    <td className="p-2">{row.acftReg}</td>
-                                    <td className="p-2 text-indigo-600 font-bold">{row.position}</td>
-                                    <td className="p-2 text-red-600 bg-red-50/50 dark:bg-red-900/10 font-mono">{row.removedSN || '---'}</td>
-                                    <td className="p-2 text-green-600 bg-green-50/50 dark:bg-green-900/10 font-mono">{row.installedSN || '---'}</td>
-                                </tr>
-                            ))}
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
+                            {filteredCalendarData.map((row) => {
+                                const grStyle = "bg-green-100/30 dark:bg-green-900/20";
+                                const isHighlighted = (colName) => row.highlights?.includes(colName) ? grStyle : "";
+
+                                return (
+                                    <tr key={`cal-${row.id}`} className="bg-green-50/50 dark:bg-green-900/10">
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-medium">{row.calLabel}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.lineBase}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.calMsn}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.schEvent}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 font-mono">{row.calPn}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.snBn}</td>
+
+                                        {/* Earliest of, every */}
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eTsn")}`}>{row.eTsn}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eCsn")}`}>{row.eCsn}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eDsn")}`}>{row.eDsn}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eTso")}`}>{row.eTso}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eCso")}`}>{row.eCso}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eDso")}`}>{row.eDso}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eTsr")}`}>{row.eTsr}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eCsr")}`}>{row.eCsr}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eDsr")}`}>{row.eDsr}</td>
+
+                                        {/* Dates */}
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">{row.lastOccurre}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">{row.nextEstima}</td>
+
+                                        {/* Metrics */}
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right font-bold text-emerald-600 dark:text-emerald-400">{row.downDays}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.avgDownda}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.occurrence}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.soTsr}</td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
-                </SectionCard>
+                </div>
 
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-3 mt-4">
+                    <button className="flex items-center gap-1 px-5 py-2 border border-slate-300 dark:border-slate-600 rounded text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-200">
+                        <Edit size={14} /> Edit
+                    </button>
+                    <button className="flex items-center gap-1 px-5 py-2 border border-slate-300 dark:border-slate-600 rounded text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-200">
+                        Update
+                    </button>
+                </div>
             </div>
+
         </div>
     );
 };
 
-export default MaintenanceTable;
+export default MaintenanceDashboard;
