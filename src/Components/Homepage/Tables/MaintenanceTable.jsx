@@ -2,8 +2,9 @@ import React, { useState, useMemo, useEffect } from "react";
 import api from "../../../apiConfig";
 import {
     Calculator, Settings, Download, Edit, RefreshCw, Layers,
-    Search, ArrowUp, ArrowDown, X
+    Search, ArrowUp, ArrowDown, X, Plus
 } from "lucide-react";
+import * as XLSX from "xlsx";
 
 // --- DUMMY DATA STRUCTURES (Replace with API Response later) ---
 
@@ -80,6 +81,9 @@ const MaintenanceDashboard = () => {
     const [resetAssetSN, setResetAssetSN] = useState("");
     const [resetDate, setResetDate] = useState("");
     const [modalTableData, setModalTableData] = useState([]);
+    const [isEditingModal, setIsEditingModal] = useState(false);
+    const [modalSortConfig, setModalSortConfig] = useState({ key: null, direction: "Up" });
+    const [modalFilters, setModalFilters] = useState({ msnEsn: "", pn: "", snBn: "" });
 
     // Autocomplete Dropdown State
     const [showDropdown, setShowDropdown] = useState(false);
@@ -127,7 +131,6 @@ const MaintenanceDashboard = () => {
         return () => clearTimeout(timeoutId);
     }, [resetAssetSN, resetDate]);
 
-    // Handle Asset SN Typing
     const handleAssetSNChange = (e) => {
         const val = e.target.value;
         setResetAssetSN(val);
@@ -137,6 +140,94 @@ const MaintenanceDashboard = () => {
             setShowDropdown(false);
             setDropdownOptions([]);
         }
+    };
+
+    const handleModalSort = (key) => {
+        setModalSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === "Up" ? "Down" : "Up"
+        }));
+    };
+
+    const handleModalFilterChange = (e) => {
+        const { name, value } = e.target;
+        setModalFilters(prev => ({ ...prev, [name]: value }));
+    };
+
+    const filteredModalTableData = useMemo(() => {
+        let processed = [...modalTableData];
+        // Filter logic
+        Object.entries(modalFilters).forEach(([key, value]) => {
+            if (value !== "") {
+                processed = processed.filter(row =>
+                    row[key] !== undefined &&
+                    String(row[key]).toLowerCase().includes(String(value).toLowerCase())
+                );
+            }
+        });
+        // Sort logic
+        if (modalSortConfig.key) {
+            processed.sort((a, b) => {
+                let valA = a[modalSortConfig.key] || "";
+                let valB = b[modalSortConfig.key] || "";
+                if (!isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB))) {
+                    valA = parseFloat(valA);
+                    valB = parseFloat(valB);
+                }
+                if (valA < valB) return modalSortConfig.direction === "Up" ? -1 : 1;
+                if (valA > valB) return modalSortConfig.direction === "Up" ? 1 : -1;
+                return 0;
+            });
+        }
+        return processed;
+    }, [modalTableData, modalFilters, modalSortConfig]);
+
+    const handleAddModalRow = () => {
+        const newRow = {
+            id: `temp-${Date.now()}`,
+            msnEsn: "", pn: "", snBn: "",
+            tsn: "", csn: "", dsn: "", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "", metric: "",
+            isNew: true
+        };
+        setModalTableData(prev => [...prev, newRow]);
+        setIsEditingModal(true);
+    };
+
+    const handleModalFieldChange = (id, field, value) => {
+        setModalTableData(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
+    };
+
+    const handleUpdateModal = async () => {
+        try {
+            // Simulated API call point for updates
+            // await api.post('/maintenance/reset-records/bulk', modalTableData);
+            setIsEditingModal(false);
+        } catch (error) {
+            console.error("Failed to update records", error);
+        }
+    };
+
+    const handleDownloadModal = () => {
+        if (modalTableData.length === 0) return;
+        const exportData = modalTableData.map(row => ({
+            "MSN/ESN": row.msnEsn,
+            "PN": row.pn,
+            "SN/BN": row.snBn,
+            "TSN": row.tsn,
+            "CSN": row.csn,
+            "DSN": row.dsn,
+            "TSO/TSRtrtr": row.tso,
+            "CSO/CSRtrt": row.cso,
+            "DSO/DSRtrt": row.dso,
+            "TSRplmt": row.tsr,
+            "CSRplmt": row.csr,
+            "DSRplmt": row.dsr,
+            "Appl time metric": row.metric
+        }));
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Reset_Records");
+        XLSX.writeFile(wb, "Reset_Maintenance_Records.xlsx");
     };
 
     // --- MAIN PAGE HANDLERS ---
@@ -556,13 +647,13 @@ const MaintenanceDashboard = () => {
 
                                 <div className="flex flex-col gap-2">
                                     <div className="flex justify-end">
-                                        <button className="flex items-center gap-1 border border-slate-300 dark:border-slate-600 px-4 py-1.5 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium">
+                                        <button onClick={handleDownloadModal} className="flex items-center gap-1 border border-slate-300 dark:border-slate-600 px-4 py-1.5 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium">
                                             <Download size={14} /> Download
                                         </button>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button className="border border-slate-300 dark:border-slate-600 px-6 py-1.5 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium">Edit</button>
-                                        <button className="border border-slate-300 dark:border-slate-600 px-6 py-1.5 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium">Update</button>
+                                        <button onClick={() => setIsEditingModal(!isEditingModal)} className={`border px-6 py-1.5 rounded text-xs transition-colors font-medium ${isEditingModal ? 'bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300' : 'border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Edit</button>
+                                        <button onClick={handleUpdateModal} className="border border-slate-300 dark:border-slate-600 px-6 py-1.5 rounded text-xs transition-colors font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-300 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-900/50">Update</button>
                                     </div>
                                 </div>
                             </div>
@@ -573,13 +664,52 @@ const MaintenanceDashboard = () => {
                                     <thead>
                                         <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
                                             <th className="p-2 border-r border-slate-200 dark:border-slate-700 font-semibold text-center">
-                                                Sort+Filter<br />MSN/ESN
+                                                <div className="flex flex-col gap-1">
+                                                    <div
+                                                        className="flex items-center justify-center gap-1 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors group"
+                                                        onClick={() => handleModalSort("msnEsn")}
+                                                    >
+                                                        MSN/ESN
+                                                        {modalSortConfig.key === "msnEsn" ? (
+                                                            modalSortConfig.direction === "Up" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                                                        ) : (
+                                                            <ArrowUp size={12} className="opacity-0 group-hover:opacity-30" />
+                                                        )}
+                                                    </div>
+                                                    <TableInput name="msnEsn" value={modalFilters.msnEsn} onChange={handleModalFilterChange} placeholder="Filter..." />
+                                                </div>
                                             </th>
                                             <th className="p-2 border-r border-slate-200 dark:border-slate-700 font-semibold text-center">
-                                                Sort+Filter<br />PN
+                                                <div className="flex flex-col gap-1">
+                                                    <div
+                                                        className="flex items-center justify-center gap-1 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors group"
+                                                        onClick={() => handleModalSort("pn")}
+                                                    >
+                                                        PN
+                                                        {modalSortConfig.key === "pn" ? (
+                                                            modalSortConfig.direction === "Up" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                                                        ) : (
+                                                            <ArrowUp size={12} className="opacity-0 group-hover:opacity-30" />
+                                                        )}
+                                                    </div>
+                                                    <TableInput name="pn" value={modalFilters.pn} onChange={handleModalFilterChange} placeholder="Filter..." />
+                                                </div>
                                             </th>
                                             <th className="p-2 border-r border-slate-200 dark:border-slate-700 font-semibold text-center">
-                                                Sort+Filter<br />SN/BN
+                                                <div className="flex flex-col gap-1">
+                                                    <div
+                                                        className="flex items-center justify-center gap-1 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors group"
+                                                        onClick={() => handleModalSort("snBn")}
+                                                    >
+                                                        SN/BN
+                                                        {modalSortConfig.key === "snBn" ? (
+                                                            modalSortConfig.direction === "Up" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                                                        ) : (
+                                                            <ArrowUp size={12} className="opacity-0 group-hover:opacity-30" />
+                                                        )}
+                                                    </div>
+                                                    <TableInput name="snBn" value={modalFilters.snBn} onChange={handleModalFilterChange} placeholder="Filter..." />
+                                                </div>
                                             </th>
                                             <th colSpan="9" className="p-2 border-r border-slate-200 dark:border-slate-700 font-bold text-center border-b">
                                                 Maintenance status
@@ -606,23 +736,47 @@ const MaintenanceDashboard = () => {
                                     <tbody className="text-slate-800 dark:text-slate-200 bg-[#dcfce7] dark:bg-green-900/20">
 
                                         {/* Dynamic Rows from State */}
-                                        {modalTableData.length > 0 ? (
-                                            modalTableData.map(row => (
+                                        {filteredModalTableData.length > 0 ? (
+                                            filteredModalTableData.map(row => (
                                                 <tr key={`reset-${row.id}`}>
-                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50 font-medium">{row.msnEsn}</td>
-                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.pn}</td>
-                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.snBn}</td>
-                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.tsn}</td>
-                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.csn}</td>
-                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.dsn}</td>
-                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.tso}</td>
-                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.cso}</td>
-                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.dso}</td>
-                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.tsr}</td>
-                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.csr}</td>
-                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.dsr}</td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50 font-medium">
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.msnEsn || ""} onChange={(e) => handleModalFieldChange(row.id, 'msnEsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.msnEsn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.pn || ""} onChange={(e) => handleModalFieldChange(row.id, 'pn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.pn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.snBn || ""} onChange={(e) => handleModalFieldChange(row.id, 'snBn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.snBn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.tsn || ""} onChange={(e) => handleModalFieldChange(row.id, 'tsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.tsn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.csn || ""} onChange={(e) => handleModalFieldChange(row.id, 'csn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.csn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.dsn || ""} onChange={(e) => handleModalFieldChange(row.id, 'dsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.dsn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.tso || ""} onChange={(e) => handleModalFieldChange(row.id, 'tso', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.tso}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.cso || ""} onChange={(e) => handleModalFieldChange(row.id, 'cso', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.cso}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.dso || ""} onChange={(e) => handleModalFieldChange(row.id, 'dso', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.dso}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.tsr || ""} onChange={(e) => handleModalFieldChange(row.id, 'tsr', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.tsr}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.csr || ""} onChange={(e) => handleModalFieldChange(row.id, 'csr', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.csr}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.dsr || ""} onChange={(e) => handleModalFieldChange(row.id, 'dsr', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.dsr}
+                                                    </td>
                                                     <td className="p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
-                                                        <input type="text" defaultValue={row.metric} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded outline-none py-0.5 bg-transparent" />
+                                                        <input type="text" value={row.metric || ""} onChange={(e) => handleModalFieldChange(row.id, 'metric', e.target.value)} readOnly={!isEditingModal && !row.isNew} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded outline-none py-0.5 bg-transparent disabled:opacity-70 read-only:outline-none read-only:border-transparent" />
                                                     </td>
                                                 </tr>
                                             ))
@@ -635,7 +789,7 @@ const MaintenanceDashboard = () => {
                                         {/* Footer Row */}
                                         <tr className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
                                             <td colSpan="3" className="p-2 text-center">
-                                                <button className="text-blue-600 font-semibold hover:underline flex items-center justify-center w-full">
+                                                <button onClick={handleAddModalRow} className="text-blue-600 font-semibold hover:underline flex items-center justify-center w-full">
                                                     +Add
                                                 </button>
                                             </td>
@@ -643,7 +797,6 @@ const MaintenanceDashboard = () => {
                                                 User enterable
                                             </td>
                                             <td className="p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
-                                                <input type="text" className="w-full text-center border border-slate-300 dark:border-slate-600 rounded outline-none py-0.5 bg-transparent" />
                                             </td>
                                         </tr>
                                     </tbody>
