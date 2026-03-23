@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import api from "../../../apiConfig";
 import {
     Calculator, Settings, Download, Edit, RefreshCw, Layers,
-    Search, ArrowUp, ArrowDown
+    Search, ArrowUp, ArrowDown, X
 } from "lucide-react";
 
 // --- DUMMY DATA STRUCTURES (Replace with API Response later) ---
@@ -17,7 +18,7 @@ const dummyTargetData = [
         id: 1, targetLabel: "ABC", targetMsn: "685782", targetPn: "CFM56-5B", targetSn: "685782", category: "Run-down", date: "12/Oct/25",
         tsn: "", csn: "", dsn: "", tso: "7150", cso: "3850", dso: "", tsr: "", csr: "3850", dsr: "",
         fTsn: "", fCsn: "", fDsn: "", fTso: "2.27", fCso: "-3", fDso: "",
-        highlights: ["tso", "cso"] // Specify which keys should have yellow background
+        highlights: ["tso", "cso"]
     },
     {
         id: 2, targetLabel: "DEF", targetMsn: "685912", targetPn: "CFM56-5B", targetSn: "685912", category: "Conserve", date: "13/Oct/25",
@@ -32,8 +33,19 @@ const dummyCalendarData = [
         id: 1, calLabel: "XYZ", lineBase: "Base", calMsn: "4120", schEvent: "C-check", calPn: "A320ceo", snBn: "4120",
         eTsn: "", eCsn: "12860", eDsn: "3300", eTso: "", eCso: "", eDso: "", eTsr: "", eCsr: "", eDsr: "",
         lastOccurre: "14 Oct 25", nextEstima: "15 Nov 26\n19 Nov 26", downDays: "3", avgDownda: "5", occurrence: "2", soTsr: "0",
-        highlights: ["eCsn", "eDsn"] // Specify which keys should have green background
+        highlights: ["eCsn", "eDsn"]
     }
+];
+
+// Dummy Data for the Reset Maintenance Modal Table
+const dummyResetData = [
+    { id: 1, date: "2025-10-09", msnEsn: "685911", pn: "82-940-A4", snBn: "96040", tsn: "3802.6", csn: "", dsn: "384", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "", metric: "BH" },
+    { id: 2, date: "2025-10-10", msnEsn: "685782", pn: "CFM56-5B", snBn: "685782", tsn: "42891.25", csn: "22833", dsn: "5094", tso: "7147.73", cso: "3853", dso: "1548", tsr: "7147.73", csr: "3853", dsr: "1548", metric: "FH" },
+    { id: 3, date: "2025-10-10", msnEsn: "685911", pn: "382-940-A", snBn: "96040", tsn: "3802.60", csn: "", dsn: "384", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "", metric: "BH" },
+    { id: 4, date: "2025-10-10", msnEsn: "685911", pn: "114039", snBn: "S9FL85", tsn: "", csn: "", dsn: "", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "5930", metric: "" },
+    { id: 5, date: "2025-10-12", msnEsn: "4120", pn: "A320ceo", snBn: "4120", tsn: "25104.45", csn: "12855", dsn: "3285", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "", metric: "BH" },
+    { id: 6, date: "2025-10-12", msnEsn: "685911", pn: "CFM56-5B", snBn: "685911", tsn: "20841.10", csn: "10275", dsn: "3285", tso: "746.50", cso: "315", dso: "40", tsr: "", csr: "10275", dsr: "", metric: "FH" },
+    { id: 7, date: "2025-10-12", msnEsn: "685912", pn: "CFM56-5B", snBn: "685912", tsn: "19376.80", csn: "9914", dsn: "3285", tso: "19376.80", cso: "9914", dso: "", tsr: "", csr: "9914", dsr: "", metric: "FH" }
 ];
 
 // --- COMPONENTS ---
@@ -54,15 +66,80 @@ const TableInput = ({ name, value, onChange, placeholder }) => (
 const MaintenanceDashboard = () => {
     const [selectedDate, setSelectedDate] = useState("2025-10-12");
 
-    // Dynamic State for Tables (Initialize with dummy data, replace with API later)
-    const [maintenanceData, setMaintenanceData] = useState(dummyMaintenanceData);
-    const [targetData, setTargetData] = useState(dummyTargetData);
-    const [calendarData, setCalendarData] = useState(dummyCalendarData);
+    // Dynamic State for Main Tables
+    const [maintenanceData] = useState(dummyMaintenanceData);
+    const [targetData] = useState(dummyTargetData);
+    const [calendarData] = useState(dummyCalendarData);
 
-    // State for Sorting and Filtering
+    // State for Sorting and Filtering (Main Page)
     const [sortConfig, setSortConfig] = useState({ key: null, direction: "Up" });
     const [filters, setFilters] = useState({});
 
+    // --- MODAL STATE & LOGIC ---
+    const [showSetResetModal, setShowSetResetModal] = useState(false);
+    const [resetAssetSN, setResetAssetSN] = useState("");
+    const [resetDate, setResetDate] = useState("");
+    const [modalTableData, setModalTableData] = useState([]);
+
+    // Autocomplete Dropdown State
+    const [showDropdown, setShowDropdown] = useState(false);
+    const [dropdownOptions, setDropdownOptions] = useState([]);
+
+    // Filter Modal Table whenever Asset SN or Date changes (now via API)
+    useEffect(() => {
+        const fetchRecords = async () => {
+            if (!resetAssetSN && !resetDate) {
+                setModalTableData([]);
+                setDropdownOptions([]);
+                return;
+            }
+
+            try {
+                const res = await api.get('/maintenance/reset-records', {
+                    params: {
+                        date: resetDate || undefined,
+                        msnEsn: resetAssetSN || undefined
+                    }
+                });
+
+                if (res.data && res.data.success) {
+                    const records = res.data.data;
+
+                    // Extract unique MSN/ESN options for the dropdown
+                    if (resetAssetSN) {
+                        const uniqueMsns = [...new Set(records.map(r => r.msnEsn).filter(Boolean))];
+                        setDropdownOptions(uniqueMsns);
+                    }
+
+                    // Populate table
+                    setModalTableData(records);
+                }
+            } catch (error) {
+                console.error("Failed to fetch reset records:", error);
+            }
+        };
+
+        // Debounce API calls slightly
+        const timeoutId = setTimeout(() => {
+            fetchRecords();
+        }, 300);
+
+        return () => clearTimeout(timeoutId);
+    }, [resetAssetSN, resetDate]);
+
+    // Handle Asset SN Typing
+    const handleAssetSNChange = (e) => {
+        const val = e.target.value;
+        setResetAssetSN(val);
+        if (val) {
+            setShowDropdown(true);
+        } else {
+            setShowDropdown(false);
+            setDropdownOptions([]);
+        }
+    };
+
+    // --- MAIN PAGE HANDLERS ---
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
@@ -75,11 +152,8 @@ const MaintenanceDashboard = () => {
         }));
     };
 
-    // Helper function to apply dynamic sorting and filtering to any dataset
     const getProcessedData = (dataset) => {
         let processed = [...dataset];
-
-        // Apply Filters
         Object.entries(filters).forEach(([key, value]) => {
             if (value !== "") {
                 processed = processed.filter(row =>
@@ -88,25 +162,19 @@ const MaintenanceDashboard = () => {
                 );
             }
         });
-
-        // Apply Sorting
         if (sortConfig.key) {
             processed.sort((a, b) => {
                 let valA = a[sortConfig.key] || "";
                 let valB = b[sortConfig.key] || "";
-
-                // Handle numeric sorting if applicable
                 if (!isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB))) {
                     valA = parseFloat(valA);
                     valB = parseFloat(valB);
                 }
-
                 if (valA < valB) return sortConfig.direction === "Up" ? -1 : 1;
                 if (valA > valB) return sortConfig.direction === "Up" ? 1 : -1;
                 return 0;
             });
         }
-
         return processed;
     };
 
@@ -114,7 +182,6 @@ const MaintenanceDashboard = () => {
     const filteredTargetData = useMemo(() => getProcessedData(targetData), [targetData, filters, sortConfig]);
     const filteredCalendarData = useMemo(() => getProcessedData(calendarData), [calendarData, filters, sortConfig]);
 
-    // Helper to render sortable/filterable column headers
     const renderHeader = (label, key, minWidth = "min-w-[100px]") => (
         <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 align-top bg-slate-100 dark:bg-slate-800/90">
             <div className={`flex flex-col gap-1 ${minWidth}`}>
@@ -129,18 +196,13 @@ const MaintenanceDashboard = () => {
                         <ArrowUp size={12} className="opacity-0 group-hover:opacity-30 transition-opacity" />
                     )}
                 </div>
-                <TableInput
-                    name={key}
-                    value={filters[key]}
-                    onChange={handleFilterChange}
-                    placeholder="Filter..."
-                />
+                <TableInput name={key} value={filters[key]} onChange={handleFilterChange} placeholder="Filter..." />
             </div>
         </th>
     );
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900 rounded-xl font-sans overflow-auto custom-scrollbar p-6 gap-8">
+        <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900 rounded-xl font-sans overflow-auto custom-scrollbar p-6 gap-8 relative">
 
             {/* Header Section */}
             <div className="flex flex-col gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
@@ -159,7 +221,10 @@ const MaintenanceDashboard = () => {
                             <Calculator size={16} /> Compute
                         </button>
                         <div className="flex flex-col gap-2 text-xs font-medium">
-                            <button className="flex items-center gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded transition-colors w-full text-left">
+                            <button
+                                onClick={() => setShowSetResetModal(true)}
+                                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded transition-colors w-full text-left"
+                            >
                                 <Settings size={14} /> Set/Reset Maintenance status
                             </button>
                             <button className="flex items-center gap-2 text-green-600 hover:text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-3 py-1.5 rounded transition-colors w-full text-left">
@@ -175,6 +240,7 @@ const MaintenanceDashboard = () => {
 
             {/* TABLE 1: Maintenance Status */}
             <div className="flex flex-col gap-2">
+                {/* ... (Table 1 Code Remains Exactly the Same) ... */}
                 <div className="flex justify-between items-end">
                     <div className="flex items-center gap-3">
                         <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">User selects a date:</span>
@@ -189,7 +255,6 @@ const MaintenanceDashboard = () => {
                         For each MSN/ESN+PN+SN/BN, metrics can be set/reset only.<br />Metrics for all other dates (historical/forecast) will be (re)calculated.
                     </span>
                 </div>
-
                 <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm">
                     <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
                         <thead>
@@ -239,13 +304,13 @@ const MaintenanceDashboard = () => {
 
             {/* TABLE 2: Target Maintenance Status */}
             <div className="flex flex-col gap-2 pt-4">
+                {/* ... (Table 2 Code Remains Exactly the Same) ... */}
                 <div className="flex justify-between items-end">
                     <span className="text-[10px] text-slate-500 italic">Label is not user enterable on this page</span>
                     <button className="flex items-center gap-1 px-3 py-1 border border-slate-300 dark:border-slate-600 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                         <Download size={12} /> Download
                     </button>
                 </div>
-
                 <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm">
                     <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
                         <thead>
@@ -291,7 +356,6 @@ const MaintenanceDashboard = () => {
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.category}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.date}</td>
 
-                                        {/* Target Maintenance Status */}
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("tsn")}`}>{row.tsn}</td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("csn")}`}>{row.csn}</td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("dsn")}`}>{row.dsn}</td>
@@ -302,7 +366,6 @@ const MaintenanceDashboard = () => {
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("csr")}`}>{row.csr}</td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("dsr")}`}>{row.dsr}</td>
 
-                                        {/* Forecasted */}
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fTsn}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fCsn}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fDsn}</td>
@@ -319,6 +382,7 @@ const MaintenanceDashboard = () => {
 
             {/* TABLE 3: Calendar Inputs */}
             <div className="flex flex-col gap-2 pt-4">
+                {/* ... (Table 3 Code Remains Exactly the Same) ... */}
                 <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">
                     Calendar inputs, down time and post event maintenance status
                 </h3>
@@ -384,7 +448,6 @@ const MaintenanceDashboard = () => {
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 font-mono">{row.calPn}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.snBn}</td>
 
-                                        {/* Earliest of, every */}
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eTsn")}`}>{row.eTsn}</td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eCsn")}`}>{row.eCsn}</td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eDsn")}`}>{row.eDsn}</td>
@@ -395,11 +458,9 @@ const MaintenanceDashboard = () => {
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eCsr")}`}>{row.eCsr}</td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eDsr")}`}>{row.eDsr}</td>
 
-                                        {/* Dates */}
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">{row.lastOccurre}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">{row.nextEstima}</td>
 
-                                        {/* Metrics */}
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right font-bold text-emerald-600 dark:text-emerald-400">{row.downDays}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.avgDownda}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.occurrence}</td>
@@ -411,7 +472,6 @@ const MaintenanceDashboard = () => {
                     </table>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="flex justify-end gap-3 mt-4">
                     <button className="flex items-center gap-1 px-5 py-2 border border-slate-300 dark:border-slate-600 rounded text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-200">
                         <Edit size={14} /> Edit
@@ -422,6 +482,177 @@ const MaintenanceDashboard = () => {
                 </div>
             </div>
 
+            {/* --- SET/RESET MAINTENANCE MODAL --- */}
+            {showSetResetModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-7xl rounded-xl shadow-2xl flex flex-col border border-slate-200 dark:border-slate-700 max-h-[95vh]">
+
+                        {/* Modal Header */}
+                        <div className="bg-blue-500 text-white px-5 py-3 flex justify-between items-center rounded-t-xl">
+                            <h3 className="font-bold text-sm tracking-wide">Set/Reset Maintenance status</h3>
+                            <button
+                                onClick={() => setShowSetResetModal(false)}
+                                className="hover:bg-blue-600 p-1 rounded-full transition-colors"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 overflow-auto custom-scrollbar flex flex-col gap-6">
+
+                            {/* Top Controls */}
+                            <div className="flex justify-between items-start">
+                                <div className="flex flex-col gap-3 text-xs text-slate-700 dark:text-slate-300 font-medium">
+
+                                    {/* SEARCHABLE DROPDOWN for Asset SN */}
+                                    <div className="flex items-center gap-3">
+                                        <span className="w-16">Asset SN</span>
+                                        <div className="relative w-36">
+                                            <input
+                                                type="text"
+                                                value={resetAssetSN}
+                                                onChange={handleAssetSNChange}
+                                                onFocus={() => { if (resetAssetSN) setShowDropdown(true) }}
+                                                onBlur={() => setTimeout(() => setShowDropdown(false), 200)} // delay to allow click
+                                                placeholder="Search MSN/ESN..."
+                                                className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 rounded w-full outline-none focus:ring-1 focus:ring-blue-500"
+                                            />
+                                            {showDropdown && dropdownOptions.length > 0 && (
+                                                <ul className="absolute z-10 w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded mt-1 max-h-40 overflow-y-auto shadow-lg">
+                                                    {dropdownOptions.map(opt => (
+                                                        <li
+                                                            key={opt}
+                                                            className="px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer text-xs"
+                                                            onMouseDown={() => {
+                                                                setResetAssetSN(opt);
+                                                                setShowDropdown(false);
+                                                            }}
+                                                        >
+                                                            {opt}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                        <span className="text-slate-500 font-normal">User selected / autopopulated if other criteria entered</span>
+                                    </div>
+
+                                    <span className="w-16 text-center text-slate-400 italic">(Or)</span>
+
+                                    {/* DATE FIELD for "As on" */}
+                                    <div className="flex items-center gap-3">
+                                        <span className="w-16">As on</span>
+                                        <input
+                                            type="date"
+                                            value={resetDate}
+                                            onChange={(e) => setResetDate(e.target.value)}
+                                            className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 rounded w-36 outline-none focus:ring-1 focus:ring-blue-500"
+                                        />
+                                        <span className="text-slate-500 font-normal">User selected / autopopulated if other criteria entered</span>
+                                    </div>
+
+                                </div>
+
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex justify-end">
+                                        <button className="flex items-center gap-1 border border-slate-300 dark:border-slate-600 px-4 py-1.5 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium">
+                                            <Download size={14} /> Download
+                                        </button>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button className="border border-slate-300 dark:border-slate-600 px-6 py-1.5 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium">Edit</button>
+                                        <button className="border border-slate-300 dark:border-slate-600 px-6 py-1.5 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium">Update</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Modal Dynamic Table */}
+                            <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm min-h-[150px]">
+                                <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
+                                    <thead>
+                                        <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 font-semibold text-center">
+                                                Sort+Filter<br />MSN/ESN
+                                            </th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 font-semibold text-center">
+                                                Sort+Filter<br />PN
+                                            </th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 font-semibold text-center">
+                                                Sort+Filter<br />SN/BN
+                                            </th>
+                                            <th colSpan="9" className="p-2 border-r border-slate-200 dark:border-slate-700 font-bold text-center border-b">
+                                                Maintenance status
+                                            </th>
+                                            <th rowSpan="2" className="p-2 font-semibold align-bottom text-center">
+                                                Appl time metric
+                                            </th>
+                                        </tr>
+                                        <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
+                                            <th className="border-r border-slate-200 dark:border-slate-700"></th>
+                                            <th className="border-r border-slate-200 dark:border-slate-700"></th>
+                                            <th className="border-r border-slate-200 dark:border-slate-700"></th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">TSN</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">CSN</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">DSN</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">TSO/TSRtrtr</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">CSO/CSRtrt</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">DSO/DSRtrt</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">TSRplmt</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">CSRplmt</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">DSRplmt</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-slate-800 dark:text-slate-200 bg-[#dcfce7] dark:bg-green-900/20">
+
+                                        {/* Dynamic Rows from State */}
+                                        {modalTableData.length > 0 ? (
+                                            modalTableData.map(row => (
+                                                <tr key={`reset-${row.id}`}>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50 font-medium">{row.msnEsn}</td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.pn}</td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.snBn}</td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.tsn}</td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.csn}</td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.dsn}</td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.tso}</td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.cso}</td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.dso}</td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.tsr}</td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.csr}</td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">{row.dsr}</td>
+                                                    <td className="p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
+                                                        <input type="text" defaultValue={row.metric} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded outline-none py-0.5 bg-transparent" />
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="13" className="p-6 text-center text-slate-500 italic">No matching records found.</td>
+                                            </tr>
+                                        )}
+
+                                        {/* Footer Row */}
+                                        <tr className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+                                            <td colSpan="3" className="p-2 text-center">
+                                                <button className="text-blue-600 font-semibold hover:underline flex items-center justify-center w-full">
+                                                    +Add
+                                                </button>
+                                            </td>
+                                            <td colSpan="9" className="p-2 text-center text-slate-600 dark:text-slate-400 font-medium">
+                                                User enterable
+                                            </td>
+                                            <td className="p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
+                                                <input type="text" className="w-full text-center border border-slate-300 dark:border-slate-600 rounded outline-none py-0.5 bg-transparent" />
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
