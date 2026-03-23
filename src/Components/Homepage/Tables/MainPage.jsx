@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge";
 import {
   LogOut, Plane, Network, Map,
   RotateCw, LayoutDashboard, Link2,
-  RadioTower, Globe, TrendingUp, List, Eye, Plus, ClipboardList, Navigation
+  RadioTower, TrendingUp, List, Eye, Plus, ClipboardList, Navigation
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -160,8 +160,8 @@ const MainPage = () => {
 
               {/* Logo / Title */}
               <div className="flex items-center gap-3 min-w-fit shrink-0">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
-                  <Globe className="text-white" size={24} />
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-lg shadow-indigo-500/10 shrink-0 border border-slate-200 dark:border-slate-700 overflow-hidden">
+                  <img src="/favicon-32x32.png" alt="Airlineplan Logo" className="w-7 h-7 object-contain" />
                 </div>
                 <div>
                   <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">

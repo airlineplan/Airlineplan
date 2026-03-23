@@ -186,7 +186,7 @@ const MaintenanceDashboard = () => {
         const newRow = {
             id: `temp-${Date.now()}`,
             msnEsn: "", pn: "", snBn: "",
-            tsn: "", csn: "", dsn: "", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "", metric: "",
+            tsn: "", csn: "", dsn: "", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "", metric: "BH",
             isNew: true
         };
         setModalTableData(prev => [...prev, newRow]);
@@ -776,7 +776,15 @@ const MaintenanceDashboard = () => {
                                                         {isEditingModal || row.isNew ? <input type="text" value={row.dsr || ""} onChange={(e) => handleModalFieldChange(row.id, 'dsr', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.dsr}
                                                     </td>
                                                     <td className="p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
-                                                        <input type="text" value={row.metric || ""} onChange={(e) => handleModalFieldChange(row.id, 'metric', e.target.value)} readOnly={!isEditingModal && !row.isNew} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded outline-none py-0.5 bg-transparent disabled:opacity-70 read-only:outline-none read-only:border-transparent" />
+                                                        <select
+                                                            value={row.metric || "BH"}
+                                                            onChange={(e) => handleModalFieldChange(row.id, 'metric', e.target.value)}
+                                                            disabled={!isEditingModal && !row.isNew}
+                                                            className="w-full text-center border border-slate-300 dark:border-slate-600 rounded outline-none py-0.5 bg-white dark:bg-slate-800 text-[10px] appearance-none cursor-pointer disabled:bg-slate-50 dark:disabled:bg-slate-900/50"
+                                                        >
+                                                            <option value="BH">BH</option>
+                                                            <option value="FH">FH</option>
+                                                        </select>
                                                     </td>
                                                 </tr>
                                             ))
