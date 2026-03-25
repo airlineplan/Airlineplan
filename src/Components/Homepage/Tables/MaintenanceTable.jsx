@@ -68,9 +68,26 @@ const MaintenanceDashboard = () => {
     const [selectedDate, setSelectedDate] = useState("2025-10-12");
 
     // Dynamic State for Main Tables
-    const [maintenanceData] = useState(dummyMaintenanceData);
+    const [maintenanceData, setMaintenanceData] = useState([]);
     const [targetData] = useState(dummyTargetData);
     const [calendarData] = useState(dummyCalendarData);
+
+    const fetchDashboardData = async () => {
+        try {
+            const res = await api.get('/maintenance/dashboard', {
+                params: { date: selectedDate }
+            });
+            if (res.data && res.data.success && res.data.data.maintenanceData) {
+                setMaintenanceData(res.data.data.maintenanceData);
+            }
+        } catch (error) {
+            console.error("Failed to fetch dashboard data:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchDashboardData();
+    }, [selectedDate]);
 
     // State for Sorting and Filtering (Main Page)
     const [sortConfig, setSortConfig] = useState({ key: null, direction: "Up" });
@@ -199,12 +216,124 @@ const MaintenanceDashboard = () => {
 
     const handleUpdateModal = async () => {
         try {
-            // Simulated API call point for updates
-            // await api.post('/maintenance/reset-records/bulk', modalTableData);
+            // Call the correct backend endpoint for bulk update/backfill
+            await api.post('/maintenance/reset-records', modalTableData);
+
             setIsEditingModal(false);
+            setShowSetResetModal(false); // Close modal on success
+
+            // Refresh main dashboard table after a successful reset
+            fetchDashboardData();
         } catch (error) {
             console.error("Failed to update records", error);
         }
+    };
+
+    // --- ROTABLES MODAL STATE & LOGIC ---
+    const [showRotablesModal, setShowRotablesModal] = useState(false);
+    const [rotablesData, setRotablesData] = useState([]);
+    const [isEditingRotables, setIsEditingRotables] = useState(false);
+    const [rotablesSortConfig, setRotablesSortConfig] = useState({ key: null, direction: "Up" });
+    const [rotablesFilters, setRotablesFilters] = useState({ label: "", date: "", pn: "", msn: "", acftRegn: "", position: "", removedSN: "", installedSN: "" });
+
+    const fetchRotablesData = async () => {
+        try {
+            const res = await api.get('/maintenance/rotables');
+            if (res.data && res.data.success) {
+                setRotablesData(res.data.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch rotables data:", error);
+        }
+    };
+
+    const handleRotablesClick = () => {
+        setShowRotablesModal(true);
+        fetchRotablesData();
+    };
+
+    const handleRotablesSort = (key) => {
+        setRotablesSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === "Up" ? "Down" : "Up"
+        }));
+    };
+
+    const handleRotablesFilterChange = (e) => {
+        const { name, value } = e.target;
+        setRotablesFilters(prev => ({ ...prev, [name]: value }));
+    };
+
+    const filteredRotablesData = useMemo(() => {
+        let processed = [...rotablesData];
+        Object.entries(rotablesFilters).forEach(([key, value]) => {
+            if (value !== "") {
+                processed = processed.filter(row =>
+                    row[key] !== undefined &&
+                    String(row[key]).toLowerCase().includes(String(value).toLowerCase())
+                );
+            }
+        });
+        if (rotablesSortConfig.key) {
+            processed.sort((a, b) => {
+                let valA = a[rotablesSortConfig.key] || "";
+                let valB = b[rotablesSortConfig.key] || "";
+                if (!isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB))) {
+                    valA = parseFloat(valA);
+                    valB = parseFloat(valB);
+                }
+                if (valA < valB) return rotablesSortConfig.direction === "Up" ? -1 : 1;
+                if (valA > valB) return rotablesSortConfig.direction === "Up" ? 1 : -1;
+                return 0;
+            });
+        }
+        return processed;
+    }, [rotablesData, rotablesFilters, rotablesSortConfig]);
+
+    const handleRotablesFieldChange = (id, field, value) => {
+        setRotablesData(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
+    };
+
+    const handleAddRotablesRow = () => {
+        const newRow = {
+            id: `temp-${Date.now()}`,
+            isNew: true,
+            label: "", date: "", pn: "", msn: "", acftRegn: "", position: "", removedSN: "", installedSN: ""
+        };
+        setRotablesData([...rotablesData, newRow]);
+        setIsEditingRotables(true);
+    };
+
+    const handleUpdateRotables = async () => {
+        try {
+            await api.post('/maintenance/rotables', { rotablesData: rotablesData });
+            setIsEditingRotables(false);
+            setShowRotablesModal(false);
+            fetchDashboardData();
+        } catch (error) {
+            console.error("Failed to update rotables", error);
+        }
+    };
+
+    const downloadRotablesExcel = () => {
+        if (!rotablesData || rotablesData.length === 0) {
+            alert("No rotables data available to download.");
+            return;
+        }
+        const exportData = rotablesData.map(row => ({
+            "Label": row.label || "",
+            "Date (EoD)": row.date || "",
+            "PN": row.pn || "",
+            "MSN": row.msn || "",
+            "ACFT Regn": row.acftRegn || "",
+            "Position (for PN)": row.position || "",
+            "Removed SN": row.removedSN || "",
+            "Installed SN": row.installedSN || ""
+        }));
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Major Rotables Movement");
+        XLSX.writeFile(workbook, "Major_Rotables_Movement.xlsx");
     };
 
     const handleDownloadModal = () => {
@@ -321,7 +450,7 @@ const MaintenanceDashboard = () => {
                             <button className="flex items-center gap-2 text-green-600 hover:text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-3 py-1.5 rounded transition-colors w-full text-left">
                                 <RefreshCw size={14} /> Set/Reset Target status
                             </button>
-                            <button className="flex items-center gap-2 text-purple-600 hover:text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 px-3 py-1.5 rounded transition-colors w-full text-left">
+                            <button onClick={handleRotablesClick} className="flex items-center gap-2 text-purple-600 hover:text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 px-3 py-1.5 rounded transition-colors w-full text-left">
                                 <Layers size={14} /> Major rotables movement
                             </button>
                         </div>
@@ -334,7 +463,7 @@ const MaintenanceDashboard = () => {
                 {/* ... (Table 1 Code Remains Exactly the Same) ... */}
                 <div className="flex justify-between items-end">
                     <div className="flex items-center gap-3">
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">User selects a date:</span>
+                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300"></span>
                         <input
                             type="date"
                             value={selectedDate}
@@ -805,6 +934,137 @@ const MaintenanceDashboard = () => {
                                                 User enterable
                                             </td>
                                             <td className="p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- MAJOR ROTABLES MOVEMENT MODAL --- */}
+            {showRotablesModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                            <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                <Layers className="text-purple-500" size={20} />
+                                Major rotables changes (Engines, LG..etc)
+                            </h2>
+                            <div className="flex gap-2">
+                                <button onClick={() => setIsEditingRotables(!isEditingRotables)} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${isEditingRotables ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}>Edit</button>
+                                <button onClick={handleUpdateRotables} disabled={!isEditingRotables} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all shadow-sm">Update</button>
+                                <button onClick={() => setShowRotablesModal(false)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><X size={20} /></button>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-auto p-4 bg-slate-50/50 dark:bg-slate-900">
+                            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-800">
+                                <table className="w-full text-left border-collapse min-w-max">
+                                    <thead>
+                                        <tr className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('label')}>
+                                                <div className="flex justify-between items-center group">
+                                                    Label {rotablesSortConfig.key === 'label' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="label" value={rotablesFilters.label} onChange={handleRotablesFilterChange} placeholder="Filter Label..." />
+                                            </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('date')}>
+                                                <div className="flex justify-between items-center group">
+                                                    Date (EoD) {rotablesSortConfig.key === 'date' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="date" value={rotablesFilters.date} onChange={handleRotablesFilterChange} placeholder="Filter Date..." />
+                                            </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('pn')}>
+                                                <div className="flex justify-between items-center group">
+                                                    PN {rotablesSortConfig.key === 'pn' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="pn" value={rotablesFilters.pn} onChange={handleRotablesFilterChange} placeholder="Filter PN..." />
+                                            </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('msn')}>
+                                                <div className="flex justify-between items-center group">
+                                                    MSN {rotablesSortConfig.key === 'msn' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="msn" value={rotablesFilters.msn} onChange={handleRotablesFilterChange} placeholder="Filter MSN..." />
+                                            </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('acftRegn')}>
+                                                <div className="flex justify-between items-center group">
+                                                    ACFT Regn {rotablesSortConfig.key === 'acftRegn' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="acftRegn" value={rotablesFilters.acftRegn} onChange={handleRotablesFilterChange} placeholder="Filter Regn..." />
+                                            </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('position')}>
+                                                <div className="flex justify-between items-center group">
+                                                    Position (for PN) {rotablesSortConfig.key === 'position' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="position" value={rotablesFilters.position} onChange={handleRotablesFilterChange} placeholder="Filter Pos..." />
+                                            </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('removedSN')}>
+                                                <div className="flex justify-between items-center group">
+                                                    Removed SN {rotablesSortConfig.key === 'removedSN' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="removedSN" value={rotablesFilters.removedSN} onChange={handleRotablesFilterChange} placeholder="Filter Rem SN..." />
+                                            </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors w-32" onClick={() => handleRotablesSort('installedSN')}>
+                                                <div className="flex justify-between items-center group">
+                                                    Installed SN {rotablesSortConfig.key === 'installedSN' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="installedSN" value={rotablesFilters.installedSN} onChange={handleRotablesFilterChange} placeholder="Filter Inst SN..." />
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-[12px] text-slate-700 dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-800">
+                                        {filteredRotablesData.length > 0 ? (
+                                            filteredRotablesData.map((row, index) => (
+                                                <tr key={row.id || index} className="hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors">
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.label || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'label', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.label}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingRotables || row.isNew ? <input type="date" value={row.date || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'date', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.date}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.pn || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'pn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.pn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.msn || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'msn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.msn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.acftRegn || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'acftRegn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.acftRegn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.position || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'position', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.position}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.removedSN || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'removedSN', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.removedSN}
+                                                    </td>
+                                                    <td className="p-2 text-center">
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.installedSN || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'installedSN', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.installedSN}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="8" className="p-6 text-center text-slate-500 italic">No matching records found.</td>
+                                            </tr>
+                                        )}
+
+                                        {/* Footer Row */}
+                                        <tr className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+                                            <td colSpan="2" className="p-2 text-center">
+                                                <button onClick={handleAddRotablesRow} className="text-blue-600 font-semibold hover:underline flex items-center justify-center w-full">
+                                                    +Add
+                                                </button>
+                                            </td>
+                                            <td colSpan="5"></td>
+                                            <td className="p-2 text-right">
+                                                <button onClick={downloadRotablesExcel} className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-semibold transition-colors ml-auto text-xs border border-emerald-600 px-2 py-1 rounded">
+                                                    <Download size={12} /> Download
+                                                </button>
                                             </td>
                                         </tr>
                                     </tbody>
