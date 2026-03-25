@@ -336,6 +336,120 @@ const MaintenanceDashboard = () => {
         XLSX.writeFile(workbook, "Major_Rotables_Movement.xlsx");
     };
 
+    // --- TARGETS MODAL STATE & LOGIC ---
+    const [showTargetsModal, setShowTargetsModal] = useState(false);
+    const [targetsData, setTargetsData] = useState([]);
+    const [isEditingTargets, setIsEditingTargets] = useState(false);
+    const [targetsSortConfig, setTargetsSortConfig] = useState({ key: null, direction: "Up" });
+    const [targetsFilters, setTargetsFilters] = useState({ label: "", msnEsn: "", pn: "", snBn: "", category: "", date: "" });
+
+    const fetchTargetsData = async () => {
+        try {
+            const res = await api.get('/maintenance/targets');
+            if (res.data && res.data.success) {
+                setTargetsData(res.data.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch targets data:", error);
+        }
+    };
+
+    const handleTargetsClick = () => {
+        setShowTargetsModal(true);
+        fetchTargetsData();
+    };
+
+    const handleTargetsSort = (key) => {
+        setTargetsSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === "Up" ? "Down" : "Up"
+        }));
+    };
+
+    const handleTargetsFilterChange = (e) => {
+        const { name, value } = e.target;
+        setTargetsFilters(prev => ({ ...prev, [name]: value }));
+    };
+
+    const filteredTargetsData = useMemo(() => {
+        let processed = [...targetsData];
+        Object.entries(targetsFilters).forEach(([key, value]) => {
+            if (value !== "") {
+                processed = processed.filter(row =>
+                    row[key] !== undefined &&
+                    String(row[key]).toLowerCase().includes(String(value).toLowerCase())
+                );
+            }
+        });
+        if (targetsSortConfig.key) {
+            processed.sort((a, b) => {
+                let valA = a[targetsSortConfig.key] || "";
+                let valB = b[targetsSortConfig.key] || "";
+                if (!isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB))) {
+                    valA = parseFloat(valA);
+                    valB = parseFloat(valB);
+                }
+                if (valA < valB) return targetsSortConfig.direction === "Up" ? -1 : 1;
+                if (valA > valB) return targetsSortConfig.direction === "Up" ? 1 : -1;
+                return 0;
+            });
+        }
+        return processed;
+    }, [targetsData, targetsFilters, targetsSortConfig]);
+
+    const handleTargetsFieldChange = (id, field, value) => {
+        setTargetsData(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
+    };
+
+    const handleAddTargetsRow = () => {
+        const newRow = {
+            id: `temp-${Date.now()}`,
+            isNew: true,
+            label: "", msnEsn: "", pn: "", snBn: "", category: "", date: "", tsn: "", csn: "", dsn: "", tso: "", cso: "", dso: "", tsRplmt: "", csRplmt: "", dsRplmt: ""
+        };
+        setTargetsData([...targetsData, newRow]);
+        setIsEditingTargets(true);
+    };
+
+    const handleUpdateTargets = async () => {
+        try {
+            await api.post('/maintenance/targets', { targetData: targetsData });
+            setIsEditingTargets(false);
+            setShowTargetsModal(false);
+            fetchDashboardData();
+        } catch (error) {
+            console.error("Failed to update targets", error);
+        }
+    };
+
+    const downloadTargetsExcel = () => {
+        if (!targetsData || targetsData.length === 0) {
+            alert("No targets data available to download.");
+            return;
+        }
+        const exportData = targetsData.map(row => ({
+            "Label": row.label || "",
+            "MSN/ESN": row.msnEsn || "",
+            "PN": row.pn || "",
+            "SN/BN": row.snBn || "",
+            "Category": row.category || "",
+            "Date": row.date || "",
+            "TSN": row.tsn || "",
+            "CSN": row.csn || "",
+            "DSN": row.dsn || "",
+            "TSO/TSRtr": row.tso || "",
+            "CSO/CSRtr": row.cso || "",
+            "DSO/DSRtr": row.dso || "",
+            "TSRplmt": row.tsRplmt || "",
+            "CSRplmt": row.csRplmt || "",
+            "DSRplmt": row.dsRplmt || ""
+        }));
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Set Target Maintenance Status");
+        XLSX.writeFile(workbook, "Set_Target_Maintenance_Status.xlsx");
+    };
+
     const handleDownloadModal = () => {
         if (modalTableData.length === 0) return;
         const exportData = modalTableData.map(row => ({
@@ -447,7 +561,7 @@ const MaintenanceDashboard = () => {
                             >
                                 <Settings size={14} /> Set/Reset Maintenance status
                             </button>
-                            <button className="flex items-center gap-2 text-green-600 hover:text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-3 py-1.5 rounded transition-colors w-full text-left">
+                            <button onClick={handleTargetsClick} className="flex items-center gap-2 text-green-600 hover:text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-3 py-1.5 rounded transition-colors w-full text-left">
                                 <RefreshCw size={14} /> Set/Reset Target status
                             </button>
                             <button onClick={handleRotablesClick} className="flex items-center gap-2 text-purple-600 hover:text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 px-3 py-1.5 rounded transition-colors w-full text-left">
@@ -1063,6 +1177,162 @@ const MaintenanceDashboard = () => {
                                             <td colSpan="5"></td>
                                             <td className="p-2 text-right">
                                                 <button onClick={downloadRotablesExcel} className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-semibold transition-colors ml-auto text-xs border border-emerald-600 px-2 py-1 rounded">
+                                                    <Download size={12} /> Download
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- TARGET MAINTENANCE MODAL --- */}
+            {showTargetsModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-screen-2xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                            <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                <RefreshCw className="text-green-500" size={20} />
+                                Set target maintenance status
+                            </h2>
+                            <div className="flex gap-2">
+                                <button onClick={() => setIsEditingTargets(!isEditingTargets)} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${isEditingTargets ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}>Edit</button>
+                                <button onClick={handleUpdateTargets} disabled={!isEditingTargets} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all shadow-sm">Update</button>
+                                <button onClick={() => setShowTargetsModal(false)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><X size={20} /></button>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-auto p-4 bg-slate-50/50 dark:bg-slate-900">
+                            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-800">
+                                <table className="w-full text-left border-collapse min-w-max">
+                                    <thead>
+                                        {/* Multi-tier Header */}
+                                        <tr className="bg-slate-200/50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-300 text-center">
+                                            <th colSpan="6" className="p-1 border-r border-slate-200 dark:border-slate-700">Target Identifiers</th>
+                                            <th colSpan="3" className="p-1 border-r border-slate-200 dark:border-slate-700">Flight Status Requirements</th>
+                                            <th colSpan="3" className="p-1 border-r border-slate-200 dark:border-slate-700">Target maintenance status</th>
+                                            <th colSpan="3" className="p-1">Remaining to Replacement</th>
+                                        </tr>
+                                        <tr className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-24 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleTargetsSort('label')}>
+                                                <div className="flex justify-between items-center group">
+                                                    Label {targetsSortConfig.key === 'label' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="label" value={targetsFilters.label} onChange={handleTargetsFilterChange} placeholder="Filter Label..." />
+                                            </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-24 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleTargetsSort('msnEsn')}>
+                                                <div className="flex justify-between items-center group">
+                                                    MSN/ESN {targetsSortConfig.key === 'msnEsn' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="msnEsn" value={targetsFilters.msnEsn} onChange={handleTargetsFilterChange} placeholder="Filter MSN/ESN..." />
+                                            </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-24 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleTargetsSort('pn')}>
+                                                <div className="flex justify-between items-center group">
+                                                    PN {targetsSortConfig.key === 'pn' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="pn" value={targetsFilters.pn} onChange={handleTargetsFilterChange} placeholder="Filter PN..." />
+                                            </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-24 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleTargetsSort('snBn')}>
+                                                <div className="flex justify-between items-center group">
+                                                    SN/BN {targetsSortConfig.key === 'snBn' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="snBn" value={targetsFilters.snBn} onChange={handleTargetsFilterChange} placeholder="Filter SN/BN..." />
+                                            </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-24 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleTargetsSort('category')}>
+                                                <div className="flex justify-between items-center group">
+                                                    Category {targetsSortConfig.key === 'category' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="category" value={targetsFilters.category} onChange={handleTargetsFilterChange} placeholder="Filter Cat..." />
+                                            </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-28 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleTargetsSort('date')}>
+                                                <div className="flex justify-between items-center group">
+                                                    Date {targetsSortConfig.key === 'date' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                </div>
+                                                <TableInput name="date" value={targetsFilters.date} onChange={handleTargetsFilterChange} placeholder="Filter Date..." />
+                                            </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">TSN</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">CSN</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">DSN</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">TSO/TSRtr</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">CSO/CSRtr</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">DSO/DSRtr</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">TSRplmt</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">CSRplmt</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] text-center w-20">DSRplmt</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-[12px] text-slate-700 dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-800">
+                                        {filteredTargetsData.length > 0 ? (
+                                            filteredTargetsData.map((row, index) => (
+                                                <tr key={row.id || index} className="hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors">
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.label || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'label', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.label}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.msnEsn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'msnEsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.msnEsn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.pn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'pn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.pn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.snBn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'snBn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.snBn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.category || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'category', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.category}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="date" value={row.date || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'date', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.date}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.tsn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'tsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.tsn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.csn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'csn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.csn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.dsn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'dsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.dsn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.tso || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'tso', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.tso}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.cso || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'cso', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.cso}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.dso || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'dso', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.dso}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.tsRplmt || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'tsRplmt', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.tsRplmt}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.csRplmt || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'csRplmt', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.csRplmt}
+                                                    </td>
+                                                    <td className="p-2 text-center">
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.dsRplmt || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'dsRplmt', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.dsRplmt}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="15" className="p-6 text-center text-slate-500 italic">No matching records found.</td>
+                                            </tr>
+                                        )}
+
+                                        {/* Footer Row */}
+                                        <tr className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
+                                            <td colSpan="6" className="p-2 text-center">
+                                                <button onClick={handleAddTargetsRow} className="text-blue-600 font-semibold hover:underline flex items-center justify-center w-full">
+                                                    +Add
+                                                </button>
+                                            </td>
+                                            <td colSpan="8"></td>
+                                            <td className="p-2 text-right">
+                                                <button onClick={downloadTargetsExcel} className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-semibold transition-colors ml-auto text-xs border border-emerald-600 px-2 py-1 rounded">
                                                     <Download size={12} /> Download
                                                 </button>
                                             </td>
