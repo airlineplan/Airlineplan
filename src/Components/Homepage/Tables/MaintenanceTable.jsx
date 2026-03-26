@@ -70,7 +70,8 @@ const MaintenanceDashboard = () => {
     // Dynamic State for Main Tables
     const [maintenanceData, setMaintenanceData] = useState([]);
     const [targetData] = useState(dummyTargetData);
-    const [calendarData] = useState(dummyCalendarData);
+    const [calendarData, setCalendarData] = useState([]);
+    const [isEditingCalendar, setIsEditingCalendar] = useState(false);
 
     const fetchDashboardData = async () => {
         try {
@@ -85,9 +86,47 @@ const MaintenanceDashboard = () => {
         }
     };
 
+    const fetchCalendarData = async () => {
+        try {
+            const res = await api.get('/maintenance/calendar');
+            if (res.data && res.data.success) {
+                setCalendarData(res.data.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch calendar data:", error);
+        }
+    };
+
     useEffect(() => {
         fetchDashboardData();
+        fetchCalendarData();
     }, [selectedDate]);
+
+    const handleCalendarFieldChange = (id, field, value) => {
+        setCalendarData(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
+    };
+
+    const handleAddCalendarRow = () => {
+        const newRow = {
+            id: `temp-${Date.now()}`,
+            isNew: true,
+            calLabel: "", lineBase: "", calMsn: "", schEvent: "", calPn: "", snBn: "", 
+            eTsn: "", eCsn: "", eDsn: "", eTso: "", eCso: "", eDso: "", eTsr: "", eCsr: "", eDsr: "",
+            lastOccurre: "", nextEstima: "", downDays: "", avgDownda: "", occurrence: "", soTsr: ""
+        };
+        setCalendarData([...calendarData, newRow]);
+        setIsEditingCalendar(true);
+    };
+
+    const handleUpdateCalendar = async () => {
+        try {
+            await api.post('/maintenance/calendar', { calendarData: calendarData });
+            setIsEditingCalendar(false);
+            fetchCalendarData();
+        } catch (error) {
+            console.error("Failed to update calendar", error);
+        }
+    };
 
     // State for Sorting and Filtering (Main Page)
     const [sortConfig, setSortConfig] = useState({ key: null, direction: "Up" });
@@ -101,6 +140,7 @@ const MaintenanceDashboard = () => {
     const [isEditingModal, setIsEditingModal] = useState(false);
     const [modalSortConfig, setModalSortConfig] = useState({ key: null, direction: "Up" });
     const [modalFilters, setModalFilters] = useState({ msnEsn: "", pn: "", snBn: "" });
+    const [isComputing, setIsComputing] = useState(false);
 
     // Autocomplete Dropdown State
     const [showDropdown, setShowDropdown] = useState(false);
@@ -516,6 +556,22 @@ const MaintenanceDashboard = () => {
     const filteredTargetData = useMemo(() => getProcessedData(targetData), [targetData, filters, sortConfig]);
     const filteredCalendarData = useMemo(() => getProcessedData(calendarData), [calendarData, filters, sortConfig]);
 
+    const handleCompute = async () => {
+        try {
+            setIsComputing(true);
+            const res = await api.post('/maintenance/compute');
+            if (res.data && res.data.success) {
+                alert(res.data.message || "Computation successful!");
+                fetchDashboardData();
+            }
+        } catch (error) {
+            console.error("Failed to compute maintenance logic:", error);
+            alert("Error: " + (error.response?.data?.message || "Internal Server Error"));
+        } finally {
+            setIsComputing(false);
+        }
+    };
+
     const renderHeader = (label, key, minWidth = "min-w-[100px]") => (
         <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 align-top bg-slate-100 dark:bg-slate-800/90">
             <div className={`flex flex-col gap-1 ${minWidth}`}>
@@ -551,8 +607,21 @@ const MaintenanceDashboard = () => {
                     </div>
 
                     <div className="flex flex-col items-end gap-3">
-                        <button className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all">
-                            <Calculator size={16} /> Compute
+                        <button 
+                            onClick={handleCompute}
+                            disabled={isComputing}
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-md transition-all ${isComputing ? "bg-slate-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}
+                        >
+                            {isComputing ? (
+                                <>
+                                    <RefreshCw size={16} className="animate-spin" />
+                                    Computing...
+                                </>
+                            ) : (
+                                <>
+                                    <Calculator size={16} /> Compute
+                                </>
+                            )}
                         </button>
                         <div className="flex flex-col gap-2 text-xs font-medium">
                             <button
@@ -775,30 +844,72 @@ const MaintenanceDashboard = () => {
 
                                 return (
                                     <tr key={`cal-${row.id}`} className="bg-green-50/50 dark:bg-green-900/10">
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-medium">{row.calLabel}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.lineBase}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.calMsn}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.schEvent}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 font-mono">{row.calPn}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.snBn}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-medium">
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.calLabel || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'calLabel', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.calLabel}
+                                        </td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.lineBase || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'lineBase', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.lineBase}
+                                        </td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.calMsn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'calMsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.calMsn}
+                                        </td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.schEvent || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'schEvent', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.schEvent}
+                                        </td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 font-mono">
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.calPn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'calPn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.calPn}
+                                        </td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.snBn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'snBn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.snBn}
+                                        </td>
 
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eTsn")}`}>{row.eTsn}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eCsn")}`}>{row.eCsn}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eDsn")}`}>{row.eDsn}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eTso")}`}>{row.eTso}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eCso")}`}>{row.eCso}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eDso")}`}>{row.eDso}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eTsr")}`}>{row.eTsr}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eCsr")}`}>{row.eCsr}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("eDsr")}`}>{row.eDsr}</td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eTsn")}`}>
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eTsn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eTsn', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eTsn}</div>}
+                                        </td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eCsn")}`}>
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eCsn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eCsn', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eCsn}</div>}
+                                        </td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eDsn")}`}>
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eDsn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eDsn', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eDsn}</div>}
+                                        </td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eTso")}`}>
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eTso || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eTso', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eTso}</div>}
+                                        </td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eCso")}`}>
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eCso || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eCso', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eCso}</div>}
+                                        </td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eDso")}`}>
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eDso || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eDso', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eDso}</div>}
+                                        </td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eTsr")}`}>
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eTsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eTsr', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eTsr}</div>}
+                                        </td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eCsr")}`}>
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eCsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eCsr', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eCsr}</div>}
+                                        </td>
+                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eDsr")}`}>
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eDsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eDsr', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eDsr}</div>}
+                                        </td>
 
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">{row.lastOccurre}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">{row.nextEstima}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.lastOccurre || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'lastOccurre', e.target.value)} className="w-full text-left border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.lastOccurre}
+                                        </td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.nextEstima || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'nextEstima', e.target.value)} className="w-full text-left border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.nextEstima}
+                                        </td>
 
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right font-bold text-emerald-600 dark:text-emerald-400">{row.downDays}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.avgDownda}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.occurrence}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.soTsr}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-bold text-emerald-600 dark:text-emerald-400">
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.downDays || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'downDays', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.downDays}</div>}
+                                        </td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.avgDownda || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'avgDownda', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.avgDownda}</div>}
+                                        </td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.occurrence || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'occurrence', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.occurrence}</div>}
+                                        </td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.soTsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'soTsr', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.soTsr}</div>}
+                                        </td>
                                     </tr>
                                 );
                             })}
@@ -807,10 +918,13 @@ const MaintenanceDashboard = () => {
                 </div>
 
                 <div className="flex justify-end gap-3 mt-4">
-                    <button className="flex items-center gap-1 px-5 py-2 border border-slate-300 dark:border-slate-600 rounded text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-200">
+                    <button onClick={handleAddCalendarRow} className="flex items-center gap-1 px-5 py-2 border border-blue-300 text-blue-600 rounded text-sm hover:bg-blue-50 transition-colors font-medium">
+                        + Add Row
+                    </button>
+                    <button onClick={() => setIsEditingCalendar(!isEditingCalendar)} className={`flex items-center gap-1 px-5 py-2 border rounded text-sm transition-colors font-medium ${isEditingCalendar ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
                         <Edit size={14} /> Edit
                     </button>
-                    <button className="flex items-center gap-1 px-5 py-2 border border-slate-300 dark:border-slate-600 rounded text-sm hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium text-slate-700 dark:text-slate-200">
+                    <button onClick={handleUpdateCalendar} disabled={!isEditingCalendar} className="flex items-center gap-1 px-5 py-2 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700 transition-colors font-medium disabled:bg-slate-300 disabled:cursor-not-allowed">
                         Update
                     </button>
                 </div>
