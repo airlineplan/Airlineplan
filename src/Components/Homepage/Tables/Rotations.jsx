@@ -304,6 +304,27 @@ const Rotations = () => {
       });
 
       toast.success("Rotation deleted");
+
+      // Reset all UI state to blank (spec: goes back to blank screen requiring Rotation # selection)
+      setSelectedRotation("");
+      setSelectedVariant("");
+      setRotationTag("");
+      setEffFromDate("");
+      setEffToDate("");
+      setDow("");
+      setRotationDevelopmentTableData([]);
+      setFlgtsTableData([]);
+      setEditable(true);
+      setDepCount(1);
+      setFlight(""); setBt(""); setSta(""); setArrStn(""); setDomIntl(""); setGt("00:00");
+      setDepStn(""); setStd("");
+
+      // Re-fetch rotation dropdown list
+      try {
+        const rotRes = await api.get("/listRotations");
+        setListOfRotations(rotRes.data);
+      } catch (e) { console.error(e); }
+
       setTimeout(() => window.dispatchEvent(new Event("refreshData")), 1500);
     } catch (e) { console.error(e); } finally { setIsRotationDeleting(false); }
   };
@@ -315,10 +336,32 @@ const Rotations = () => {
       let res;
 
       if (!lastObject) {
-        res = await api.post("/deleteRotation", {
-          rotationNumber: selectedRotation, selectedVariant
+        // No legs left — delete the entire rotation (using the correct endpoint)
+        res = await api.post("/deleteCompleteRotation", {
+          rotationNumber: selectedRotation,
+          selectedVariant,
+          totalDepNumber: 0
         });
-        if (res.status === 200) setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
+        if (res.status === 200) {
+          // Reset UI state after full rotation delete
+          setSelectedRotation("");
+          setSelectedVariant("");
+          setRotationTag("");
+          setEffFromDate("");
+          setEffToDate("");
+          setDow("");
+          setRotationDevelopmentTableData([]);
+          setFlgtsTableData([]);
+          setEditable(true);
+
+          // Re-fetch rotation dropdown list
+          try {
+            const rotRes = await api.get("/listRotations");
+            setListOfRotations(rotRes.data);
+          } catch (e) { console.error(e); }
+
+          setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
+        }
       } else {
         res = await api.post("/deletePrevInRotation", {
           rotationNumber: selectedRotation, selectedVariant,
