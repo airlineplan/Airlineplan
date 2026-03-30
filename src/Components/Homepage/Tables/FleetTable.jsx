@@ -86,6 +86,48 @@ const FleetTable = () => {
         }
     }, [selectedMonth]);
 
+    useEffect(() => {
+        const fetchInitialData = async () => {
+            try {
+                const fleetResponse = await api.get("/fleet");
+                if (fleetResponse.data.data && fleetResponse.data.data.length > 0) {
+
+                    // 🔥 FIX: Safely format MongoDB ISO dates to strictly 'YYYY-MM-DD' for HTML inputs
+                    const formattedAssets = fleetResponse.data.data.map(a => {
+                        return {
+                            ...a,
+                            id: a._id,
+                            // Extract just the YYYY-MM-DD portion. If null, return an empty string.
+                            entry: a.entry ? a.entry.substring(0, 10) : "",
+                            exit: a.exit ? a.exit.substring(0, 10) : "",
+                            schedule: {}
+                        };
+                    });
+
+                    setAssets(formattedAssets);
+                }
+
+                const response = await api.get("/fleet/months");
+                const fetchedMonths = response.data.months;
+
+                if (fetchedMonths && fetchedMonths.length > 0) {
+                    setMonths(fetchedMonths);
+                    setSelectedMonth(fetchedMonths[0]);
+                } else {
+                    const currentMonth = moment().format("MMMM YYYY");
+                    setMonths([currentMonth]);
+                    setSelectedMonth(currentMonth);
+                }
+            } catch (error) {
+                console.error("Error fetching initial data:", error);
+                const currentMonth = moment().format("MMMM YYYY");
+                setMonths([currentMonth]);
+                setSelectedMonth(currentMonth);
+            }
+        };
+        fetchInitialData();
+    }, []);
+
     const fetchScheduleMetrics = async (monthStr) => {
         try {
             const response = await api.get(`/fleet/metrics?month=${encodeURIComponent(monthStr)}`);

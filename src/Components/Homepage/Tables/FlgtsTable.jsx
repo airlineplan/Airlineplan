@@ -152,6 +152,11 @@ const FlgtsTable = ({ isMaster = true }) => {
       let colA = a[sortConfig.key];
       let colB = b[sortConfig.key];
 
+      if (sortConfig.key === 'acftType') {
+        colA = a.aircraft?.registration || a.acftType;
+        colB = b.aircraft?.registration || b.acftType;
+      }
+
       if (colA === null || colA === undefined) colA = "";
       if (colB === null || colB === undefined) colB = "";
 
@@ -170,7 +175,11 @@ const FlgtsTable = ({ isMaster = true }) => {
   }, [flgtsTableData, sortConfig]);
 
   const renderCell = (row, col) => {
-    const val = row[col.key];
+    let val = row[col.key];
+
+    if (col.key === 'acftType') {
+      val = row.aircraft?.registration || row.acftType;
+    }
 
     // Ignore empty/null cells
     if (val === undefined || val === null || val === "") return "";
