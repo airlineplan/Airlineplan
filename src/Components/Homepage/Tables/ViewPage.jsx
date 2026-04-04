@@ -14,7 +14,7 @@ const TIMEZONES = [
 const MODE_COLUMNS = {
   Rotations: [{ key: 'rot', label: 'Rotation #' }, { key: 'variant', label: 'Variant' }],
   Sectors: [{ key: 'sector', label: 'Sector' }],
-  Station: [{ key: 'type', label: 'Type' }, { key: 'sector', label: 'Sector' }],
+  Station: [{ key: 'type', label: 'Type' }, { key: 'sector', label: 'Station' }],
   Aircraft: [{ key: 'ac', label: 'Aircraft' }, { key: 'variant', label: 'Variant' }]
 };
 
@@ -140,6 +140,36 @@ const ViewPage = () => {
   const [weeks, setWeeks] = useState([]);
   const [weekStart, setWeekStart] = useState("");
 
+  // --- Date Math for UI: always start on Monday ---
+  const timelineStart = useMemo(() => {
+    if (!weekStart) return null;
+    const ref = new Date(weekStart);
+    ref.setHours(0, 0, 0, 0);
+    // getDay(): 0=Sun,1=Mon,...,6=Sat
+    // daysFromMonday: Mon→0, Tue→1, ..., Sun→6
+    const daysFromMonday = (ref.getDay() + 6) % 7;
+    ref.setDate(ref.getDate() - daysFromMonday);
+    return ref;
+  }, [weekStart]);
+
+  // Generate Array of 7 Days for the new Timeline Header
+  const weekDays = useMemo(() => {
+    if (!timelineStart) return [];
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date(timelineStart);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+  }, [timelineStart]);
+
+  const formattedTimelineStart = useMemo(() => {
+    if (!timelineStart) return "";
+    const yyyy = timelineStart.getFullYear();
+    const mm = String(timelineStart.getMonth() + 1).padStart(2, '0');
+    const dd = String(timelineStart.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }, [timelineStart]);
+
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -158,7 +188,7 @@ const ViewPage = () => {
 
       // 2️⃣ After completion → reload current view data
       const response = await api.get("/view-page-data", {
-        params: { mode, station: stationCode, weekStart, viewTimezone: timezone }
+        params: { mode, station: stationCode, weekStart: formattedTimelineStart || weekStart, viewTimezone: timezone }
       });
 
       setData(response.data?.rows || []);
@@ -194,14 +224,14 @@ const ViewPage = () => {
   }, [mode]);
 
   useEffect(() => {
-    if (!weekStart) return;
+    if (!weekStart || !formattedTimelineStart) return;
 
     const fetchData = async () => {
       setLoading(true);
       try {
         const accessToken = localStorage.getItem("accessToken");
         const response = await api.get("/view-page-data", {
-          params: { mode, station: stationCode, weekStart, viewTimezone: timezone }
+          params: { mode, station: stationCode, weekStart: formattedTimelineStart, viewTimezone: timezone }
         });
 
         setData(response.data?.rows || []);
@@ -213,7 +243,7 @@ const ViewPage = () => {
     };
 
     fetchData();
-  }, [mode, stationCode, weekStart, timezone]);
+  }, [mode, stationCode, weekStart, formattedTimelineStart, timezone]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -259,24 +289,6 @@ const ViewPage = () => {
 
     return result;
   }, [data, filters, sortConfig]);
-
-  // --- Date Math for UI (Monday Start, Sunday End) ---
-  const timelineStart = useMemo(() => {
-    if (!weekStart) return null;
-    const start = new Date(weekStart);
-    start.setHours(0, 0, 0, 0);
-    return start;
-  }, [weekStart]);
-
-  // Generate Array of 7 Days for the new Timeline Header
-  const weekDays = useMemo(() => {
-    if (!timelineStart) return [];
-    return Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date(timelineStart);
-      d.setDate(d.getDate() + i);
-      return d;
-    });
-  }, [timelineStart]);
 
   const parentRef = useRef(null);
   const rowVirtualizer = useVirtualizer({
@@ -345,7 +357,7 @@ const ViewPage = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm font-semibold">Week</label>
+          <label className="text-sm font-semibold">Week ending</label>
           <select
             value={weekStart}
             onChange={(e) => setWeekStart(e.target.value)}

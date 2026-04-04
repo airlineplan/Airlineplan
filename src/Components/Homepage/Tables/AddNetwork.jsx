@@ -189,8 +189,8 @@ const AddNetwork = ({ setAdd }) => {
     // We only explicitly require STD and BT to attempt calculation. 
     // This ensures calculation runs even for brand new stations.
     if (std && bt) {
-      let depTzMins = 0;
-      let arrTzMins = 0;
+      let depTzMins = null;
+      let arrTzMins = null;
 
       // Only attempt to find timezone offsets if stations are typed
       if (depStn && arrStn && stationsData.length > 0) {
@@ -199,7 +199,7 @@ const AddNetwork = ({ setAdd }) => {
         const arrConfig = stationsData.find(s => s.stationName?.toUpperCase() === arrStn?.toUpperCase());
 
         const getTzMins = (config, flightDateStr) => {
-          if (!config) return 0; // Fallback for completely new/unrecognized stations
+          if (!config) return null; // Fallback for completely new/unrecognized stations
 
           let tz = config.stdtz;
 
@@ -214,7 +214,9 @@ const AddNetwork = ({ setAdd }) => {
             }
           }
 
-          if (!tz || !tz.startsWith('UTC')) return 0;
+          if (!tz || !tz.startsWith('UTC')) return null;
+          if (tz === 'UTC') return 0;
+          
           const sign = tz.includes('-') ? -1 : 1;
           const timePart = tz.replace(/UTC[+-]/, '');
           if (!timePart) return 0;
@@ -233,7 +235,9 @@ const AddNetwork = ({ setAdd }) => {
       // Only run math if time parts are successfully converted to numbers
       if (!isNaN(stdH) && !isNaN(btH)) {
         // FORMULA: STA = STD + BT + Diff in TZ (ArrTZ - DepTZ)
-        const diffInTzMins = arrTzMins - depTzMins;
+        const diffInTzMins = (depTzMins !== null && arrTzMins !== null && !isNaN(depTzMins) && !isNaN(arrTzMins)) 
+          ? arrTzMins - depTzMins 
+          : 0;
         let totalMins = (stdH * 60 + (stdM || 0)) + (btH * 60 + (btM || 0)) + diffInTzMins;
 
         // Wrap around 24 hours to cleanly handle midnight crossovers (forwards or backwards)
