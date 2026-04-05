@@ -8,25 +8,37 @@ const STATUSES = ["Active", "Available", "Assigned", "Maintenance", "Retired"];
 const OWNERSHIP_TYPES = ["Owned with no lien", "Operating lease", "Finance lease", "Wet lease"];
 
 // STRICT COLOR LOGIC
+// Aircraft status: Available = orange/salmon, Assigned = green, Maintenance = dark stone
 const getStatusColor = (status, category) => {
     const s = status?.toLowerCase() || "";
 
-    // 1. ABSOLUTE OVERRIDE: If it is on ground/maintenance, it is ALWAYS Gray.
+    // 1. ABSOLUTE OVERRIDE: Maintenance is always dark.
     if (s.includes("maintenance") || s.includes("check") || s.includes("ground")) {
         return "bg-stone-500 dark:bg-stone-700 text-white border-stone-600 font-medium text-[10px]";
     }
 
-    // 2. Aircraft Specific Colors
+    // 2. Aircraft Specific Colors  (Available=orange, Assigned=green)
     if (category === "Aircraft") {
-        if (s === "available-aircraft" || s === "0") return "bg-[#8de08d] dark:bg-green-900/40 text-green-900 border-green-400 font-bold";
-        if (s === "aircraft-assigned") return "bg-transparent text-slate-800 dark:text-slate-200 border-slate-300 font-semibold";
+        if (s === "available-aircraft") return "bg-orange-200 dark:bg-orange-900/40 text-orange-800 border-orange-300";
+        if (s === "aircraft-assigned")  return "bg-[#8de08d] dark:bg-green-900/40 text-green-900 border-green-400 font-semibold";
     }
 
     // 3. Fallbacks for Engine, APU, Other (Manual entry)
     if (s.includes("available")) return "bg-orange-200 dark:bg-orange-900/40 text-orange-900 border-orange-300";
-    if (s.includes("assigned") || s === "1" || s === "2" || s === "0") return "bg-[#8de08d] dark:bg-green-900/40 text-green-900 border-green-400";
+    if (s.includes("assigned") || s === "1" || s === "2") return "bg-[#8de08d] dark:bg-green-900/40 text-green-900 border-green-400";
 
     return "bg-transparent";
+};
+
+// Derive today's auto-computed status for an Aircraft from metricsData
+const getTodayStatus = (asset, metricsData) => {
+    if (asset.category !== "Aircraft" || !asset.sn) return null;
+    const todayStr = moment().format("DD MMM YY");
+    const metric = metricsData[String(asset.sn).trim()]?.[todayStr];
+    if (!metric) return "Available";
+    if (metric.status === "maintenance" || metric.status?.includes("check") || metric.status?.includes("ground")) return "Maintenance";
+    if (metric.status === "aircraft-assigned") return "Assigned";
+    return "Available";
 };
 
 const generateDatesForMonth = (monthYearStr) => {
@@ -244,42 +256,38 @@ const FleetTable = () => {
                     </div>
 
                     <div className="flex items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
-                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-orange-200 border-orange-300 border"></span> Available (Spare)</div>
-                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-[#8de08d] border-green-400 border"></span> 0 / Assigned</div>
-                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 bg-stone-500 border-stone-600 border"></span> Maintenance</div>
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-orange-200 border-orange-300 border inline-block"></span> Available</div>
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#8de08d] border-green-400 border inline-block"></span> Assigned</div>
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-stone-500 border-stone-600 border inline-block"></span> Maintenance</div>
                     </div>
                 </div>
             </div>
 
             {/* Main Table Area */}
-            <div className="flex-1 overflow-auto p-6">
-                <div className="inline-flex min-w-full border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm">
+            {/* NOTE: overflow-hidden must NOT be on this table container — it breaks position:sticky on the left pane */}
+            <div className="flex-1 overflow-auto">
+                <div className="inline-flex min-w-full border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 shadow-sm mx-6 my-6">
 
-                    {/* LEFT PANE: Full Asset Details */}
-                    <div className="flex-shrink-0 sticky left-0 z-20 bg-white dark:bg-slate-800 border-r-2 border-slate-300 shadow-xl">
+                    {/* ═══════════════════════════════════════════════════════
+                        LEFT PANE — FROZEN  (S.No · Category · Type · Variant · SN)
+                        Sticky ends here ↓ ; everything right of SN scrolls
+                    ═══════════════════════════════════════════════════════ */}
+                    <div className="flex-shrink-0 sticky left-0 z-20 bg-white dark:bg-slate-800 border-r-2 border-slate-400 shadow-xl">
 
-                        {/* Headers */}
-                        <div className="flex font-semibold text-slate-700 dark:text-slate-200 text-[11px] uppercase tracking-wider bg-[#f4e6fa] dark:bg-fuchsia-900/30 border-b border-slate-200">
-                            <div className="w-10 p-2 border-r text-center">S.No</div>
-                            <div className="w-28 p-2 border-r">Asset Category</div>
-                            <div className="w-24 p-2 border-r">Asset Type</div>
-                            <div className="w-24 p-2 border-r">Asset Variant</div>
-                            <div className="w-24 p-2 border-r">Asset SN *</div>
-                            <div className="w-24 p-2 border-r">Asset Regn</div>
-                            <div className="w-28 p-2 border-r">Fleet Entry</div>
-                            <div className="w-28 p-2 border-r">Fleet Exit</div>
-                            <div className="w-24 p-2 border-r">Titled/Spare</div>
-                            <div className="w-32 p-2 border-r">Ownership</div>
-                            <div className="w-24 p-2 border-r text-right">MTOW (Kg)</div>
-                            <div className="w-28 p-2 border-r">Status Today</div>
-                            <div className="w-10 p-2"></div>
+                        {/* Frozen Header — height h-14 matches right-pane 2-row date header */}
+                        <div className="flex h-14 font-semibold text-slate-700 dark:text-slate-200 text-[11px] uppercase tracking-wider bg-[#f4e6fa] dark:bg-fuchsia-900/30 border-b border-slate-200">
+                            <div className="w-10 flex items-center justify-center border-r">S.No</div>
+                            <div className="w-28 flex items-center p-2 border-r">Asset Category</div>
+                            <div className="w-24 flex items-center p-2 border-r">Asset Type</div>
+                            <div className="w-24 flex items-center p-2 border-r">Asset Variant</div>
+                            <div className="w-24 flex items-center p-2">Asset SN *</div>
                         </div>
 
-                        {/* Editable Rows */}
+                        {/* Frozen Data Rows */}
                         <div className="divide-y divide-slate-100 dark:divide-slate-700">
                             {filteredAssets.map((asset, index) => (
-                                <div key={asset.id} className="flex text-xs text-slate-800 dark:text-slate-200 bg-[#fbf5fd] dark:bg-fuchsia-900/10 hover:bg-white transition-colors">
-                                    <div className="w-10 p-2 border-r flex items-center justify-center font-medium text-slate-500">{index + 1}</div>
+                                <div key={asset.id} className="flex h-8 text-xs text-slate-800 dark:text-slate-200 bg-[#fbf5fd] dark:bg-fuchsia-900/10 hover:bg-white transition-colors">
+                                    <div className="w-10 border-r flex items-center justify-center font-medium text-slate-500">{index + 1}</div>
                                     <div className="w-28 p-1 border-r">
                                         <select value={asset.category} onChange={e => handleInputChange(asset.id, "category", e.target.value)} className="w-full h-full bg-transparent outline-none cursor-pointer">
                                             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -291,9 +299,68 @@ const FleetTable = () => {
                                     <div className="w-24 p-1 border-r">
                                         <input type="text" value={asset.variant} onChange={e => handleInputChange(asset.id, "variant", e.target.value)} className="w-full h-full bg-transparent outline-none px-1" placeholder="e.g. A320-214" />
                                     </div>
-                                    <div className="w-24 p-1 border-r">
+                                    <div className="w-24 p-1">
                                         <input type="text" value={asset.sn} onChange={e => handleInputChange(asset.id, "sn", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 font-bold text-emerald-600" required placeholder="Required" />
                                     </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Add Row Button */}
+                        <div className="p-2 border-t border-slate-200 bg-slate-50 dark:bg-slate-800">
+                            <button onClick={handleAddRow} className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors px-2 py-1">
+                                <Plus size={14} /> Add Asset Row
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* ═══════════════════════════════════════════════════════
+                        RIGHT PANE — SCROLLABLE
+                        Regn · Entry · Exit · Titled · Ownership · MTOW · Status · Delete
+                        followed by the full DOW + Date calendar grid
+                    ═══════════════════════════════════════════════════════ */}
+                    <div className="flex-grow flex flex-col w-max bg-white dark:bg-slate-800">
+
+                        {/* ── Header: regular columns (purple) + date 2-row header (orange) ── */}
+                        <div className="flex h-14 border-b border-slate-200">
+                            {/* Regular column headers */}
+                            <div className="flex font-semibold text-slate-700 dark:text-slate-200 text-[11px] uppercase tracking-wider bg-[#f4e6fa] dark:bg-fuchsia-900/30 border-r border-slate-300">
+                                <div className="w-24 h-full flex items-center p-2 border-r">Asset Regn</div>
+                                <div className="w-28 h-full flex items-center p-2 border-r">Fleet Entry</div>
+                                <div className="w-28 h-full flex items-center p-2 border-r">Fleet Exit</div>
+                                <div className="w-24 h-full flex items-center p-2 border-r">Titled/Spare</div>
+                                <div className="w-32 h-full flex items-center p-2 border-r">Ownership</div>
+                                <div className="w-24 h-full flex items-center p-2 border-r text-right justify-end">MTOW (Kg)</div>
+                                <div className="w-32 h-full flex items-center p-2 border-r">Status Today</div>
+                                <div className="w-10 h-full flex items-center"></div>
+                            </div>
+                            {/* Date column 2-row header (DOW + date) */}
+                            <div className="flex flex-col bg-[#fae6da] dark:bg-orange-900/30 flex-grow">
+                                {/* Row 1 – Day of week */}
+                                <div className="flex flex-1 items-center text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest border-b border-orange-200/60 pt-0.5">
+                                    {scheduleDates.map((date, i) => (
+                                        <div key={`dow-${i}`} className="w-20 flex-shrink-0 px-1 border-r border-slate-300 text-center">
+                                            {moment(date, "DD MMM YY").format("ddd").toUpperCase()}
+                                        </div>
+                                    ))}
+                                </div>
+                                {/* Row 2 – Calendar date */}
+                                <div className="flex flex-1 items-center text-xs font-semibold text-slate-800 dark:text-slate-100 pb-0.5">
+                                    {scheduleDates.map((date, i) => (
+                                        <div key={`date-${i}`} className="w-20 flex-shrink-0 px-1 border-r border-slate-300 text-center whitespace-nowrap">
+                                            {date}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ── Data Rows: regular cells + date cells in ONE flex row each ── */}
+                        <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                            {filteredAssets.map((asset) => (
+                                <div key={`sched-${asset.id}`} className="flex h-8 text-xs text-slate-800 dark:text-slate-200 bg-[#fbf5fd] dark:bg-fuchsia-900/10 hover:bg-white transition-colors">
+
+                                    {/* Regular column cells (Regn → Delete) */}
                                     <div className="w-24 p-1 border-r">
                                         <input type="text" value={asset.regn} onChange={e => handleInputChange(asset.id, "regn", e.target.value.toUpperCase())} className="w-full h-full bg-transparent outline-none px-1 uppercase font-semibold" placeholder="VT-XXX" />
                                     </div>
@@ -315,72 +382,55 @@ const FleetTable = () => {
                                     <div className="w-24 p-1 border-r">
                                         <input type="number" value={asset.mtow} onChange={e => handleInputChange(asset.id, "mtow", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 text-right" placeholder="e.g. 77000" />
                                     </div>
-                                    <div className="w-28 p-1 border-r">
-                                        <select value={asset.status} onChange={e => handleInputChange(asset.id, "status", e.target.value)} className="w-full h-full bg-transparent outline-none cursor-pointer">
-                                            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                                        </select>
+                                    <div className="w-32 p-1 border-r flex items-center">
+                                        {asset.category === "Aircraft" ? (() => {
+                                            const todayStatus = getTodayStatus(asset, metricsData);
+                                            const badgeColor = todayStatus === "Maintenance"
+                                                ? "bg-stone-500 text-white"
+                                                : todayStatus === "Assigned"
+                                                ? "bg-[#8de08d] text-green-900"
+                                                : "bg-orange-200 text-orange-900";
+                                            return (
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${badgeColor}`}>
+                                                    {todayStatus}
+                                                </span>
+                                            );
+                                        })() : (
+                                            <select value={asset.status} onChange={e => handleInputChange(asset.id, "status", e.target.value)} className="w-full h-full bg-transparent outline-none cursor-pointer">
+                                                {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                                            </select>
+                                        )}
                                     </div>
-                                    <div className="w-10 p-1 flex items-center justify-center">
+                                    <div className="w-10 p-1 border-r flex items-center justify-center">
                                         <button onClick={() => handleDeleteRow(asset.id)} className="text-red-400 hover:text-red-600 transition-colors" title="Delete Row"><Trash2 size={14} /></button>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
 
-                        {/* Add Row Button */}
-                        <div className="p-2 border-t border-slate-200 bg-slate-50 dark:bg-slate-800">
-                            <button onClick={handleAddRow} className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors px-2 py-1">
-                                <Plus size={14} /> Add Asset Row
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* RIGHT PANE: Dynamic Schedule & Auto-Calculated Metrics Grid */}
-                    <div className="flex-grow flex flex-col w-max bg-white dark:bg-slate-800">
-                        {/* Dates Header */}
-                        <div className="flex flex-col bg-[#fae6da] dark:bg-orange-900/30 border-b border-slate-200">
-                            <div className="flex text-xs font-semibold text-slate-800 dark:text-slate-100 pb-0.5 pt-6">
-                                {scheduleDates.map((date, i) => (
-                                    <div key={`date-${i}`} className="w-20 flex-shrink-0 p-2 px-1 border-r border-slate-300 text-center whitespace-nowrap">
-                                        {date}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Date Input/Metric Cells */}
-                        <div className="divide-y divide-slate-200 dark:divide-slate-700">
-                            {filteredAssets.map((asset) => (
-                                <div key={`sched-${asset.id}`} className="flex h-8">
+                                    {/* Date cells */}
                                     {scheduleDates.map((date) => {
-                                        // Pull manually entered data by default
                                         let dayData = asset.schedule[date] || { status: "available", label: "" };
                                         let cellTitle = "";
                                         let isReadOnly = false;
                                         const snStr = String(asset.sn).trim();
 
-                                        // AIRCRAFT LOGIC: Full overrides (Assignments + Maintenance)
                                         if (asset.category === "Aircraft" && asset.sn) {
                                             isReadOnly = true;
                                             const metric = metricsData[snStr]?.[date];
-
                                             if (metric) {
-                                                dayData = { status: metric.status, label: metric.label };
-
-                                                if (metric.status === "aircraft-assigned" && !metric.status.includes("maintenance")) {
-                                                    cellTitle = `Block Hrs: ${metric.bh?.toFixed(2)}\nFlight Hrs: ${metric.fh?.toFixed(2)}\nDepartures: ${metric.dep}`;
-                                                } else if (metric.status.includes("maintenance")) {
+                                                if (metric.status === "maintenance" || metric.status?.includes("check") || metric.status?.includes("ground")) {
+                                                    dayData = { status: "maintenance", label: "0" };
                                                     cellTitle = `Ground Event: ${metric.label}`;
+                                                } else if (metric.status === "aircraft-assigned") {
+                                                    const bhVal = typeof metric.bh === "number" ? metric.bh : 0;
+                                                    dayData = { status: "aircraft-assigned", label: bhVal > 0 ? bhVal.toFixed(2) : "0" };
+                                                    cellTitle = `Block Hrs: ${metric.bh?.toFixed(2)}\nFlight Hrs: ${metric.fh?.toFixed(2)}\nDepartures: ${metric.dep}`;
+                                                } else {
+                                                    dayData = { status: "available-aircraft", label: "0" };
                                                 }
                                             } else {
                                                 dayData = { status: "available-aircraft", label: "0" };
                                             }
-                                        }
-                                        // ENGINE / APU LOGIC: Inherit Maintenance from attached Aircraft
-                                        else if (asset.sn) {
+                                        } else if (asset.sn) {
                                             const metric = metricsData[snStr]?.[date];
-
-                                            // If the backend mapped a maintenance event to this Engine/APU SN, override the manual input
                                             if (metric && metric.status.includes("maintenance")) {
                                                 dayData = { status: metric.status, label: metric.label };
                                                 isReadOnly = true;
@@ -389,11 +439,10 @@ const FleetTable = () => {
                                         }
 
                                         const classes = getStatusColor(dayData.status, asset.category);
-
                                         return (
                                             <div
                                                 key={`${asset.id}-${date}`}
-                                                className={`w-20 flex-shrink-0 border-r border-b ${classes} transition-all relative group`}
+                                                className={`w-20 flex-shrink-0 border-r ${classes} transition-all`}
                                                 title={cellTitle}
                                             >
                                                 <input
@@ -410,7 +459,7 @@ const FleetTable = () => {
                                 </div>
                             ))}
                         </div>
-                        <div className="flex-1 min-h-[40px] border-l border-slate-200 bg-slate-50/50" />
+                        <div className="flex-1 min-h-[40px] bg-slate-50/50" />
                     </div>
                 </div>
             </div>
