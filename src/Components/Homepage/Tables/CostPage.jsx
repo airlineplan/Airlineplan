@@ -6,6 +6,7 @@ import { twMerge } from "tailwind-merge";
 import { ChevronDown, Check, LayoutDashboard, Download, Layers, RefreshCw, PlusCircle } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
+import CostInputModal from "./CostInputModal";
 
 // --- UTILITIES ---
 
@@ -245,6 +246,7 @@ const CostPage = () => {
     // --- STATE ---
     const [loading, setLoading] = useState(false);
     const [rawFlights, setRawFlights] = useState([]);
+    const [isCostInputOpen, setIsCostInputOpen] = useState(false);
 
     // Added flight and poo arrays to dropdownOptions
     const [dropdownOptions, setDropdownOptions] = useState({
@@ -453,7 +455,10 @@ const CostPage = () => {
             {/* --- TOP HEADER & ACTIONS --- */}
             <div className="flex justify-between items-center w-full">
                 <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Cost Analysis</h2>
-                <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/20 font-medium">
+                <button
+                    onClick={() => setIsCostInputOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/20 font-medium"
+                >
                     <PlusCircle size={16} /> Cost input
                 </button>
             </div>
@@ -589,6 +594,12 @@ const CostPage = () => {
                     </table>
                 </div>
             </div>
+            
+            {/* --- COST INPUT MODAL --- */}
+            <CostInputModal 
+                isOpen={isCostInputOpen} 
+                onClose={() => setIsCostInputOpen(false)} 
+            />
         </div>
     );
 };
