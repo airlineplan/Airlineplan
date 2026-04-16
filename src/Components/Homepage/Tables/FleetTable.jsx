@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Upload, Search, Info, Plus, Save, Trash2 } from "lucide-react";
 import moment from "moment";
 import api from "../../../apiConfig";
@@ -6,35 +6,49 @@ import api from "../../../apiConfig";
 const CATEGORIES = ["Aircraft", "Engine", "APU", "Other"];
 const STATUSES = ["Active", "Available", "Assigned", "Maintenance", "Retired"];
 const OWNERSHIP_TYPES = ["Owned with no lien", "Operating lease", "Finance lease", "Wet lease"];
+const METRICS_CACHE_KEY_PREFIX = "fleet:metrics:";
+const METRICS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
 
 // STRICT COLOR LOGIC
-// Aircraft status: Available = orange/salmon, Assigned = green, Maintenance = dark stone
+// Aircraft/Engine/APU schedule colors:
+// - assigned (aircraft): brown
+// - available/unassigned: green
+// - on-ground/maintenance: gray
 const getStatusColor = (status, category) => {
     const s = status?.toLowerCase() || "";
 
-    // 1. ABSOLUTE OVERRIDE: Maintenance is always dark.
     if (s.includes("maintenance") || s.includes("check") || s.includes("ground")) {
         return "bg-stone-500 dark:bg-stone-700 text-white border-stone-600 font-medium text-[10px]";
     }
 
-    // 2. Aircraft Specific Colors  (Available=orange, Assigned=green)
-    if (category === "Aircraft") {
-        if (s === "available-aircraft") return "bg-orange-200 dark:bg-orange-900/40 text-orange-800 border-orange-300";
-        if (s === "aircraft-assigned")  return "bg-[#8de08d] dark:bg-green-900/40 text-green-900 border-green-400 font-semibold";
+    if (category === "Aircraft" && s === "aircraft-assigned") {
+        return "bg-amber-700 dark:bg-amber-800 text-white border-amber-900 font-semibold";
     }
 
-    // 3. Fallbacks for Engine, APU, Other (Manual entry)
-    if (s.includes("available")) return "bg-orange-200 dark:bg-orange-900/40 text-orange-900 border-orange-300";
-    if (s.includes("assigned") || s === "1" || s === "2") return "bg-[#8de08d] dark:bg-green-900/40 text-green-900 border-green-400";
+    if (s.includes("available") || s === "auto-available") {
+        return "bg-[#8de08d] dark:bg-green-900/40 text-green-900 border-green-400";
+    }
+
+    if (s.includes("assigned") || s === "1" || s === "2") {
+        return "bg-amber-700 dark:bg-amber-800 text-white border-amber-900 font-semibold";
+    }
 
     return "bg-transparent";
+};
+
+const normalizeSnKey = (value) => {
+    if (value === null || value === undefined) return "";
+    const raw = String(value).trim().toUpperCase();
+    if (!raw) return "";
+    const digitsOnly = raw.replace(/\D/g, "");
+    return digitsOnly || raw;
 };
 
 // Derive today's auto-computed status for an Aircraft from metricsData
 const getTodayStatus = (asset, metricsData) => {
     if (asset.category !== "Aircraft" || !asset.sn) return null;
     const todayStr = moment().format("DD MMM YY");
-    const metric = metricsData[String(asset.sn).trim()]?.[todayStr];
+    const metric = metricsData[normalizeSnKey(asset.sn)]?.[todayStr];
     if (!metric) return "Available";
     if (metric.status === "maintenance" || metric.status?.includes("check") || metric.status?.includes("ground")) return "Maintenance";
     if (metric.status === "aircraft-assigned") return "Assigned";
@@ -58,6 +72,8 @@ const FleetTable = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [scheduleDates, setScheduleDates] = useState([]);
     const [metricsData, setMetricsData] = useState({});
+    const metricsCacheRef = useRef(new Map());
+    const activeMetricsReqIdRef = useRef(0);
 
     const [assets, setAssets] = useState([
         {
@@ -90,6 +106,26 @@ const FleetTable = () => {
         };
         fetchMonths();
     }, []);
+
+    useEffect(() => {
+        const handleAssignmentsUpdated = () => {
+            metricsCacheRef.current.clear();
+            try {
+                const keysToDelete = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith(METRICS_CACHE_KEY_PREFIX)) keysToDelete.push(key);
+                }
+                keysToDelete.forEach((k) => localStorage.removeItem(k));
+            } catch (error) {
+                console.warn("Failed to clear fleet metrics cache from localStorage", error);
+            }
+            if (selectedMonth) fetchScheduleMetrics(selectedMonth, { forceRefresh: true });
+        };
+
+        window.addEventListener("assignments:updated", handleAssignmentsUpdated);
+        return () => window.removeEventListener("assignments:updated", handleAssignmentsUpdated);
+    }, [selectedMonth]);
 
     useEffect(() => {
         if (selectedMonth) {
@@ -140,10 +176,57 @@ const FleetTable = () => {
         fetchInitialData();
     }, []);
 
-    const fetchScheduleMetrics = async (monthStr) => {
+    const readLocalMetricsCache = (monthStr) => {
+        try {
+            const cacheRaw = localStorage.getItem(`${METRICS_CACHE_KEY_PREFIX}${monthStr}`);
+            if (!cacheRaw) return null;
+            const parsed = JSON.parse(cacheRaw);
+            if (!parsed || typeof parsed !== "object") return null;
+            if (!parsed.savedAt || (Date.now() - parsed.savedAt > METRICS_CACHE_TTL_MS)) return null;
+            return parsed.data || {};
+        } catch (error) {
+            console.warn("Failed to read fleet metrics cache", error);
+            return null;
+        }
+    };
+
+    const writeLocalMetricsCache = (monthStr, data) => {
+        try {
+            localStorage.setItem(
+                `${METRICS_CACHE_KEY_PREFIX}${monthStr}`,
+                JSON.stringify({ savedAt: Date.now(), data })
+            );
+        } catch (error) {
+            console.warn("Failed to write fleet metrics cache", error);
+        }
+    };
+
+    const fetchScheduleMetrics = async (monthStr, options = {}) => {
+        const { forceRefresh = false } = options;
+        const reqId = ++activeMetricsReqIdRef.current;
+        const cacheEntry = metricsCacheRef.current.get(monthStr);
+
+        if (!forceRefresh && cacheEntry && (Date.now() - cacheEntry.savedAt <= METRICS_CACHE_TTL_MS)) {
+            setMetricsData(cacheEntry.data || {});
+            return;
+        }
+
+        if (!forceRefresh) {
+            const localCached = readLocalMetricsCache(monthStr);
+            if (localCached) {
+                metricsCacheRef.current.set(monthStr, { savedAt: Date.now(), data: localCached });
+                setMetricsData(localCached);
+                return;
+            }
+        }
+
         try {
             const response = await api.get(`/fleet/metrics?month=${encodeURIComponent(monthStr)}`);
-            setMetricsData(response.data.data || {});
+            if (reqId !== activeMetricsReqIdRef.current) return; // stale response guard
+            const freshData = response.data.data || {};
+            metricsCacheRef.current.set(monthStr, { savedAt: Date.now(), data: freshData });
+            writeLocalMetricsCache(monthStr, freshData);
+            setMetricsData(freshData);
         } catch (error) {
             console.error("Error fetching metrics", error);
         }
@@ -256,8 +339,8 @@ const FleetTable = () => {
                     </div>
 
                     <div className="flex items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
-                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-orange-200 border-orange-300 border inline-block"></span> Available</div>
-                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#8de08d] border-green-400 border inline-block"></span> Assigned</div>
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#8de08d] border-green-400 border inline-block"></span> Available</div>
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-700 border-amber-900 border inline-block"></span> Assigned (Aircraft)</div>
                         <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-stone-500 border-stone-600 border inline-block"></span> Maintenance</div>
                     </div>
                 </div>
@@ -388,8 +471,8 @@ const FleetTable = () => {
                                             const badgeColor = todayStatus === "Maintenance"
                                                 ? "bg-stone-500 text-white"
                                                 : todayStatus === "Assigned"
-                                                ? "bg-[#8de08d] text-green-900"
-                                                : "bg-orange-200 text-orange-900";
+                                                ? "bg-amber-700 text-white"
+                                                : "bg-[#8de08d] text-green-900";
                                             return (
                                                 <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${badgeColor}`}>
                                                     {todayStatus}
@@ -410,31 +493,25 @@ const FleetTable = () => {
                                         let dayData = asset.schedule[date] || { status: "available", label: "" };
                                         let cellTitle = "";
                                         let isReadOnly = false;
-                                        const snStr = String(asset.sn).trim();
+                                        const snStr = normalizeSnKey(asset.sn);
+                                        const isAutoScheduleAsset = ["Aircraft", "Engine", "APU"].includes(asset.category);
 
-                                        if (asset.category === "Aircraft" && asset.sn) {
+                                        if (isAutoScheduleAsset && snStr) {
                                             isReadOnly = true;
                                             const metric = metricsData[snStr]?.[date];
                                             if (metric) {
                                                 if (metric.status === "maintenance" || metric.status?.includes("check") || metric.status?.includes("ground")) {
                                                     dayData = { status: "maintenance", label: "0" };
-                                                    cellTitle = `Ground Event: ${metric.label}`;
-                                                } else if (metric.status === "aircraft-assigned") {
+                                                    cellTitle = `Ground Event: ${metric.event || metric.label || "Maintenance"}`;
+                                                } else if (asset.category === "Aircraft" && metric.status === "aircraft-assigned") {
                                                     const bhVal = typeof metric.bh === "number" ? metric.bh : 0;
                                                     dayData = { status: "aircraft-assigned", label: bhVal > 0 ? bhVal.toFixed(2) : "0" };
-                                                    cellTitle = `Block Hrs: ${metric.bh?.toFixed(2)}\nFlight Hrs: ${metric.fh?.toFixed(2)}\nDepartures: ${metric.dep}`;
+                                                    cellTitle = `BH: ${(metric.bh || 0).toFixed(2)}\nFH: ${(metric.fh || 0).toFixed(2)}\nDepartures: ${metric.dep || 0}`;
                                                 } else {
-                                                    dayData = { status: "available-aircraft", label: "0" };
+                                                    dayData = { status: "auto-available", label: "0" };
                                                 }
                                             } else {
-                                                dayData = { status: "available-aircraft", label: "0" };
-                                            }
-                                        } else if (asset.sn) {
-                                            const metric = metricsData[snStr]?.[date];
-                                            if (metric && metric.status.includes("maintenance")) {
-                                                dayData = { status: metric.status, label: metric.label };
-                                                isReadOnly = true;
-                                                cellTitle = `Inherited Ground Event: ${metric.label}`;
+                                                dayData = { status: "auto-available", label: "0" };
                                             }
                                         }
 
@@ -468,7 +545,7 @@ const FleetTable = () => {
             <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 rounded-b-xl flex justify-between">
                 <div className="text-xs text-slate-500 flex items-center gap-2">
                     <Info size={14} />
-                    <span><strong>Aircraft</strong> rows are read-only in the schedule grid. Data is auto-calculated from Assignment and Ground Day tables. Maintenance days override assignments.</span>
+                    <span><strong>Aircraft, Engine and APU</strong> rows are read-only in the schedule grid. Aircraft values are auto-calculated from Assignment + Master flights + Ground Day tables. Ground Day always overrides.</span>
                 </div>
             </div>
         </div>
