@@ -80,37 +80,49 @@ const FlgtsTable = ({ isMaster = true }) => {
     return COLUMNS_CONFIG.filter(col => isMaster || !col.masterOnly);
   }, [isMaster]);
 
-  const fetchResults = useCallback(
-    debounce(async (page, limit, currentFilters) => {
-      setLoading(true);
-      try {
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) throw new Error("No access token");
+  const fetchFlights = useCallback(async (page, limit, currentFilters) => {
+    setLoading(true);
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) throw new Error("No access token");
 
-        const activeFilters = Object.fromEntries(
-          Object.entries(currentFilters).filter(([_, v]) => v !== "")
-        );
-        const requestBody = { ...activeFilters, page, limit };
+      const activeFilters = Object.fromEntries(
+        Object.entries(currentFilters).filter(([_, v]) => v !== "")
+      );
+      const requestBody = { ...activeFilters, page, limit };
 
-        const response = await api.post(
-          "/searchflights",
-          requestBody
-        );
+      const response = await api.post(
+        "/searchflights",
+        requestBody
+      );
 
-        setFlgtsTableData(response.data.data || []);
-        setTotalFlights(response.data.total || 0);
-      } catch (error) {
-        console.error("Error fetching flights:", error);
-      } finally {
-        setLoading(false);
-      }
-    }, 500),
-    []
+      setFlgtsTableData(response.data.data || []);
+      setTotalFlights(response.data.total || 0);
+    } catch (error) {
+      console.error("Error fetching flights:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchResults = useMemo(
+    () => debounce((page, limit, currentFilters) => fetchFlights(page, limit, currentFilters), 500),
+    [fetchFlights]
   );
 
   useEffect(() => {
     fetchResults(currentPage, rowsPerPage, filters);
+    return () => fetchResults.cancel();
   }, [currentPage, filters, fetchResults]);
+
+  useEffect(() => {
+    const onAssignmentsUpdated = () => {
+      fetchFlights(currentPage, rowsPerPage, filters);
+    };
+
+    window.addEventListener("assignments:updated", onAssignmentsUpdated);
+    return () => window.removeEventListener("assignments:updated", onAssignmentsUpdated);
+  }, [currentPage, rowsPerPage, filters, fetchFlights]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;

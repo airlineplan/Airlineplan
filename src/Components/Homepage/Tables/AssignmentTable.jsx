@@ -124,6 +124,7 @@ const AssignmentTable = () => {
                 headers: { "Content-Type": "multipart/form-data" }
             });
             toast.success("Assignments uploaded successfully!");
+            window.dispatchEvent(new CustomEvent("assignments:updated"));
             fetchAssignments(); // Refresh table immediately
         } catch (error) {
             console.error("Upload error", error);
