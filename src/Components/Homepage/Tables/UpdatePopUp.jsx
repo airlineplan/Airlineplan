@@ -7,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { X, PenLine } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { calculateAutoSta } from "./networkStaUtils";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -76,6 +77,8 @@ const UpdatePopUp = (props) => {
   const [remarks1, setRemarks1] = useState("");
   const [remarks2, setRemarks2] = useState("");
   const [message, setMessage] = useState("");
+  const [stationsData, setStationsData] = useState([]);
+  const skipAutoStaOnceRef = React.useRef(false);
 
   const [loading, setLoading] = useState(false);
 
@@ -96,6 +99,21 @@ const UpdatePopUp = (props) => {
   const productId = props.checkedRows;
 
   // --- HANDLERS ---
+  useEffect(() => {
+    const fetchStations = async () => {
+      try {
+        const response = await api.get("/get-stationData");
+        if (response.data && response.data.data) {
+          setStationsData(response.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch stations list", error);
+      }
+    };
+
+    fetchStations();
+  }, []);
+
   const handleUpdateOpen = () => {
     setOpenUpdate(true);
     setFlightError(null);
@@ -133,7 +151,7 @@ const UpdatePopUp = (props) => {
 
   const handleSTD = (event) => setStd(event.target.value);
   const handleBT = (event) => setBt(event.target.value);
-  const handleSTA = (event) => setSta(event.target.value); // Manual override is possible via this handler
+  const handleSTA = (event) => setSta(event.target.value);
 
   const handleArrStn = (event) => {
     const value = event.target.value;
@@ -210,29 +228,22 @@ const UpdatePopUp = (props) => {
 
   // --- AUTO CALCULATION LOGIC FOR STA ---
   useEffect(() => {
-    if (std && bt) {
-      // Split time strings into hours and minutes
-      const [stdHours, stdMinutes] = std.split(":").map(Number);
-      const [btHours, btMinutes] = bt.split(":").map(Number);
-
-      if (!isNaN(stdHours) && !isNaN(stdMinutes) && !isNaN(btHours) && !isNaN(btMinutes)) {
-        // Calculate total minutes and rollover hours
-        let totalMinutes = stdMinutes + btMinutes;
-        let extraHours = Math.floor(totalMinutes / 60);
-        let finalMinutes = totalMinutes % 60;
-
-        // Calculate total hours and handle midnight rollover (24-hour format)
-        let totalHours = stdHours + btHours + extraHours;
-        let finalHours = totalHours % 24;
-
-        // Pad with zeros to maintain "HH:mm" structure expected by type="time"
-        const formattedHours = String(finalHours).padStart(2, "0");
-        const formattedMinutes = String(finalMinutes).padStart(2, "0");
-
-        setSta(`${formattedHours}:${formattedMinutes}`);
-      }
+    if (skipAutoStaOnceRef.current) {
+      skipAutoStaOnceRef.current = false;
+      return;
     }
-  }, [std, bt]); // Runs whenever STD or BT changes
+
+    const calculatedSTA = calculateAutoSta({
+      std,
+      bt,
+      depStn,
+      arrStn,
+      stationsData,
+      effFromDt,
+    });
+
+    setSta(calculatedSTA);
+  }, [std, bt, depStn, arrStn, effFromDt, stationsData]);
 
   // Required Field logic
   useEffect(() => {
@@ -255,6 +266,7 @@ const UpdatePopUp = (props) => {
   const fetchData = async () => {
     if (isBulkUpdate) return;
     try {
+      skipAutoStaOnceRef.current = true;
       const response = await api.get(`/products/${DataId}`);
       const item = response.data;
 

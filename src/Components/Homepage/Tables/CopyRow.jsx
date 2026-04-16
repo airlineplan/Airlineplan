@@ -7,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { X, Copy, Search } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { calculateAutoSta } from "./networkStaUtils";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -118,6 +119,7 @@ export default function CopyRow(props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dropdownData, setDropdownData] = useState({ from: [], to: [] });
+  const [stationsData, setStationsData] = useState([]);
 
   const [flight, setFlight] = useState("");
   const [depStn, setDepStn] = useState("");
@@ -134,6 +136,7 @@ export default function CopyRow(props) {
   const [userTag2, setUserTag2] = useState("");
   const [remarks1, setRemarks1] = useState("");
   const [remarks2, setRemarks2] = useState("");
+  const skipAutoStaOnceRef = useRef(false);
 
   const [flightError, setFlightError] = useState("");
   const [depStnError, setDepStnError] = useState("");
@@ -149,6 +152,17 @@ export default function CopyRow(props) {
 
   // --- API: Fetch Dropdowns ---
   useEffect(() => {
+    const fetchStations = async () => {
+      try {
+        const response = await api.get("/get-stationData");
+        if (response.data && response.data.data) {
+          setStationsData(response.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch stations list", error);
+      }
+    };
+
     const fetchDropdowns = async () => {
       try {
         const response = await api.get("/dashboard/populateDropDowns");
@@ -164,30 +178,28 @@ export default function CopyRow(props) {
       }
     };
 
+    fetchStations();
     fetchDropdowns();
   }, []);
 
   // --- AUTO CALCULATION LOGIC FOR STA ---
   useEffect(() => {
-    if (std && bt) {
-      const [stdHours, stdMinutes] = std.split(":").map(Number);
-      const [btHours, btMinutes] = bt.split(":").map(Number);
-
-      if (!isNaN(stdHours) && !isNaN(stdMinutes) && !isNaN(btHours) && !isNaN(btMinutes)) {
-        let totalMinutes = stdMinutes + btMinutes;
-        let extraHours = Math.floor(totalMinutes / 60);
-        let finalMinutes = totalMinutes % 60;
-
-        let totalHours = stdHours + btHours + extraHours;
-        let finalHours = totalHours % 24;
-
-        const formattedHours = String(finalHours).padStart(2, "0");
-        const formattedMinutes = String(finalMinutes).padStart(2, "0");
-
-        setSta(`${formattedHours}:${formattedMinutes}`);
-      }
+    if (skipAutoStaOnceRef.current) {
+      skipAutoStaOnceRef.current = false;
+      return;
     }
-  }, [std, bt]);
+
+    const calculatedSTA = calculateAutoSta({
+      std,
+      bt,
+      depStn,
+      arrStn,
+      stationsData,
+      effFromDt,
+    });
+
+    setSta(calculatedSTA);
+  }, [std, bt, depStn, arrStn, effFromDt, stationsData]);
 
   // --- HANDLERS ---
   const handleClickOpen = () => {
@@ -220,7 +232,10 @@ export default function CopyRow(props) {
 
   // Updated handlers to extract values from native input events
   const handleSTD = (event) => setStd(event.target.value);
-  const handleSTA = (event) => setSta(event.target.value);
+  const handleSTA = (event) => {
+    const value = event.target.value;
+    setSta(value);
+  };
   const handleBT = (event) => setBt(event.target.value);
 
   const handleVariant = (event) => {
@@ -296,6 +311,7 @@ export default function CopyRow(props) {
   const DataId = props?.checkedRows?.[0];
   const fetchData = async () => {
     try {
+      skipAutoStaOnceRef.current = true;
       const response = await api.get(`/products/${DataId}`);
       const item = response.data;
       setFlight(item.flight || "");
