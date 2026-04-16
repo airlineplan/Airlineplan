@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge";
 import {
   LogOut, Plane, Network, Map,
   RotateCw, LayoutDashboard, Link2, Coins,
-  RadioTower, TrendingUp, List, Eye, Plus, ClipboardList, Navigation, DollarSign
+  RadioTower, TrendingUp, List, Eye, Plus, ClipboardList, Navigation, DollarSign, Users
 } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -29,6 +29,7 @@ import MaintenanceTable from "./MaintenanceTable";
 import PooTable from "./PooTable";
 import CostPage from "./CostPage";
 import RevenuePage from "./RevenuePage";
+import CrewPage from "./CrewPage";
 
 import AircraftRoute from "../../../Pages/AircraftRoute";
 
@@ -55,6 +56,7 @@ const TABS = [
   { id: 13, label: "POO", icon: Map, component: PooTable },
   { id: 14, label: "Revenue", icon: DollarSign, component: RevenuePage },
   { id: 15, label: "Cost", icon: Coins, component: CostPage },
+  { id: 16, label: "Crew", icon: Users, component: CrewPage },
 
 ];
 
