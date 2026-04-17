@@ -1,327 +1,601 @@
-import React, { useState, useEffect, useCallback } from "react";
-import api from "../../../apiConfig";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { PlusCircle, RefreshCw, Save } from "lucide-react";
 import { toast } from "react-toastify";
 
+import api from "../../../apiConfig";
+
 function cn(...inputs) {
-    return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs));
 }
 
+const TYPE_STYLES = {
+  Leg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+  Behind: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  Beyond: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
+  "Transit FL": "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
+  "Transit SL": "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300",
+};
+
+function formatNumber(value, maxFractionDigits = 2) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return "0";
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: maxFractionDigits }).format(numeric);
+}
+
+function formatDate(value) {
+  if (!value) return "--";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "--";
+  return parsed.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "2-digit",
+  });
+}
+
+function parseApplyDates(raw) {
+  return raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function inputBaseClass(bgClass = "") {
+  return cn(
+    "w-24 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100",
+    bgClass
+  );
+}
+
+const blankTransitDraft = {
+  firstFlightNumber: "",
+  secondFlightNumber: "",
+  pax: "0",
+  cargoT: "0",
+  odFare: "0",
+  odRate: "0",
+  prorateRatioL1: "0",
+  pooCcy: "",
+  pooCcyToRccy: "1",
+  applySSPricing: false,
+  interline: "",
+  codeshare: "",
+};
+
 const PooTable = () => {
-    // ── State ──
-    const [poo, setPoo] = useState("DEL");
-    const [date, setDate] = useState("");
-    const [pooCcy, setPooCcy] = useState("INR");
-    const [pooCcyToRccy, setPooCcyToRccy] = useState(1);
-    const [records, setRecords] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [sortConfig, setSortConfig] = useState({ key: "sNo", dir: "asc" });
-    const [filterText, setFilterText] = useState({});
+  const [poo, setPoo] = useState("DEL");
+  const [date, setDate] = useState("");
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [dirtyMap, setDirtyMap] = useState({});
+  const [applyDates, setApplyDates] = useState("");
+  const [transitDraft, setTransitDraft] = useState(blankTransitDraft);
 
-    // ── Styles ──
-    const thClass = "px-3 py-2 border-b border-r border-slate-200 dark:border-slate-700 font-semibold text-slate-700 dark:text-slate-300 text-[11px] bg-slate-100 dark:bg-slate-800/50 whitespace-nowrap align-bottom";
-    const tdClass = "px-3 py-2 border-b border-r border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap";
-    const inputBg = "bg-green-100/50 dark:bg-green-900/20";
-    const headerInput = "px-2 py-1 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-indigo-500";
+  const fetchData = useCallback(async () => {
+    if (!poo || !date) return;
+    setLoading(true);
+    try {
+      const response = await api.get("/poo", { params: { poo, date } });
+      setRecords(response.data.data || []);
+      setDirtyMap({});
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to load POO traffic allocation");
+    } finally {
+      setLoading(false);
+    }
+  }, [poo, date]);
 
-    // ── Fetch existing records ──
-    const fetchData = useCallback(async () => {
-        if (!poo || !date) return;
-        setLoading(true);
-        try {
-            const res = await api.get("/poo", { params: { poo, date } });
-            setRecords(res.data.data || []);
-        } catch (err) {
-            console.error(err);
-            toast.error("Failed to fetch POO data");
-        } finally {
-            setLoading(false);
-        }
-    }, [poo, date]);
+  useEffect(() => {
+    if (poo && date) fetchData();
+  }, [fetchData, poo, date]);
 
-    useEffect(() => {
-        if (poo && date) fetchData();
-    }, []);
+  const handlePopulate = async () => {
+    if (!poo || !date) {
+      toast.warn("Choose a POO station and date first");
+      return;
+    }
 
-    // ── Populate ──
-    const handlePopulate = async () => {
-        if (!poo || !date) return toast.warn("Enter POO & Date first");
-        setLoading(true);
-        try {
-            const res = await api.post("/poo/populate", { poo, date });
-            setRecords(res.data.data || []);
-            toast.success(res.data.message || "Populated");
-        } catch (err) {
-            console.error(err);
-            toast.error("Populate failed");
-        } finally {
-            setLoading(false);
-        }
-    };
+    setLoading(true);
+    try {
+      const response = await api.post("/poo/populate", { poo, date });
+      setRecords(response.data.data || []);
+      setDirtyMap({});
+      toast.success(response.data.message || "POO traffic allocation refreshed");
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || "Failed to refresh POO traffic allocation");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // ── Update / Save ──
-    const handleUpdate = async () => {
-        if (!records.length) return toast.warn("No records to update");
-        setLoading(true);
-        try {
-            const payload = records.map(r => ({ ...r, pooCcy, pooCcyToRccy }));
-            await api.post("/poo/update", { records: payload });
-            toast.success("Records updated & revenue computed");
-            fetchData();
-        } catch (err) {
-            console.error(err);
-            toast.error("Update failed");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // ── Edit cell ──
-    const updateField = (idx, field, value) => {
-        setRecords(prev => {
-            const copy = [...prev];
-            copy[idx] = { ...copy[idx], [field]: value };
-            return copy;
-        });
-    };
-
-    // ── Sort ──
-    const handleSort = (key) => {
-        setSortConfig(prev => ({
-            key,
-            dir: prev.key === key && prev.dir === "asc" ? "desc" : "asc"
-        }));
-    };
-
-    // ── Filter + Sort applied ──
-    const getFilteredSorted = () => {
-        let data = [...records];
-        // Filter
-        Object.keys(filterText).forEach(key => {
-            const val = filterText[key]?.toLowerCase();
-            if (val) {
-                data = data.filter(r => String(r[key] || "").toLowerCase().includes(val));
+  const updateField = (rowId, field, value) => {
+    setRecords((prev) =>
+      prev.map((row) =>
+        row._id === rowId
+          ? {
+              ...row,
+              [field]: value,
             }
-        });
-        // Sort
-        if (sortConfig.key) {
-            data.sort((a, b) => {
-                const av = a[sortConfig.key] ?? "";
-                const bv = b[sortConfig.key] ?? "";
-                if (typeof av === "number" && typeof bv === "number") {
-                    return sortConfig.dir === "asc" ? av - bv : bv - av;
-                }
-                return sortConfig.dir === "asc"
-                    ? String(av).localeCompare(String(bv))
-                    : String(bv).localeCompare(String(av));
-            });
-        }
-        return data;
-    };
-
-    // Group by identifier
-    const groupRecords = (data) => {
-        const groups = { 'Non-Stop': [], 'Connecting': [], 'Transit': [] };
-        data.forEach(r => {
-            const id = r.identifier || 'Non-Stop';
-            if (!groups[id]) groups[id] = [];
-            groups[id].push(r);
-        });
-        return groups;
-    };
-
-    const displayData = getFilteredSorted();
-    const grouped = groupRecords(displayData);
-
-    const fmt = (v) => {
-        const n = parseFloat(v);
-        if (isNaN(n)) return "0";
-        return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
-    };
-
-    // ── Column definitions ──
-    const columns = [
-        { key: "od", label: "OD", filterable: true },
-        { key: "odDI", label: "Dom/INTL", filterable: true },
-        { key: "flightNumber", label: "Flight(s)", filterable: true },
-        { key: "stops", label: "Stop", filterable: true },
-        { key: "sectorGcd", label: "Total GCD", sortable: true },
-        { key: "maxPax", label: "Max Pax", sortable: true },
-        { key: "maxCargoT", label: "Max Cargo T", sortable: true },
-        { key: "pax", label: "Pax", editable: true },
-        { key: "cargoT", label: "Cargo", editable: true },
-        { key: "legFare", label: "Fare", editable: true },
-        { key: "legRate", label: "Rate", editable: true },
-        { key: "legPaxRev", label: "Pax Rev", computed: true },
-        { key: "legCargoRev", label: "Cargo Rev", computed: true },
-        { key: "legTotalRev", label: "Total Rev", computed: true },
-    ];
-
-    const SortIcon = ({ colKey }) => {
-        if (sortConfig.key !== colKey) return <span className="ml-1 opacity-30">↕</span>;
-        return <span className="ml-1">{sortConfig.dir === "asc" ? "↑" : "↓"}</span>;
-    };
-
-    // ── Render ──
-    return (
-        <div className="flex flex-col h-full w-full">
-            {/* ── Header Controls ── */}
-            <div className="flex flex-wrap items-center justify-between gap-4 p-4 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50">
-                <div className="flex flex-wrap items-center gap-5">
-                    <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold text-slate-500">POO</label>
-                        <input
-                            type="text"
-                            value={poo}
-                            onChange={e => setPoo(e.target.value.toUpperCase())}
-                            className={cn(headerInput, "w-20 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800")}
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold text-slate-500">Date</label>
-                        <input
-                            type="date"
-                            value={date}
-                            onChange={e => setDate(e.target.value)}
-                            className={cn(headerInput, "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700")}
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold text-slate-500">POO CCY</label>
-                        <input
-                            type="text"
-                            value={pooCcy}
-                            onChange={e => setPooCcy(e.target.value.toUpperCase())}
-                            className={cn(headerInput, "w-20 bg-blue-100 dark:bg-blue-900/40 border-blue-200 dark:border-blue-800")}
-                        />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold text-slate-500">CCY → RCCY Rate</label>
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={pooCcyToRccy}
-                            onChange={e => setPooCcyToRccy(parseFloat(e.target.value) || 1)}
-                            className={cn(headerInput, "w-24 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700")}
-                        />
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handlePopulate}
-                        disabled={loading}
-                        className="px-5 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-medium rounded shadow-sm transition-colors"
-                    >
-                        {loading ? "Loading…" : "Populate"}
-                    </button>
-                    <button
-                        onClick={handleUpdate}
-                        disabled={loading || !records.length}
-                        className="px-5 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-medium rounded shadow-sm transition-colors"
-                    >
-                        Update
-                    </button>
-                </div>
-            </div>
-
-            {/* ── Table Area ── */}
-            <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar p-4">
-                {records.length === 0 && !loading && (
-                    <div className="text-center py-20 text-slate-400 dark:text-slate-500">
-                        <p className="text-lg">No POO records</p>
-                        <p className="text-sm mt-1">Select a POO station and date, then click <strong>Populate</strong></p>
-                    </div>
-                )}
-
-                {records.length > 0 && (
-                    <table className="min-w-max w-full border-collapse text-xs border border-slate-200 dark:border-slate-700">
-                        <thead>
-                            <tr>
-                                <th className={thClass}>#</th>
-                                {columns.map(col => (
-                                    <th
-                                        key={col.key}
-                                        className={cn(thClass, "cursor-pointer select-none")}
-                                        onClick={() => handleSort(col.key)}
-                                    >
-                                        <div className="flex items-center gap-1">
-                                            {col.label}
-                                            <SortIcon colKey={col.key} />
-                                        </div>
-                                        {col.filterable && (
-                                            <input
-                                                type="text"
-                                                placeholder="Filter…"
-                                                className="mt-1 w-full px-1 py-0.5 text-[10px] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded focus:outline-none"
-                                                value={filterText[col.key] || ""}
-                                                onClick={e => e.stopPropagation()}
-                                                onChange={e => setFilterText(p => ({ ...p, [col.key]: e.target.value }))}
-                                            />
-                                        )}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white dark:bg-slate-900/30">
-                            {Object.entries(grouped).map(([groupName, items]) => {
-                                if (!items.length) return null;
-                                return (
-                                    <React.Fragment key={groupName}>
-                                        {/* Group header */}
-                                        <tr className="bg-slate-50 dark:bg-slate-800/40">
-                                            <td colSpan={columns.length + 1} className="px-3 py-2 font-semibold text-sm text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700">
-                                                {groupName}
-                                                <span className="ml-2 text-xs font-normal text-slate-400">({items.length} records)</span>
-                                            </td>
-                                        </tr>
-                                        {items.map((rec) => {
-                                            // Find the original index for editing
-                                            const idx = records.findIndex(r => r._id === rec._id || (r.sNo === rec.sNo && r.od === rec.od));
-                                            return (
-                                                <tr key={rec._id || rec.sNo} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
-                                                    <td className={tdClass}>{rec.sNo}</td>
-                                                    {columns.map(col => {
-                                                        if (col.editable) {
-                                                            return (
-                                                                <td key={col.key} className={cn(tdClass, inputBg)}>
-                                                                    <input
-                                                                        type="number"
-                                                                        step="any"
-                                                                        value={rec[col.key] ?? ""}
-                                                                        onChange={e => updateField(idx, col.key, e.target.value)}
-                                                                        className="w-16 px-1 py-0.5 text-xs bg-transparent border border-green-300/50 dark:border-green-700/50 rounded focus:outline-none focus:ring-1 focus:ring-green-500 text-right"
-                                                                    />
-                                                                </td>
-                                                            );
-                                                        }
-                                                        if (col.computed) {
-                                                            return (
-                                                                <td key={col.key} className={cn(tdClass, "text-right font-medium")}>
-                                                                    {fmt(rec[col.key])}
-                                                                </td>
-                                                            );
-                                                        }
-                                                        return (
-                                                            <td key={col.key} className={tdClass}>
-                                                                {col.key === "sectorGcd" || col.key === "maxPax" || col.key === "maxCargoT"
-                                                                    ? fmt(rec[col.key])
-                                                                    : rec[col.key] ?? ""}
-                                                            </td>
-                                                        );
-                                                    })}
-                                                </tr>
-                                            );
-                                        })}
-                                    </React.Fragment>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                )}
-            </div>
-        </div>
+          : row
+      )
     );
+
+    setDirtyMap((prev) => ({
+      ...prev,
+      [rowId]: {
+        ...(prev[rowId] || {}),
+        _id: rowId,
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSave = async () => {
+    const payload = Object.values(dirtyMap);
+    if (!payload.length) {
+      toast.info("No POO changes to save");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await api.post("/poo/update", {
+        records: payload,
+        applyToDates: parseApplyDates(applyDates),
+      });
+      toast.success(response.data.message || "POO traffic allocation saved");
+      if (response.data.appliedDates?.length) {
+        toast.info(`Applied to ${response.data.appliedDates.length} matching date(s)`);
+      }
+      if (response.data.skippedDates?.length) {
+        toast.warn(`Skipped ${response.data.skippedDates.length} date(s) that did not match the source flights`);
+      }
+      await fetchData();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || "Failed to save POO traffic allocation");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateTransit = async () => {
+    if (!poo || !date) {
+      toast.warn("Choose a POO station and date first");
+      return;
+    }
+    if (!transitDraft.firstFlightNumber || !transitDraft.secondFlightNumber) {
+      toast.warn("Enter both transit flight numbers");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await api.post("/poo/update", {
+        transitDraft: {
+          ...transitDraft,
+          poo,
+          date,
+        },
+      });
+      toast.success(response.data.message || "Transit OD created");
+      setTransitDraft(blankTransitDraft);
+      await fetchData();
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || "Failed to create transit OD");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const groupedRows = useMemo(() => {
+    const groups = new Map();
+    records.forEach((row) => {
+      const key = row.odGroupKey || row.rowMatchKey || row._id;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(row);
+    });
+    return [...groups.values()];
+  }, [records]);
+
+  const totalDirtyRows = Object.keys(dirtyMap).length;
+
+  return (
+    <div className="flex h-full w-full flex-col">
+      <div className="border-b border-slate-200 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+        <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">POO</label>
+                <input
+                  type="text"
+                  value={poo}
+                  onChange={(e) => setPoo(e.target.value.toUpperCase())}
+                  className="w-24 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Date</label>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Apply To Dates</label>
+                <input
+                  type="text"
+                  value={applyDates}
+                  onChange={(e) => setApplyDates(e.target.value)}
+                  placeholder="2026-03-05, 2026-03-12"
+                  className="w-72 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">Create Transit OD</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                    User-trusted setup for Transit FL / Transit SL rows on the selected POO page.
+                  </div>
+                </div>
+                <button
+                  onClick={handleCreateTransit}
+                  disabled={saving || loading}
+                  className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <PlusCircle size={16} />
+                  Add Transit
+                </button>
+              </div>
+              <div className="grid gap-3 md:grid-cols-5 xl:grid-cols-10">
+                <input
+                  value={transitDraft.firstFlightNumber}
+                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, firstFlightNumber: e.target.value }))}
+                  placeholder="First Flight"
+                  className={inputBaseClass("text-left")}
+                />
+                <input
+                  value={transitDraft.secondFlightNumber}
+                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, secondFlightNumber: e.target.value }))}
+                  placeholder="Second Flight"
+                  className={inputBaseClass("text-left")}
+                />
+                <input
+                  value={transitDraft.pax}
+                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, pax: e.target.value }))}
+                  placeholder="Pax"
+                  className={inputBaseClass()}
+                />
+                <input
+                  value={transitDraft.cargoT}
+                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, cargoT: e.target.value }))}
+                  placeholder="Cargo T"
+                  className={inputBaseClass()}
+                />
+                <input
+                  value={transitDraft.odFare}
+                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, odFare: e.target.value }))}
+                  placeholder="OD Fare"
+                  className={inputBaseClass()}
+                />
+                <input
+                  value={transitDraft.odRate}
+                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, odRate: e.target.value }))}
+                  placeholder="OD Rate"
+                  className={inputBaseClass()}
+                />
+                <input
+                  value={transitDraft.prorateRatioL1}
+                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, prorateRatioL1: e.target.value }))}
+                  placeholder="Prorate"
+                  className={inputBaseClass()}
+                />
+                <input
+                  value={transitDraft.pooCcy}
+                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, pooCcy: e.target.value.toUpperCase() }))}
+                  placeholder="CCY"
+                  className={inputBaseClass("text-left")}
+                />
+                <input
+                  value={transitDraft.pooCcyToRccy}
+                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, pooCcyToRccy: e.target.value }))}
+                  placeholder="FX"
+                  className={inputBaseClass()}
+                />
+                <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={transitDraft.applySSPricing}
+                    onChange={(e) => setTransitDraft((prev) => ({ ...prev, applySSPricing: e.target.checked }))}
+                  />
+                  SS Pricing
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+              <div className="font-semibold text-slate-800 dark:text-slate-100">POO Operating Rules</div>
+              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Traffic changes rebalance server-side across leg, connecting, and transit buckets. Transit rows are deleted automatically when both legs return to zero.
+              </div>
+            </div>
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-300">
+              <div className="font-semibold text-slate-800 dark:text-slate-100">Interline / Codeshare</div>
+              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Fields are visible on the table in this phase, but there is no downstream business logic attached yet.
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                {totalDirtyRows} pending change{totalDirtyRows === 1 ? "" : "s"}
+              </div>
+              <button
+                onClick={handlePopulate}
+                disabled={loading || saving}
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <RefreshCw size={16} className={cn(loading && "animate-spin")} />
+                {loading ? "Refreshing..." : "Refresh Allocation"}
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={loading || saving || totalDirtyRows === 0}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Save size={16} />
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto p-4">
+        {!loading && records.length === 0 && (
+          <div className="flex h-full min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-center dark:border-slate-700 dark:bg-slate-900/20">
+            <div className="space-y-2 px-6">
+              <div className="text-lg font-semibold text-slate-700 dark:text-slate-200">No POO traffic rows</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">
+                Choose a station and date, then refresh allocation to generate leg, connection, and transit buckets.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {records.length > 0 && (
+          <div className="space-y-4">
+            {groupedRows.map((group, groupIndex) => {
+              const lead = group[0];
+              return (
+                <div
+                  key={`${lead.odGroupKey || lead.rowMatchKey || lead._id}-${groupIndex}`}
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/40"
+                >
+                  <div className="flex flex-col gap-2 border-b border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/60 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                        {lead.od} • {lead.poo}
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">
+                        {formatDate(lead.date)} • {lead.odDI} • Stops {lead.stops}
+                      </div>
+                    </div>
+                    <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      {lead.source === "user" ? "User Transit Group" : "System Group"}
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="min-w-[2200px] border-collapse">
+                      <thead>
+                        <tr className="bg-white/70 dark:bg-slate-950/40">
+                          {[
+                            "POO",
+                            "Type",
+                            "Sector",
+                            "Flight",
+                            "Connected",
+                            "Max Pax",
+                            "Max Cargo T",
+                            "Pax",
+                            "Cargo T",
+                            "Leg Fare",
+                            "Leg Rate",
+                            "OD Fare",
+                            "OD Rate",
+                            "Prorate",
+                            "CCY",
+                            "FX",
+                            "Leg Rev",
+                            "OD Rev",
+                            "RCCY Rev",
+                            "Interline",
+                            "Codeshare",
+                          ].map((label) => (
+                            <th
+                              key={label}
+                              className="border-b border-r border-slate-200 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400"
+                            >
+                              {label}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {group.map((row) => {
+                          const derivedLegPricing = row.stops === 1;
+                          return (
+                            <tr
+                              key={row._id}
+                              className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/20"
+                            >
+                              <td className="border-r border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:text-slate-200">
+                                {row.poo}
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
+                                <span
+                                  className={cn(
+                                    "inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                                    TYPE_STYLES[row.displayType] || "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                                  )}
+                                >
+                                  {row.displayType}
+                                </span>
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
+                                {row.sector}
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
+                                <div>{row.flightNumber}</div>
+                                <div className="text-xs text-slate-400">{row.std || "--"} - {row.sta || "--"}</div>
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
+                                <div>{row.connectedFlightNumber || "--"}</div>
+                                <div className="text-xs text-slate-400">{row.connectedStd || "--"} - {row.connectedSta || "--"}</div>
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
+                                {formatNumber(row.maxPax, 0)}
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
+                                {formatNumber(row.maxCargoT)}
+                              </td>
+                              <td className="border-r border-slate-200 bg-emerald-50/60 px-3 py-2 dark:border-slate-800 dark:bg-emerald-900/10">
+                                <input
+                                  type="number"
+                                  step="1"
+                                  min="0"
+                                  value={row.pax ?? ""}
+                                  onChange={(e) => updateField(row._id, "pax", e.target.value)}
+                                  className={inputBaseClass()}
+                                />
+                              </td>
+                              <td className="border-r border-slate-200 bg-cyan-50/60 px-3 py-2 dark:border-slate-800 dark:bg-cyan-900/10">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  value={row.cargoT ?? ""}
+                                  onChange={(e) => updateField(row._id, "cargoT", e.target.value)}
+                                  className={inputBaseClass()}
+                                />
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={row.legFare ?? ""}
+                                  onChange={(e) => updateField(row._id, "legFare", e.target.value)}
+                                  disabled={derivedLegPricing}
+                                  className={inputBaseClass(derivedLegPricing ? "opacity-70" : "")}
+                                />
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={row.legRate ?? ""}
+                                  onChange={(e) => updateField(row._id, "legRate", e.target.value)}
+                                  disabled={derivedLegPricing}
+                                  className={inputBaseClass(derivedLegPricing ? "opacity-70" : "")}
+                                />
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={row.odFare ?? ""}
+                                  onChange={(e) => updateField(row._id, "odFare", e.target.value)}
+                                  className={inputBaseClass()}
+                                />
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={row.odRate ?? ""}
+                                  onChange={(e) => updateField(row._id, "odRate", e.target.value)}
+                                  className={inputBaseClass()}
+                                />
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={row.prorateRatioL1 ?? ""}
+                                  onChange={(e) => updateField(row._id, "prorateRatioL1", e.target.value)}
+                                  className={inputBaseClass()}
+                                />
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
+                                <input
+                                  type="text"
+                                  value={row.pooCcy ?? ""}
+                                  onChange={(e) => updateField(row._id, "pooCcy", e.target.value.toUpperCase())}
+                                  className={cn(inputBaseClass("text-left"), "w-20")}
+                                />
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
+                                <input
+                                  type="number"
+                                  step="0.0001"
+                                  value={row.pooCcyToRccy ?? ""}
+                                  onChange={(e) => updateField(row._id, "pooCcyToRccy", e.target.value)}
+                                  className={inputBaseClass()}
+                                />
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
+                                {formatNumber(row.legTotalRev)}
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
+                                {formatNumber(row.odTotalRev)}
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 text-right text-sm font-semibold text-slate-700 dark:border-slate-800 dark:text-slate-200">
+                                {formatNumber(row.rccyTotalRev)}
+                              </td>
+                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
+                                <input
+                                  type="text"
+                                  value={row.interline ?? ""}
+                                  onChange={(e) => updateField(row._id, "interline", e.target.value)}
+                                  className={cn(inputBaseClass("text-left"), "w-28")}
+                                />
+                              </td>
+                              <td className="px-3 py-2">
+                                <input
+                                  type="text"
+                                  value={row.codeshare ?? ""}
+                                  onChange={(e) => updateField(row._id, "codeshare", e.target.value)}
+                                  className={cn(inputBaseClass("text-left"), "w-28")}
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default PooTable;

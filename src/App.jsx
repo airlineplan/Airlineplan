@@ -1,5 +1,7 @@
 import React from "react";
 import { Routes, Route } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import Homepage from "./Pages/Homepage";
 import Loginpage from "./Pages/Loginpage";
@@ -11,15 +13,18 @@ import AircraftRoute from "./Pages/AircraftRoute";
 
 const App = () => {
   return (
-    <Routes>
-      <Route path="/" element={<Loginpage />} />
-      <Route path="/homepage" element={<Homepage />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/forget" element={<ForgatePassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/contact" element={<Contact />} />
-      <Route path="/aircraft-route-economic" element={<AircraftRoute />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Loginpage />} />
+        <Route path="/homepage" element={<Homepage />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/forget" element={<ForgatePassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/aircraft-route-economic" element={<AircraftRoute />} />
+      </Routes>
+      <ToastContainer position="bottom-right" theme="colored" limit={1} />
+    </>
   );
 };
 

@@ -6,7 +6,7 @@ import {
   Lock, Mail, CheckCircle2, ArrowRight,
   Loader2, Plane, Globe
 } from 'lucide-react';
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // Assuming you have this component
@@ -264,7 +264,6 @@ export default function Loginpage() {
 
       </motion.div>
 
-      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
-} 
+}

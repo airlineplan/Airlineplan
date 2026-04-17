@@ -7,10 +7,10 @@ import { twMerge } from "tailwind-merge";
 import {
   LogOut, Plane, Network, Map,
   RotateCw, LayoutDashboard, Link2, Coins,
-  RadioTower, TrendingUp, List, Eye, Plus, ClipboardList, Navigation, DollarSign, Users
+  RadioTower, TrendingUp, List, Eye, ClipboardList, Navigation, DollarSign, Users,
+  LayoutGrid, Wrench
 } from "lucide-react";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 
 // Child Components
 import NetworkTable from "./NetworkTable";
@@ -51,12 +51,12 @@ const TABS = [
   { id: 8, label: "Connections", icon: Link2, component: ConnectionTable },
   { id: 9, label: "Assignment", icon: ClipboardList, component: AssignmentTable },
   { id: 10, label: "Fleet", icon: Navigation, component: FleetTable },
-  { id: 11, label: "Maintenance", icon: RadioTower, component: MaintenanceTable },
-  { id: 12, label: "Route Economics", icon: TrendingUp, component: AircraftRoute },
-  { id: 13, label: "POO", icon: Map, component: PooTable },
-  { id: 14, label: "Revenue", icon: DollarSign, component: RevenuePage },
-  { id: 15, label: "Cost", icon: Coins, component: CostPage },
-  { id: 16, label: "Crew", icon: Users, component: CrewPage },
+  { id: 11, label: "Maintenance", icon: Wrench, component: MaintenanceTable },
+  { id: 12, label: "POO", icon: Map, component: PooTable },
+  { id: 13, label: "Revenue", icon: DollarSign, component: RevenuePage },
+  { id: 14, label: "Cost", icon: Coins, component: CostPage },
+  { id: 15, label: "Crew", icon: Users, component: CrewPage },
+  { id: 16, label: "Route Economics", icon: TrendingUp, component: AircraftRoute },
 
 ];
 
@@ -82,6 +82,7 @@ const MainPage = () => {
   const [flightsData, setFlightsData] = useState(null);
   const [totalFlights, setTotalFlights] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
 
   useEffect(() => {
@@ -97,6 +98,27 @@ const MainPage = () => {
     const handleSoftReload = () => setRefreshKey((prev) => prev + 1);
     window.addEventListener("refreshData", handleSoftReload);
     return () => window.removeEventListener("refreshData", handleSoftReload);
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (!event.target.closest("[data-menu-root='main-nav']")) {
+        setMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, []);
 
   const fetchFlightsData = async (page = 1, limit = 10) => {
@@ -140,29 +162,45 @@ const MainPage = () => {
           {/* Top Mobile Row / Left Desktop Area */}
           <div className="flex items-center justify-between w-full xl:w-auto">
             <div className="flex items-center gap-4">
-              {/* Navigation Menu (Hover + Icon) */}
-              <div className="group relative z-[100]">
-                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shadow-sm border border-slate-200 dark:border-slate-700">
-                  <Plus className="text-slate-700 dark:text-slate-300 transition-transform duration-300 group-hover:rotate-90" size={24} />
-                </div>
+              {/* Navigation Menu */}
+              <div className="relative z-[100]" data-menu-root="main-nav">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                  className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shadow-sm border border-slate-200 dark:border-slate-700"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                >
+                  <LayoutGrid className={cn("text-slate-700 dark:text-slate-300 transition-transform duration-300", menuOpen && "scale-105")} size={22} />
+                </button>
 
                 {/* Dropdown Menu */}
-                <div className="absolute top-full left-0 mt-2 w-56 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl opacity-0 invisible min-h-0 scale-95 group-hover:scale-100 group-hover:opacity-100 group-hover:visible transition-all duration-300 origin-top-left flex flex-col p-2 gap-1 z-50">
-                  {TABS.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveStep(tab.id)}
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 w-full text-left",
-                        activeStep === tab.id
-                          ? "bg-gradient-to-r from-indigo-500/10 to-cyan-500/10 text-indigo-600 dark:text-indigo-400"
-                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      )}
-                    >
-                      <tab.icon size={18} className={cn(activeStep === tab.id ? "text-indigo-600 dark:text-indigo-400" : "opacity-70")} />
-                      <span>{tab.label}</span>
-                    </button>
-                  ))}
+                <div
+                  className={cn(
+                    "absolute top-full left-0 mt-3 w-[min(92vw,56rem)] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl transition-all duration-300 origin-top-left p-3 sm:p-4 z-50",
+                    menuOpen ? "opacity-100 visible scale-100" : "opacity-0 invisible scale-95 pointer-events-none"
+                  )}
+                >
+                  <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+                    {TABS.map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => {
+                          setActiveStep(tab.id);
+                          setMenuOpen(false);
+                        }}
+                        className={cn(
+                          "flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-xl text-sm font-medium transition-all duration-200 w-full text-center min-h-24 border",
+                          activeStep === tab.id
+                            ? "bg-gradient-to-br from-indigo-500/10 to-cyan-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800"
+                            : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border-transparent hover:border-slate-200 dark:hover:border-slate-700"
+                        )}
+                      >
+                        <tab.icon size={20} className={cn(activeStep === tab.id ? "text-indigo-600 dark:text-indigo-400" : "opacity-75")} />
+                        <span className="leading-tight">{tab.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -175,7 +213,7 @@ const MainPage = () => {
                   <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
                     Airlineplan
                   </h1>
-                  <p className="hidden md:block text-xs text-slate-500 dark:text-slate-400 font-medium">Planning, Operations & Analysis</p>
+                  <p className="hidden md:block text-xs text-slate-500 dark:text-slate-400 font-medium">Plan, Operate, Analyze & repeat</p>
                 </div>
               </div>
             </div>
@@ -220,8 +258,6 @@ const MainPage = () => {
         </main>
 
       </div>
-
-      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 };

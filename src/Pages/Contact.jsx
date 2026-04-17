@@ -6,7 +6,7 @@ import {
   Send, User, Mail, MessageSquare,
   Loader2, Type, MapPin, Phone, ArrowLeft
 } from 'lucide-react';
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // Ensure this path matches your project structure exactly
@@ -255,7 +255,6 @@ export default function Contact() {
 
       </motion.div>
 
-      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 }
