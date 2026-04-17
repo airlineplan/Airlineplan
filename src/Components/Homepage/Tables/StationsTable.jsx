@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { twMerge } from "tailwind-merge";
 import { Save, Clock, RadioTower } from "lucide-react";
 import { clsx } from "clsx";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // --- CONSTANTS ---
@@ -309,7 +309,6 @@ const StationsTable = () => {
         </div>
       </div>
 
-      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 };

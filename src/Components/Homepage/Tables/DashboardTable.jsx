@@ -8,7 +8,7 @@ import {
   Download, ChevronDown, Check,
   BarChart3, RefreshCw
 } from "lucide-react";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // --- UTILITIES ---
@@ -474,7 +474,6 @@ const DashboardTable = (props) => {
         </div>
       </div>
 
-      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 };

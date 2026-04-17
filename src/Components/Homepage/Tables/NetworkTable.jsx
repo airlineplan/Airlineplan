@@ -8,7 +8,7 @@ import {
   Upload, Plus, Trash2, ArrowUp, ArrowDown,
   Search, FileSpreadsheet, X, Check, ChevronLeft, ChevronRight, Network
 } from "lucide-react";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // --- EXTERNAL COMPONENTS ---
@@ -544,7 +544,6 @@ export default function NetworkTable() {
         </div>
       </Modal>
 
-      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 }

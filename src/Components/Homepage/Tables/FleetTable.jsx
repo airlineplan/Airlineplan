@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Upload, Search, Info, Plus, Save, Trash2 } from "lucide-react";
 import moment from "moment";
 import api from "../../../apiConfig";
+import { toast } from "react-toastify";
 
 const CATEGORIES = ["Aircraft", "Engine", "APU", "Other"];
 const STATUSES = ["Active", "Available", "Assigned", "Maintenance", "Retired"];
@@ -108,7 +109,7 @@ const FleetTable = () => {
     }, []);
 
     useEffect(() => {
-        const handleAssignmentsUpdated = () => {
+        const refreshMetrics = (forceRefresh = false) => {
             metricsCacheRef.current.clear();
             try {
                 const keysToDelete = [];
@@ -120,11 +121,18 @@ const FleetTable = () => {
             } catch (error) {
                 console.warn("Failed to clear fleet metrics cache from localStorage", error);
             }
-            if (selectedMonth) fetchScheduleMetrics(selectedMonth, { forceRefresh: true });
+            if (selectedMonth) fetchScheduleMetrics(selectedMonth, { forceRefresh });
         };
 
+        const handleAssignmentsUpdated = () => refreshMetrics(true);
+        const handleRefreshData = () => refreshMetrics(true);
+
         window.addEventListener("assignments:updated", handleAssignmentsUpdated);
-        return () => window.removeEventListener("assignments:updated", handleAssignmentsUpdated);
+        window.addEventListener("refreshData", handleRefreshData);
+        return () => {
+            window.removeEventListener("assignments:updated", handleAssignmentsUpdated);
+            window.removeEventListener("refreshData", handleRefreshData);
+        };
     }, [selectedMonth]);
 
     useEffect(() => {
@@ -278,14 +286,14 @@ const FleetTable = () => {
         try {
             const validAssets = assets.filter(a => a.sn && a.sn.trim() !== "");
             if (validAssets.length === 0) {
-                alert("No valid assets to save. Please enter at least a Serial Number.");
+                toast.warning("No valid assets to save. Please enter at least a Serial Number.");
                 setIsSaving(false); return;
             }
             await api.post("/fleet/bulk-save", { fleetData: validAssets });
-            alert("Fleet data saved successfully!");
+            toast.success("Fleet data saved successfully!");
         } catch (error) {
             console.error("Error saving fleet", error);
-            alert("Failed to save fleet data. " + (error.response?.data?.message || ""));
+            toast.error("Failed to save fleet data. " + (error.response?.data?.message || ""));
         } finally {
             setIsSaving(false);
         }
@@ -501,7 +509,10 @@ const FleetTable = () => {
                                             const metric = metricsData[snStr]?.[date];
                                             if (metric) {
                                                 if (metric.status === "maintenance" || metric.status?.includes("check") || metric.status?.includes("ground")) {
-                                                    dayData = { status: "maintenance", label: "0" };
+                                                    dayData = {
+                                                        status: "maintenance",
+                                                        label: metric.event || metric.label || "Maintenance"
+                                                    };
                                                     cellTitle = `Ground Event: ${metric.event || metric.label || "Maintenance"}`;
                                                 } else if (asset.category === "Aircraft" && metric.status === "aircraft-assigned") {
                                                     const bhVal = typeof metric.bh === "number" ? metric.bh : 0;

@@ -10,7 +10,7 @@ import {
   Search, Clock, Plane, Calendar, ChevronRight,
   ChevronLeft, AlertCircle, RotateCw, Loader2
 } from "lucide-react";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // --- UTILITIES ---
@@ -625,7 +625,6 @@ const Rotations = () => {
 
       </div>
 
-      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 };

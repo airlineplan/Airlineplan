@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { X, Save, AlertCircle, Calendar, Plus, Search } from "lucide-react";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { calculateAutoSta } from "./networkStaUtils";
 
@@ -380,7 +380,6 @@ const AddNetwork = ({ setAdd }) => {
           </>
         )}
       </AnimatePresence>
-      <ToastContainer position="bottom-right" theme="colored" />
     </>
   );
 };

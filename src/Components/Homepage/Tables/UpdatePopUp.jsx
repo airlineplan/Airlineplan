@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import api from "../../../apiConfig";
 import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { X, PenLine } from "lucide-react";
 import { clsx } from "clsx";
@@ -519,7 +519,6 @@ const UpdatePopUp = (props) => {
           </>
         )}
       </AnimatePresence>
-      <ToastContainer position="bottom-right" theme="colored" />
     </>
   );
 };

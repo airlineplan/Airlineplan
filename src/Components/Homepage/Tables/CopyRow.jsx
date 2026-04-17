@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import api from "../../../apiConfig";
 import dayjs from "dayjs";
 import { motion, AnimatePresence } from "framer-motion";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { X, Copy, Search } from "lucide-react";
 import { clsx } from "clsx";
@@ -521,7 +521,6 @@ export default function CopyRow(props) {
           </>
         )}
       </AnimatePresence>
-      <ToastContainer position="bottom-right" theme="colored" />
     </>
   );
 }

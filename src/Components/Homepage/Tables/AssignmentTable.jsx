@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Upload, Calendar, Loader2 } from "lucide-react";
 import api from "../../../apiConfig"; // Adjust path as needed
-import { toast, ToastContainer } from "react-toastify"; // Optional: for notifications
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const SCENARIO_DATES = [
@@ -137,8 +137,6 @@ const AssignmentTable = () => {
 
     return (
         <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900 rounded-xl relative">
-            <ToastContainer />
-
             {/* Hidden File Input */}
             <input
                 type="file"

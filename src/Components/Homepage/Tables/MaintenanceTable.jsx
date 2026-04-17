@@ -1,10 +1,13 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import api from "../../../apiConfig";
 import {
     Calculator, Settings, Download, Edit, RefreshCw, Layers,
     Search, ArrowUp, ArrowDown, X, Plus
 } from "lucide-react";
 import * as XLSX from "xlsx";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 // --- DUMMY DATA STRUCTURES (Replace with API Response later) ---
 
@@ -66,6 +69,7 @@ const TableInput = ({ name, value, onChange, placeholder }) => (
 
 const MaintenanceDashboard = () => {
     const [selectedDate, setSelectedDate] = useState("2025-10-12");
+    const [selectedMsn, setSelectedMsn] = useState("");
 
     // Dynamic State for Main Tables
     const [maintenanceData, setMaintenanceData] = useState([]);
@@ -76,7 +80,10 @@ const MaintenanceDashboard = () => {
     const fetchDashboardData = async () => {
         try {
             const res = await api.get('/maintenance/dashboard', {
-                params: { date: selectedDate }
+                params: {
+                    date: selectedDate,
+                    msnEsn: selectedMsn || undefined
+                }
             });
             if (res.data && res.data.success && res.data.data.maintenanceData) {
                 setMaintenanceData(res.data.data.maintenanceData);
@@ -98,9 +105,14 @@ const MaintenanceDashboard = () => {
     };
 
     useEffect(() => {
-        fetchDashboardData();
+        const timeoutId = setTimeout(() => {
+            fetchDashboardData();
+        }, 300);
+
         fetchCalendarData();
-    }, [selectedDate]);
+
+        return () => clearTimeout(timeoutId);
+    }, [selectedDate, selectedMsn]);
 
     const handleCalendarFieldChange = (id, field, value) => {
         setCalendarData(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
@@ -239,6 +251,36 @@ const MaintenanceDashboard = () => {
         return processed;
     }, [modalTableData, modalFilters, modalSortConfig]);
 
+    const duplicateResetCombos = useMemo(() => {
+        const comboCounts = new Map();
+
+        modalTableData.forEach(row => {
+            const msnEsn = String(row.msnEsn || "").trim();
+            const pn = String(row.pn || "").trim();
+            const snBn = String(row.snBn || "").trim();
+
+            if (!msnEsn || !pn || !snBn) {
+                return;
+            }
+
+            const key = `${msnEsn.toUpperCase()}|${pn.toUpperCase()}|${snBn.toUpperCase()}`;
+            comboCounts.set(key, (comboCounts.get(key) || 0) + 1);
+        });
+
+        return [...comboCounts.entries()]
+            .filter(([, count]) => count > 1)
+            .map(([key]) => {
+                const [msnEsn, pn, snBn] = key.split("|");
+                return { msnEsn, pn, snBn };
+            });
+    }, [modalTableData]);
+
+    const duplicateResetWarning = duplicateResetCombos.length > 0
+        ? `Each MSN/ESN + PN + SN/BN can have only one reset row. Duplicate combo${duplicateResetCombos.length > 1 ? "s" : ""} found: ${duplicateResetCombos
+            .map(item => `${item.msnEsn}/${item.pn}/${item.snBn}`)
+            .join(", ")}.`
+        : "";
+
     const handleAddModalRow = () => {
         const newRow = {
             id: `temp-${Date.now()}`,
@@ -256,8 +298,13 @@ const MaintenanceDashboard = () => {
 
     const handleUpdateModal = async () => {
         try {
+            if (duplicateResetCombos.length > 0) {
+                toast.warning("Duplicate PN + SN/BN reset rows found. Please keep only one reset row for each MSN/ESN + PN + SN/BN combination.");
+                return;
+            }
+
             // Call the correct backend endpoint for bulk update/backfill
-            await api.post('/maintenance/reset-records', modalTableData);
+            await api.post('/maintenance/reset-records', { resetData: modalTableData });
 
             setIsEditingModal(false);
             setShowSetResetModal(false); // Close modal on success
@@ -357,7 +404,7 @@ const MaintenanceDashboard = () => {
 
     const downloadRotablesExcel = () => {
         if (!rotablesData || rotablesData.length === 0) {
-            alert("No rotables data available to download.");
+            toast.warning("No rotables data available to download.");
             return;
         }
         const exportData = rotablesData.map(row => ({
@@ -464,7 +511,7 @@ const MaintenanceDashboard = () => {
 
     const downloadTargetsExcel = () => {
         if (!targetsData || targetsData.length === 0) {
-            alert("No targets data available to download.");
+            toast.warning("No targets data available to download.");
             return;
         }
         const exportData = targetsData.map(row => ({
@@ -561,12 +608,12 @@ const MaintenanceDashboard = () => {
             setIsComputing(true);
             const res = await api.post('/maintenance/compute');
             if (res.data && res.data.success) {
-                alert(res.data.message || "Computation successful!");
+                toast.success(res.data.message || "Computation successful!");
                 fetchDashboardData();
             }
         } catch (error) {
             console.error("Failed to compute maintenance logic:", error);
-            alert("Error: " + (error.response?.data?.message || "Internal Server Error"));
+            toast.error(error.response?.data?.message || "Internal Server Error");
         } finally {
             setIsComputing(false);
         }
@@ -653,9 +700,27 @@ const MaintenanceDashboard = () => {
                             onChange={(e) => setSelectedDate(e.target.value)}
                             className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs px-2 py-1 rounded"
                         />
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                value={selectedMsn}
+                                onChange={(e) => setSelectedMsn(e.target.value)}
+                                placeholder="MSN/ESN"
+                                className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs px-2 py-1 rounded w-36"
+                            />
+                            {selectedMsn ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedMsn("")}
+                                    className="text-[10px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                >
+                                    Clear
+                                </button>
+                            ) : null}
+                        </div>
                     </div>
                     <span className="text-[10px] text-slate-500 italic text-right max-w-sm">
-                        For each MSN/ESN+PN+SN/BN, metrics can be set/reset only.<br />Metrics for all other dates (historical/forecast) will be (re)calculated.
+                        For each MSN/ESN+PN+SN/BN, metrics can be set/reset only on one date.<br />Metrics for all other dates (historical/forecast) will be (re)calculated.
                     </span>
                 </div>
                 <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm">
@@ -931,7 +996,7 @@ const MaintenanceDashboard = () => {
             </div>
 
             {/* --- SET/RESET MAINTENANCE MODAL --- */}
-            {showSetResetModal && (
+            {showSetResetModal && createPortal(
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
                     <div className="bg-white dark:bg-slate-900 w-full max-w-7xl rounded-xl shadow-2xl flex flex-col border border-slate-200 dark:border-slate-700 max-h-[95vh]">
 
@@ -1008,6 +1073,11 @@ const MaintenanceDashboard = () => {
                                             <Download size={14} /> Download
                                         </button>
                                     </div>
+                                    {duplicateResetWarning ? (
+                                        <div className="max-w-md rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
+                                            {duplicateResetWarning}
+                                        </div>
+                                    ) : null}
                                     <div className="flex gap-2">
                                         <button onClick={() => setIsEditingModal(!isEditingModal)} className={`border px-6 py-1.5 rounded text-xs transition-colors font-medium ${isEditingModal ? 'bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300' : 'border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Edit</button>
                                         <button onClick={handleUpdateModal} className="border border-slate-300 dark:border-slate-600 px-6 py-1.5 rounded text-xs transition-colors font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-300 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-900/50">Update</button>
@@ -1170,10 +1240,10 @@ const MaintenanceDashboard = () => {
                         </div>
                     </div>
                 </div>
-            )}
+            , document.body)}
 
             {/* --- MAJOR ROTABLES MOVEMENT MODAL --- */}
-            {showRotablesModal && (
+            {showRotablesModal && createPortal(
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
                         {/* Header */}
@@ -1301,10 +1371,10 @@ const MaintenanceDashboard = () => {
                         </div>
                     </div>
                 </div>
-            )}
+            , document.body)}
 
             {/* --- TARGET MAINTENANCE MODAL --- */}
-            {showTargetsModal && (
+            {showTargetsModal && createPortal(
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-screen-2xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
                         {/* Header */}
@@ -1457,7 +1527,7 @@ const MaintenanceDashboard = () => {
                         </div>
                     </div>
                 </div>
-            )}
+            , document.body)}
         </div>
     );
 };

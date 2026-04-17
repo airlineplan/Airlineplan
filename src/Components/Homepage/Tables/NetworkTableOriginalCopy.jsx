@@ -25,7 +25,7 @@ import api from "../../../apiConfig";
 import moment from "moment";
 import { useEffect } from "react";
 import UpdatePopUp from "./UpdatePopUp";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import CopyRow from "./CopyRow";
 import AddNetwork from "./AddNetwork";
@@ -1127,7 +1127,6 @@ const NetworkTable = () => {
           color="primary"
         />
       </Stack>
-      <ToastContainer />
     </Stack>
   );
 };
