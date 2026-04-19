@@ -11,7 +11,6 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  ChevronUp,
   CircleDollarSign,
   Download,
   Fuel,
@@ -79,6 +78,7 @@ const DEFAULT_CURRENCIES = ["EUR", "USD", "GBP", "INR", "AED", "JPY"];
 
 const FX_BASIS_OPTIONS = [
   { label: "Absolute", value: "absolute" },
+  { label: "As % of total revenue", value: "% of total revenue" },
   { label: "Per ASK", value: "per ASK" },
   { label: "Per RPK", value: "per RPK" },
   { label: "Per ATK", value: "per ATK" },
@@ -89,25 +89,62 @@ const FX_BASIS_OPTIONS = [
   { label: "Per Seat", value: "per seat" },
   { label: "Per Pax", value: "per pax" },
   { label: "Per Cargo capacity T", value: "per Cargo capacity T" },
+  { label: "Per Cargo T", value: "per Cargo T" },
 ];
 
 function buildCurrencyPairs(currencyCodes, reportingCurrency) {
   return currencyCodes.filter((code) => code !== reportingCurrency).map((code) => `${code}/${reportingCurrency}`);
 }
 
-function createFxRows(periodColumns, pairLabels) {
-  return periodColumns.map((period) => {
+function createFxRows(periodColumns, pairLabels, existingFxRates = []) {
+  const rateLookup = new Map();
+  existingFxRates.forEach((row) => {
+    if (!row?.dateKey || !row?.pair) return;
+    rateLookup.set(`${row.dateKey}::${row.pair}`, row.rate);
+  });
+
+  return (periodColumns || []).map((period) => {
+    const dateKey = normalizeDateKey(period?.dateKey || period?.endDate || period?.date || "");
     const pairs = {};
     pairLabels.forEach((pair) => {
-      pairs[pair] = "1.00";
+      const savedRate = rateLookup.get(`${dateKey}::${pair}`);
+      pairs[pair] = formatFxRate(savedRate ?? "1.00");
     });
 
     return {
       key: period.key,
+      dateKey,
       dateLabel: period.dateLabel,
       pairs,
     };
   });
+}
+
+function normalizeDateKey(value) {
+  if (!value) return "";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).trim();
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function buildFxDateColumns(flights = []) {
+  const uniqueDates = [...new Set(
+    (Array.isArray(flights) ? flights : [])
+      .map((row) => normalizeDateKey(row?.date))
+      .filter(Boolean)
+  )].sort((a, b) => new Date(a) - new Date(b));
+
+  return uniqueDates.map((dateKey) => ({
+    key: dateKey,
+    dateKey,
+    dateLabel: formatPeriodDate(dateKey),
+  }));
 }
 
 function formatFxRate(value) {
@@ -414,11 +451,14 @@ const FxRateModal = ({
   fxRows,
   setFxRows,
   fxRowRefs,
-  dateJump,
-  setDateJump,
+  selectedFxDate,
+  setSelectedFxDate,
+  savedFxRates,
+  setSavedFxRates,
   periodColumns,
 }) => {
   const [currencyInput, setCurrencyInput] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -434,10 +474,16 @@ const FxRateModal = ({
     [currencyCodes, reportingCurrency]
   );
 
+  const visibleFxRows = useMemo(() => {
+    const selectedKey = normalizeDateKey(selectedFxDate);
+    if (!selectedKey) return fxRows;
+    return fxRows.filter((row) => normalizeDateKey(row.dateKey) === selectedKey);
+  }, [fxRows, selectedFxDate]);
+
   useEffect(() => {
     if (!open) return;
-    setFxRows(createFxRows(periodColumns, generatedPairs));
-  }, [open, generatedPairs, periodColumns, setFxRows]);
+    setFxRows(createFxRows(periodColumns, generatedPairs, savedFxRates));
+  }, [open, generatedPairs, periodColumns, savedFxRates, setFxRows]);
 
   const addCurrency = () => {
     const code = normalizeCurrencyCode(currencyInput);
@@ -454,34 +500,52 @@ const FxRateModal = ({
     if (code === reportingCurrency) {
       const fallback = currencyCodes.find((item) => item !== code) || DEFAULT_CURRENCIES[0];
       setReportingCurrency(fallback);
-      setFxRows(createFxRows(periodColumns, buildCurrencyPairs(currencyCodes.filter((item) => item !== code), fallback)));
+      setFxRows(createFxRows(periodColumns, buildCurrencyPairs(currencyCodes.filter((item) => item !== code), fallback), savedFxRates));
     }
   };
 
   const resetForReportingCurrency = (nextReportingCurrency) => {
     setReportingCurrency(nextReportingCurrency);
-    setFxRows(createFxRows(periodColumns, buildCurrencyPairs(currencyCodes, nextReportingCurrency)));
+    setFxRows(createFxRows(periodColumns, buildCurrencyPairs(currencyCodes, nextReportingCurrency), savedFxRates));
   };
 
-  const centerRow = () => {
-    const query = String(dateJump ?? "").trim().toLowerCase();
-    if (!query) return;
-    const index = fxRows.findIndex((row) => row.dateLabel.toLowerCase().includes(query) || row.key.toLowerCase().includes(query));
+  const handleDateChange = (value) => {
+    setSelectedFxDate(value);
+    if (!value) return;
+    const selectedKey = normalizeDateKey(value);
+    const index = fxRows.findIndex((row) => normalizeDateKey(row.dateKey) === selectedKey);
     if (index >= 0) {
       fxRowRefs.current[index]?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   };
 
-  const updateRate = (rowIndex, pair, value) => {
-    const next = [...fxRows];
-    next[rowIndex] = {
-      ...next[rowIndex],
-      pairs: {
-        ...next[rowIndex].pairs,
-        [pair]: formatFxRate(value),
-      },
-    };
-    setFxRows(next);
+  const saveFxRates = async () => {
+    const nextRates = visibleFxRows.flatMap((row) => Object.entries(row.pairs || {}).map(([pair, rate]) => ({
+      pair,
+      dateKey: row.dateKey,
+      rate: Number(formatFxRate(rate)),
+    })));
+    const visibleDateKeys = new Set(visibleFxRows.map((row) => normalizeDateKey(row.dateKey)).filter(Boolean));
+    const mergedRates = [
+      ...(Array.isArray(savedFxRates) ? savedFxRates.filter((row) => !visibleDateKeys.has(normalizeDateKey(row.dateKey))) : []),
+      ...nextRates,
+    ];
+
+    try {
+      setSaving(true);
+      await api.post("/revenue/config", {
+        reportingCurrency,
+        currencyCodes,
+        fxRates: mergedRates,
+      });
+      setSavedFxRates(mergedRates);
+      toast.success("FX rates saved");
+    } catch (error) {
+      console.error("Error saving FX rates:", error);
+      toast.error("Failed to save FX rates");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!open) return null;
@@ -567,7 +631,7 @@ const FxRateModal = ({
               <ul className="mt-3 space-y-2">
                 <li>Generated pairs use non-reporting currency / reporting currency.</li>
                 <li>Changing the reporting currency resets all rates to 1.00.</li>
-                <li>Rates are kept as two-decimal floats for the master date range.</li>
+                <li>Each selected date stores its own FX rate set.</li>
               </ul>
             </div>
           </div>
@@ -589,13 +653,13 @@ const FxRateModal = ({
                 <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Go to date</div>
                 <div className="flex items-center gap-2">
                   <input
-                    value={dateJump}
-                    onChange={(e) => setDateJump(e.target.value)}
-                    placeholder="MMM YY / Period"
+                    type="date"
+                    value={selectedFxDate}
+                    onChange={(e) => handleDateChange(e.target.value)}
                     className="h-10 w-48 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   />
-                  <button type="button" onClick={centerRow} className="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500">
-                    Update
+                  <button type="button" onClick={saveFxRates} disabled={saving} className="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-70">
+                    {saving ? "Saving..." : "Update"}
                   </button>
                 </div>
               </div>
@@ -616,7 +680,7 @@ const FxRateModal = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {fxRows.map((row, rowIndex) => (
+                      {visibleFxRows.map((row, rowIndex) => (
                         <tr
                           key={row.key}
                           ref={(node) => {
@@ -634,10 +698,12 @@ const FxRateModal = ({
                                 value={row.pairs[pair] ?? "1.00"}
                                 onChange={(e) => {
                                   const next = [...fxRows];
-                                  next[rowIndex] = {
-                                    ...next[rowIndex],
+                                  const sourceIndex = fxRows.findIndex((candidate) => candidate.key === row.key);
+                                  if (sourceIndex < 0) return;
+                                  next[sourceIndex] = {
+                                    ...next[sourceIndex],
                                     pairs: {
-                                      ...next[rowIndex].pairs,
+                                      ...next[sourceIndex].pairs,
                                       [pair]: formatFxRate(e.target.value),
                                     },
                                   };
@@ -654,8 +720,14 @@ const FxRateModal = ({
                 </div>
               </div>
 
+              {visibleFxRows.length === 0 && (
+                <div className="border-b border-slate-200 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                  No FX row matches the selected date.
+                </div>
+              )}
+
               <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                All FX rates are user editable. When one rate is changed, the currency pair keeps the value for the current selected date series.
+                All FX rates are user editable. The selected date keeps its own saved currency-pair values.
               </div>
             </div>
           </div>
@@ -821,7 +893,9 @@ const DashboardTable = () => {
   const [reportingCurrency, setReportingCurrency] = useState(DEFAULT_CURRENCIES[0]);
   const [fxBasis, setFxBasis] = useState("per ASK");
   const [fxRows, setFxRows] = useState([]);
-  const [dateJump, setDateJump] = useState("");
+  const [fxDateColumns, setFxDateColumns] = useState([]);
+  const [savedFxRates, setSavedFxRates] = useState([]);
+  const [selectedFxDate, setSelectedFxDate] = useState("");
   const fxRowRefs = useRef([]);
   const [exposureCurrency, setExposureCurrency] = useState("EUR");
 
@@ -860,6 +934,43 @@ const DashboardTable = () => {
     };
 
     getDropdownData();
+  }, []);
+
+  useEffect(() => {
+    const loadRevenueConfig = async () => {
+      try {
+        const response = await api.get("/revenue/config");
+        const config = response.data?.data || {};
+        const savedCurrencyCodes = Array.isArray(config.currencyCodes) ? config.currencyCodes : [];
+        const nextCurrencyCodes = [...new Set([...DEFAULT_CURRENCIES, ...savedCurrencyCodes])];
+        const nextReportingCurrency = config.reportingCurrency || DEFAULT_CURRENCIES[0];
+        const nextFxRates = Array.isArray(config.fxRates) ? config.fxRates : [];
+
+        setCurrencyCodes(nextCurrencyCodes);
+        setReportingCurrency(nextReportingCurrency);
+        setSavedFxRates(nextFxRates);
+      } catch (error) {
+        console.error("Error loading revenue config:", error);
+      }
+    };
+
+    loadRevenueConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const loadFxDates = async () => {
+      try {
+        const response = await api.get("/flight", { params: { page: 1, limit: 100000 } });
+        const flights = Array.isArray(response.data?.data) ? response.data.data : [];
+        setFxDateColumns(buildFxDateColumns(flights));
+      } catch (error) {
+        console.error("Error loading flight dates for FX grid:", error);
+        setFxDateColumns([]);
+      }
+    };
+
+    loadFxDates();
   }, []);
 
   const serializedFilters = useMemo(() => {
@@ -918,9 +1029,9 @@ const DashboardTable = () => {
       : null;
 
   useEffect(() => {
-    setFxRows(createFxRows(periodColumns, buildCurrencyPairs(currencyCodes, reportingCurrency)));
-    fxRowRefs.current = [];
-  }, [currencyCodes, periodColumns, reportingCurrency]);
+    if (!fxDateColumns.length) return;
+    setFxRows(createFxRows(fxDateColumns, buildCurrencyPairs(currencyCodes, reportingCurrency), savedFxRates));
+  }, [currencyCodes, fxDateColumns, reportingCurrency, savedFxRates]);
 
   const operationalSections = useMemo(() => OPERATIONAL_SECTIONS, []);
   const financeSections = useMemo(() => FINANCE_SECTIONS, []);
@@ -1278,9 +1389,11 @@ const DashboardTable = () => {
         fxRows={fxRows}
         setFxRows={setFxRows}
         fxRowRefs={fxRowRefs}
-        dateJump={dateJump}
-        setDateJump={setDateJump}
-        periodColumns={periodColumns}
+        selectedFxDate={selectedFxDate}
+        setSelectedFxDate={setSelectedFxDate}
+        savedFxRates={savedFxRates}
+        setSavedFxRates={setSavedFxRates}
+        periodColumns={fxDateColumns}
       />
 
       <RiskExposureModal
