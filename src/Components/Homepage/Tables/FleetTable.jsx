@@ -48,19 +48,29 @@ const getStatusColor = (status, category) => {
     return "bg-transparent";
 };
 
-const normalizeSnKey = (value) => {
+const normalizeNumericAssetKey = (value) => {
     if (value === null || value === undefined) return "";
     const raw = String(value).trim().toUpperCase();
     if (!raw) return "";
     const digitsOnly = raw.replace(/\D/g, "");
     return digitsOnly || raw;
 };
+const normalizeApuKey = (value) => {
+    if (value === null || value === undefined) return "";
+    return String(value).trim().toUpperCase();
+};
+const createMetricKey = (category, value) => {
+    const normalized =
+        category === "APU" ? normalizeApuKey(value) : normalizeNumericAssetKey(value);
+
+    return normalized ? `${category}:${normalized}` : "";
+};
 
 // Derive today's auto-computed status for an Aircraft from metricsData
 const getTodayStatus = (asset, metricsData) => {
     if (asset.category !== "Aircraft" || !asset.sn) return null;
     const todayStr = moment().format("DD MMM YY");
-    const metric = metricsData[normalizeSnKey(asset.sn)]?.[todayStr];
+    const metric = metricsData[createMetricKey("Aircraft", asset.sn)]?.[todayStr];
     if (!metric) return "Available";
     if (metric.status === "maintenance" || metric.status?.includes("check") || metric.status?.includes("ground")) return "Maintenance";
     if (metric.status === "aircraft-assigned") return "Assigned";
@@ -307,7 +317,7 @@ const FleetTable = () => {
         acc[date] = assets.reduce((totals, asset) => {
             if (asset.category !== "Aircraft") return totals;
 
-            const snKey = normalizeSnKey(asset.sn);
+            const snKey = createMetricKey("Aircraft", asset.sn);
             if (!snKey) return totals;
 
             const metric = metricsData[snKey]?.[date];
@@ -565,7 +575,7 @@ const FleetTable = () => {
                                         const hasManualOverride = Boolean(manualDayData?.label?.trim());
                                         let dayData = manualDayData || { status: "available", label: "" };
                                         let cellTitle = "";
-                                        const snStr = normalizeSnKey(asset.sn);
+                                        const snStr = createMetricKey(asset.category, asset.sn);
                                         const isAutoScheduleAsset = ["Aircraft", "Engine", "APU"].includes(asset.category);
 
                                         if (isAutoScheduleAsset && snStr && !hasManualOverride) {
