@@ -1015,12 +1015,6 @@ const DashboardTable = () => {
               <SlidersHorizontal size={12} />
               Dashboard Filters
             </div>
-            <h2 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
-              Dashboard redesign from the mockup
-            </h2>
-            <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">
-              Existing dashboard data stays wired in, while the finance and FX/risk sections are scaffolded for the next iteration.
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">

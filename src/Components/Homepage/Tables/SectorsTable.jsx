@@ -158,9 +158,10 @@ const SectorsTable = () => {
     // 1. Filter logic mirroring your original structure exactly
     data = data.filter(row => {
       const match = (val, filter) => String(val || "").toLowerCase().includes(filter.toLowerCase());
+      const sectorName = [row.sector1, row.sector2].filter(Boolean).join("-");
 
       return (
-        match(row.sector1, filters.sector1) &&
+        match(sectorName, filters.sector1) &&
         match(row.gcd, filters.gcd) &&
         match(row.acftType, filters.acftType) &&
         match(row.variant, filters.variant) &&
