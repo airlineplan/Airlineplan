@@ -229,19 +229,21 @@ const PERIODICITY_OPTIONS = [
 ];
 
 const COST_TYPE_OPTIONS = [
-    { label: "Engine Fuel", value: "engineFuel" },
-    { label: "APU Fuel", value: "apuFuel" },
-    { label: "MR contribution", value: "mrContribution" },
-    { label: "Major Sch Mx", value: "majorSchMx" },
-    { label: "Transit Mx", value: "transitMx" },
-    { label: "Other Mx", value: "otherMx" },
-    { label: "Rotable changes", value: "rotableChanges" },
-    { label: "Navigation", value: "navigation" },
-    { label: "Airport", value: "airport" },
-    { label: "Crew allowances", value: "crewAllowances" },
-    { label: "Crew overlay", value: "crewOverlay" },
-    { label: "Crew positioning", value: "crewPositioning" },
-    { label: "Other DOC", value: "otherDoc" }
+    { label: "Engine Fuel Cost", value: "engineFuelCostRCCY" },
+    { label: "APU Fuel Cost", value: "apuFuelCostRCCY" },
+    { label: "Maintenance Reserve Contribution", value: "maintenanceReserveContributionRCCY" },
+    { label: "MR Monthly", value: "mrMonthlyRCCY" },
+    { label: "Qualifying Sch Mx Events", value: "qualifyingSchMxEventsRCCY" },
+    { label: "Transit Maintenance", value: "transitMaintenanceRCCY" },
+    { label: "Other Maintenance", value: "otherMaintenanceRCCY" },
+    { label: "Other Mx Expenses", value: "otherMxExpensesRCCY" },
+    { label: "Rotable changes", value: "rotableChangesRCCY" },
+    { label: "Navigation", value: "navigationRCCY" },
+    { label: "Airport", value: "airportRCCY" },
+    { label: "Crew allowances", value: "crewAllowancesRCCY" },
+    { label: "Layover Cost", value: "layoverCostRCCY" },
+    { label: "Crew positioning", value: "crewPositioningCostRCCY" },
+    { label: "Other DOC", value: "otherDocRCCY" }
 ];
 
 const GROUPING_OPTIONS = [
@@ -282,7 +284,18 @@ const CostPage = () => {
     const isSnGroupingSelected = [level1, level2, level3].some((level) => level?.value === "sn");
     const lockCostCategories = isSnSelected || isSnGroupingSelected;
     const costCategoryOptions = useMemo(() => {
-        const lockedValues = new Set(["engineFuel", "apuFuel", "transitMx", "navigation", "airport", "crewAllowances", "crewOverlay", "crewPositioning", "otherDoc", "rotableChanges"]);
+        const lockedValues = new Set([
+            "engineFuelCostRCCY",
+            "apuFuelCostRCCY",
+            "transitMaintenanceRCCY",
+            "navigationRCCY",
+            "airportRCCY",
+            "crewAllowancesRCCY",
+            "layoverCostRCCY",
+            "crewPositioningCostRCCY",
+            "otherDocRCCY",
+            "rotableChangesRCCY"
+        ]);
         return COST_TYPE_OPTIONS.map((option) => ({
             ...option,
             disabled: lockCostCategories && lockedValues.has(option.value),

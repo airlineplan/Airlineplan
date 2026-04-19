@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Save, Plus, Edit2, Check, Trash2 } from "lucide-react";
 import { clsx } from "clsx";
@@ -220,7 +221,7 @@ export default function CostInputModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
@@ -271,11 +272,11 @@ export default function CostInputModal({ isOpen, onClose }) {
                     data={fuelConsum}
                     setData={setFuelConsum}
                     columns={[
-                      { label: "Fuel consum (GCD/Sector)", key: "type" },
-                      { label: "ACFT Regn 1", key: "acft1" },
-                      { label: "ACFT Regn 2", key: "acft2" },
-                      { label: "MMM-YY 1", key: "m1" },
-                      { label: "MMM-YY 2", key: "m2" },
+                      { label: "Sector / GCD", key: "sectorOrGcd" },
+                      { label: "ACFT Regn", key: "acftRegn" },
+                      { label: "Month", key: "month" },
+                      { label: "Fuel Cons Kg", key: "fuelConsumptionKg", type: "number" },
+                      { label: "CCY", key: "ccy" },
                     ]}
                   />
                   <EditableTable
@@ -287,7 +288,11 @@ export default function CostInputModal({ isOpen, onClose }) {
                       { label: "From date", key: "fromDate", type: "date" },
                       { label: "To date", key: "toDate", type: "date" },
                       { label: "Variant", key: "variant" },
-                      { label: "Consumption", key: "consumption", type: "number" },
+                      { label: "ACFT Regn", key: "acftRegn" },
+                      { label: "APU Hr", key: "apuHours", type: "number" },
+                      { label: "Cons / APU Hr", key: "consumptionPerApuHour", type: "number" },
+                      { label: "Basis", key: "basis" },
+                      { label: "CCY", key: "ccy" },
                     ]}
                   />
                 </div>
@@ -297,22 +302,25 @@ export default function CostInputModal({ isOpen, onClose }) {
                     data={plfEffect}
                     setData={setPlfEffect}
                     columns={[
-                      { label: "PLF effect (GCD/Sector)", key: "type" },
-                      { label: "ACFT Regn", key: "acft" },
-                      { label: "50%", key: "p50", type: "number" },
-                      { label: "60%", key: "p60", type: "number" },
-                      { label: "75%", key: "p75", type: "number" },
+                      { label: "Sector / GCD", key: "sectorOrGcd" },
+                      { label: "ACFT Regn", key: "acftRegn" },
+                      { label: "80%", key: "p80", type: "number" },
+                      { label: "90%", key: "p90", type: "number" },
+                      { label: "95%", key: "p95", type: "number" },
+                      { label: "98%", key: "p98", type: "number" },
                       { label: "100%", key: "p100", type: "number" },
                     ]}
                   />
                   <EditableTable
-                    title="CCY"
+                    title="Fuel Price"
                     data={ccyFuel}
                     setData={setCcyFuel}
                     columns={[
-                      { label: "Into plane", key: "intoPlane" },
-                      { label: "MMM-YY 1", key: "m1" },
-                      { label: "MMM-YY 2", key: "m2" },
+                      { label: "Station", key: "station" },
+                      { label: "Month", key: "month" },
+                      { label: "CCY", key: "ccy" },
+                      { label: "Kg/Ltr", key: "kgPerLtr", type: "number" },
+                      { label: "Into plane rate", key: "intoPlaneRate", type: "number" },
                     ]}
                   />
                 </div>
@@ -327,12 +335,13 @@ export default function CostInputModal({ isOpen, onClose }) {
                   setData={setLeasedReserve}
                   columns={[
                     { label: "MR Acc ID", key: "mrAccId" },
-                    { label: "Sch. Mx. Eve", key: "schMxEve" },
                     { label: "ACFT Regn.", key: "acftRegn" },
                     { label: "PN", key: "pn" },
                     { label: "SN", key: "sn" },
+                    { label: "Driver", key: "driver" },
                     { label: "Set balance", key: "setBalance", type: "number" },
                     { label: "Set rate", key: "setRate", type: "number" },
+                    { label: "CCY", key: "ccy" },
                     { label: "End date", key: "endDate", type: "date" },
                   ]}
                 />
@@ -342,11 +351,14 @@ export default function CostInputModal({ isOpen, onClose }) {
                   setData={setSchMxEvents}
                   columns={[
                     { label: "Date", key: "date", type: "date" },
-                    { label: "MSN/LSN", key: "msn" },
+                    { label: "MSN/ESN/APUN", key: "msnEsnApun" },
                     { label: "Sch.Mx.Event", key: "event" },
+                    { label: "PN", key: "pn" },
+                    { label: "SN/BN", key: "snBn" },
                     { label: "Event total cost", key: "cost", type: "number" },
-                    { label: "Opening bal", key: "openBal", type: "number" },
-                    { label: "Capitalisation", key: "cap", type: "number" },
+                    { label: "Opening bal", key: "openingBal", type: "number" },
+                    { label: "Capitalisation", key: "capitalisation" },
+                    { label: "CCY", key: "ccy" },
                   ]}
                 />
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -355,9 +367,14 @@ export default function CostInputModal({ isOpen, onClose }) {
                     data={transitMx}
                     setData={setTransitMx}
                     columns={[
-                      { label: "Station", key: "stn" },
-                      { label: "Variant/ACFT", key: "var" },
-                      { label: "Cost per dep", key: "costDep", type: "number" },
+                      { label: "Dep Stn", key: "depStn" },
+                      { label: "Variant", key: "variant" },
+                      { label: "ACFT Regn", key: "acftRegn" },
+                      { label: "PN", key: "pn" },
+                      { label: "SN", key: "sn" },
+                      { label: "From date", key: "fromDate", type: "date" },
+                      { label: "To date", key: "toDate", type: "date" },
+                      { label: "Cost / departure", key: "costPerDeparture", type: "number" },
                       { label: "CCY", key: "ccy" },
                     ]}
                   />
@@ -366,9 +383,16 @@ export default function CostInputModal({ isOpen, onClose }) {
                     data={otherMx}
                     setData={setOtherMx}
                     columns={[
-                      { label: "Variant/ACFT", key: "var" },
-                      { label: "Cost per BH", key: "costBh", type: "number" },
-                      { label: "Cost per dep", key: "costDep", type: "number" },
+                      { label: "Dep Stn", key: "depStn" },
+                      { label: "Variant", key: "variant" },
+                      { label: "ACFT Regn", key: "acftRegn" },
+                      { label: "PN", key: "pn" },
+                      { label: "SN", key: "sn" },
+                      { label: "From date", key: "fromDate", type: "date" },
+                      { label: "To date", key: "toDate", type: "date" },
+                      { label: "Cost / BH", key: "costPerBh", type: "number" },
+                      { label: "Cost / departure", key: "costPerDeparture", type: "number" },
+                      { label: "Cost / month", key: "costPerMonth", type: "number" },
                       { label: "CCY", key: "ccy" },
                     ]}
                   />
@@ -378,11 +402,11 @@ export default function CostInputModal({ isOpen, onClose }) {
                   data={rotableChanges}
                   setData={setRotableChanges}
                   columns={[
-                    { label: "Label", key: "lbl" },
+                    { label: "Label", key: "label" },
                     { label: "Date", key: "date", type: "date" },
                     { label: "PN", key: "pn" },
                     { label: "MSN", key: "msn" },
-                    { label: "ACFT Regn", key: "acft" },
+                    { label: "ACFT Regn", key: "acftRegn" },
                     { label: "Cost", key: "cost", type: "number" },
                     { label: "CCY", key: "ccy" },
                   ]}
@@ -399,8 +423,9 @@ export default function CostInputModal({ isOpen, onClose }) {
                     setData={setNavEnr}
                     columns={[
                       { label: "Sector", key: "sector" },
-                      { label: "MTOW 1", key: "m1", type: "number" },
-                      { label: "MTOW 2", key: "m2", type: "number" },
+                      { label: "Variant", key: "variant" },
+                      { label: "Month", key: "month" },
+                      { label: "Cost", key: "cost", type: "number" },
                       { label: "CCY", key: "ccy" },
                     ]}
                   />
@@ -409,9 +434,10 @@ export default function CostInputModal({ isOpen, onClose }) {
                     data={navTerm}
                     setData={setNavTerm}
                     columns={[
-                      { label: "Station", key: "stn" },
-                      { label: "MTOW 1", key: "m1", type: "number" },
-                      { label: "MTOW 2", key: "m2", type: "number" },
+                      { label: "Arr Stn", key: "arrStn" },
+                      { label: "Variant", key: "variant" },
+                      { label: "Month", key: "month" },
+                      { label: "Cost", key: "cost", type: "number" },
                       { label: "CCY", key: "ccy" },
                     ]}
                   />
@@ -427,9 +453,10 @@ export default function CostInputModal({ isOpen, onClose }) {
                     data={airportLanding}
                     setData={setAirportLanding}
                     columns={[
-                      { label: "Station", key: "stn" },
-                      { label: "MTOW 1", key: "m1", type: "number" },
-                      { label: "MTOW 2", key: "m2", type: "number" },
+                      { label: "Arr Stn", key: "arrStn" },
+                      { label: "Variant", key: "variant" },
+                      { label: "Month", key: "month" },
+                      { label: "Cost", key: "cost", type: "number" },
                       { label: "CCY", key: "ccy" },
                     ]}
                   />
@@ -438,9 +465,10 @@ export default function CostInputModal({ isOpen, onClose }) {
                     data={airportAvsec}
                     setData={setAirportAvsec}
                     columns={[
-                      { label: "Station", key: "stn" },
-                      { label: "Variant 1", key: "v1", type: "number" },
-                      { label: "Variant 2", key: "v2", type: "number" },
+                      { label: "Arr Stn", key: "arrStn" },
+                      { label: "Variant", key: "variant" },
+                      { label: "Month", key: "month" },
+                      { label: "Cost", key: "cost", type: "number" },
                       { label: "CCY", key: "ccy" },
                     ]}
                   />
@@ -449,9 +477,10 @@ export default function CostInputModal({ isOpen, onClose }) {
                     data={airportDom}
                     setData={setAirportDom}
                     columns={[
-                      { label: "Station", key: "stn" },
-                      { label: "Variant 1", key: "v1", type: "number" },
-                      { label: "Variant 2", key: "v2", type: "number" },
+                      { label: "Arr Stn", key: "arrStn" },
+                      { label: "Variant", key: "variant" },
+                      { label: "Month", key: "month" },
+                      { label: "Cost", key: "cost", type: "number" },
                       { label: "CCY", key: "ccy" },
                     ]}
                   />
@@ -460,9 +489,10 @@ export default function CostInputModal({ isOpen, onClose }) {
                     data={airportIntl}
                     setData={setAirportIntl}
                     columns={[
-                      { label: "Station", key: "stn" },
-                      { label: "Variant 1", key: "v1", type: "number" },
-                      { label: "Variant 2", key: "v2", type: "number" },
+                      { label: "Arr Stn", key: "arrStn" },
+                      { label: "Variant", key: "variant" },
+                      { label: "Month", key: "month" },
+                      { label: "Cost", key: "cost", type: "number" },
                       { label: "CCY", key: "ccy" },
                     ]}
                   />
@@ -477,14 +507,19 @@ export default function CostInputModal({ isOpen, onClose }) {
                   data={otherDoc}
                   setData={setOtherDoc}
                   columns={[
-                    { label: "Label", key: "lbl" },
-                    { label: "Sector", key: "sec" },
-                    { label: "Dep Stn", key: "dep" },
-                    { label: "Arr Stn", key: "arr" },
-                    { label: "Variant/ACFT", key: "var" },
+                    { label: "Label", key: "label" },
+                    { label: "Sector", key: "sector" },
+                    { label: "Dep Stn", key: "depStn" },
+                    { label: "Arr Stn", key: "arrStn" },
+                    { label: "Variant", key: "variant" },
+                    { label: "ACFT Regn", key: "acftRegn" },
+                    { label: "PN", key: "pn" },
+                    { label: "SN", key: "sn" },
+                    { label: "Per", key: "per" },
                     { label: "Cost", key: "cost", type: "number" },
-                    { label: "From date", key: "fdate", type: "date" },
-                    { label: "To date", key: "tdate", type: "date" },
+                    { label: "CCY", key: "ccy" },
+                    { label: "From date", key: "fromDate", type: "date" },
+                    { label: "To date", key: "toDate", type: "date" },
                   ]}
                 />
 
@@ -517,4 +552,6 @@ export default function CostInputModal({ isOpen, onClose }) {
       )}
     </AnimatePresence>
   );
+
+  return typeof document !== "undefined" ? createPortal(modalContent, document.body) : modalContent;
 }
