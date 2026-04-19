@@ -84,6 +84,7 @@ const MultiSelectDropdown = ({ placeholder, options = [], onChange, selected = [
     }, []);
 
     const toggleOption = (opt) => {
+        if (opt.disabled) return;
         let newSelected;
         if (selected.some(item => item.value === opt.value)) {
             newSelected = selected.filter(item => item.value !== opt.value);
@@ -124,15 +125,29 @@ const MultiSelectDropdown = ({ placeholder, options = [], onChange, selected = [
                                 <div
                                     key={opt.value}
                                     onClick={() => toggleOption(opt)}
-                                    className="flex items-center px-3 py-2 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                                    className={cn(
+                                        "flex items-center px-3 py-2 text-sm transition-colors",
+                                        opt.disabled
+                                            ? "cursor-not-allowed opacity-50"
+                                            : "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
+                                    )}
                                 >
                                     <div className={cn(
                                         "w-4 h-4 rounded border mr-3 flex items-center justify-center transition-colors shrink-0",
-                                        isSelected ? "bg-indigo-500 border-indigo-500" : "border-slate-300 dark:border-slate-600"
+                                        opt.disabled
+                                            ? "bg-slate-100 border-slate-200 dark:bg-slate-800 dark:border-slate-700"
+                                            : isSelected
+                                                ? "bg-indigo-500 border-indigo-500"
+                                                : "border-slate-300 dark:border-slate-600"
                                     )}>
-                                        {isSelected && <Check size={12} className="text-white" />}
+                                        {isSelected && !opt.disabled && <Check size={12} className="text-white" />}
                                     </div>
-                                    <span className="text-slate-700 dark:text-slate-300 truncate">{opt.label}</span>
+                                    <span className={cn(
+                                        "truncate",
+                                        opt.disabled ? "text-slate-400 dark:text-slate-500" : "text-slate-700 dark:text-slate-300"
+                                    )}>
+                                        {opt.label}
+                                    </span>
                                 </div>
                             );
                         })}
@@ -248,22 +263,31 @@ const CostPage = () => {
     const [rawFlights, setRawFlights] = useState([]);
     const [isCostInputOpen, setIsCostInputOpen] = useState(false);
 
-    // Added flight and poo arrays to dropdownOptions
     const [dropdownOptions, setDropdownOptions] = useState({
-        from: [], to: [], sector: [], flight: [], poo: [], variant: [], userTag1: [], userTag2: []
+        from: [], to: [], sector: [], sn: [], flight: [], variant: [], userTag1: [], userTag2: []
     });
 
-    // Added flight and poo to filters
     const [filters, setFilters] = useState({
         label: LABEL_OPTIONS[2],
         periodicity: PERIODICITY_OPTIONS[2],
-        from: [], to: [], sector: [], flight: [], poo: [], variant: [], userTag1: [], userTag2: [],
+        from: [], to: [], sector: [], sn: [], flight: [], variant: [], userTag1: [], userTag2: [],
         costTypes: []
     });
 
     const [level1, setLevel1] = useState(GROUPING_OPTIONS[1]); // Sector
     const [level2, setLevel2] = useState(GROUPING_OPTIONS[4]); // Variant
     const [level3, setLevel3] = useState(GROUPING_OPTIONS[0]); // None
+
+    const isSnSelected = filters.sn.length > 0;
+    const isSnGroupingSelected = [level1, level2, level3].some((level) => level?.value === "sn");
+    const lockCostCategories = isSnSelected || isSnGroupingSelected;
+    const costCategoryOptions = useMemo(() => {
+        const lockedValues = new Set(["engineFuel", "apuFuel", "transitMx", "navigation", "airport", "crewAllowances", "crewOverlay", "crewPositioning", "otherDoc", "rotableChanges"]);
+        return COST_TYPE_OPTIONS.map((option) => ({
+            ...option,
+            disabled: lockCostCategories && lockedValues.has(option.value),
+        }));
+    }, [lockCostCategories]);
 
     // --- API CALLS ---
 
@@ -277,8 +301,8 @@ const CostPage = () => {
                         from: response.data.from || [],
                         to: response.data.to || [],
                         sector: response.data.sector || [],
-                        flight: response.data.flight || [], // Ensuring flight loads
-                        poo: response.data.poo || [],       // Ensuring poo loads
+                        sn: response.data.sn || [],
+                        flight: response.data.flight || [],
                         variant: response.data.variant || [],
                         userTag1: response.data.userTag1 || [],
                         userTag2: response.data.userTag2 || [],
@@ -476,27 +500,27 @@ const CostPage = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                             <SingleSelectDropdown placeholder="Label" options={LABEL_OPTIONS} selected={filters.label} onChange={(v) => updateFilter('label', v)} />
                             <SingleSelectDropdown placeholder="Periodicity" options={PERIODICITY_OPTIONS} selected={filters.periodicity} onChange={(v) => updateFilter('periodicity', v)} />
-                            {/* Added explicit Cost Types Dropdown to this top tier to act as the 3rd box from wireframe */}
-                            <div className="col-span-1 sm:col-span-2 lg:col-span-2">
-                                <MultiSelectDropdown
-                                    placeholder="Select Cost Categories (RCCY)..."
-                                    options={COST_TYPE_OPTIONS}
-                                    selected={filters.costTypes}
-                                    onChange={(v) => updateFilter('costTypes', v)}
-                                />
-                            </div>
                         </div>
 
                         {/* Bottom Row: Detailed Dimensions (The inner blue box from wireframe with 8 fields) */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2 p-3 bg-white/40 dark:bg-slate-900/40 border border-indigo-200/50 dark:border-indigo-800/50 rounded-lg shadow-inner">
-                            <MultiSelectDropdown placeholder="FROM" options={dropdownOptions.from} selected={filters.from} onChange={(v) => updateFilter('from', v)} />
-                            <MultiSelectDropdown placeholder="TO" options={dropdownOptions.to} selected={filters.to} onChange={(v) => updateFilter('to', v)} />
+                            <MultiSelectDropdown placeholder="Dep Stn" options={dropdownOptions.from} selected={filters.from} onChange={(v) => updateFilter('from', v)} />
+                            <MultiSelectDropdown placeholder="Arr Stn" options={dropdownOptions.to} selected={filters.to} onChange={(v) => updateFilter('to', v)} />
                             <MultiSelectDropdown placeholder="Sector" options={dropdownOptions.sector} selected={filters.sector} onChange={(v) => updateFilter('sector', v)} />
-                            <MultiSelectDropdown placeholder="Flight #" options={dropdownOptions.flight} selected={filters.flight} onChange={(v) => updateFilter('flight', v)} />
-                            <MultiSelectDropdown placeholder="POO" options={dropdownOptions.poo} selected={filters.poo} onChange={(v) => updateFilter('poo', v)} />
                             <MultiSelectDropdown placeholder="Variant" options={dropdownOptions.variant} selected={filters.variant} onChange={(v) => updateFilter('variant', v)} />
+                            <MultiSelectDropdown placeholder="SN" options={dropdownOptions.sn} selected={filters.sn} onChange={(v) => updateFilter('sn', v)} />
+                            <MultiSelectDropdown placeholder="Flight #" options={dropdownOptions.flight} selected={filters.flight} onChange={(v) => updateFilter('flight', v)} />
                             <MultiSelectDropdown placeholder="User Tag 1" options={dropdownOptions.userTag1} selected={filters.userTag1} onChange={(v) => updateFilter('userTag1', v)} />
                             <MultiSelectDropdown placeholder="User Tag 2" options={dropdownOptions.userTag2} selected={filters.userTag2} onChange={(v) => updateFilter('userTag2', v)} />
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 p-3 bg-white/40 dark:bg-slate-900/40 border border-indigo-200/50 dark:border-indigo-800/50 rounded-lg shadow-inner">
+                            <MultiSelectDropdown
+                                placeholder="Select Cost Categories (RCCY)..."
+                                options={costCategoryOptions}
+                                selected={filters.costTypes}
+                                onChange={(v) => updateFilter('costTypes', v)}
+                            />
                         </div>
 
                     </div>

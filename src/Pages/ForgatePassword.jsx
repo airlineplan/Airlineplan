@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Key, Mail, Send, Loader2, ArrowLeft, Lock
 } from "lucide-react";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // Ensure this path matches your project
@@ -170,8 +170,6 @@ const ForgatePassword = () => {
         </AnimatePresence>
 
       </div>
-
-      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 };

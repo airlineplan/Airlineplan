@@ -5,7 +5,7 @@ import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ChevronDown, Check, LayoutDashboard, Download, Layers, RefreshCw } from "lucide-react";
 import * as XLSX from "xlsx";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // --- UTILITIES ---
@@ -706,7 +706,6 @@ const ListTable = () => {
           </table>
         </div>
       </div>
-      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 };

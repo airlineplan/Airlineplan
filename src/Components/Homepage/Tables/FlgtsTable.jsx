@@ -42,6 +42,24 @@ const COLUMNS_CONFIG = [
   { id: 'rsk', key: 'rsk', label: 'RSK', minWidth: '90px', masterOnly: true, isInt: true },
   { id: 'cargoAtk', key: 'cargoAtk', label: 'Cargo ATK', minWidth: '100px', masterOnly: true, isInt: true },
   { id: 'cargoRtk', key: 'cargoRtk', label: 'Cargo RTK', minWidth: '100px', masterOnly: true, isInt: true },
+  { id: 'engineFuelConsumption', key: 'engineFuelConsumption', label: 'Engine fuel consumption', minWidth: '150px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'engineFuelCost', key: 'engineFuelCost', label: 'Engine fuel cost', minWidth: '130px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'mrContribution', key: 'mrContribution', label: 'MR contribution', minWidth: '130px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'transitMaintenance', key: 'transitMaintenance', label: 'Transit maintenance', minWidth: '140px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'otherMaintenance1', key: 'otherMaintenance1', label: 'Other maintenance 1', minWidth: '150px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'otherMaintenance2', key: 'otherMaintenance2', label: 'Other maintenance 2', minWidth: '150px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'otherMaintenance3', key: 'otherMaintenance3', label: 'Other maintenance 3', minWidth: '150px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'navEnr', key: 'navEnr', label: 'Nav ENR', minWidth: '100px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'navTrml', key: 'navTrml', label: 'Nav Trml', minWidth: '100px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'aptLandingCost', key: 'aptLandingCost', label: 'APT-Landing cost', minWidth: '135px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'aptHandlingCost', key: 'aptHandlingCost', label: 'APT-Handling cost', minWidth: '140px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'aptOtherCost', key: 'aptOtherCost', label: 'APT-Other cost', minWidth: '130px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'otherDoc1', key: 'otherDoc1', label: 'Other DOC 1', minWidth: '120px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'otherDoc2', key: 'otherDoc2', label: 'Other DOC 2', minWidth: '120px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'otherDoc3', key: 'otherDoc3', label: 'Other DOC 3', minWidth: '120px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'crewAllowances', key: 'crewAllowances', label: 'Crew Allowances', minWidth: '130px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'layoverCost', key: 'layoverCost', label: 'Layover cost', minWidth: '110px', masterOnly: true, isFloat: true, filterable: false },
+  { id: 'crewPositioningCost', key: 'crewPositioningCost', label: 'Crew positioning cost', minWidth: '155px', masterOnly: true, isFloat: true, filterable: false },
   { id: 'domIntl', key: 'domIntl', label: 'Dom/Intl', minWidth: '90px', masterOnly: true },
   { id: 'userTag1', key: 'userTag1', label: 'User Tag 1', minWidth: '120px', masterOnly: true },
   { id: 'userTag2', key: 'userTag2', label: 'User Tag 2', minWidth: '120px', masterOnly: true },
@@ -80,37 +98,49 @@ const FlgtsTable = ({ isMaster = true }) => {
     return COLUMNS_CONFIG.filter(col => isMaster || !col.masterOnly);
   }, [isMaster]);
 
-  const fetchResults = useCallback(
-    debounce(async (page, limit, currentFilters) => {
-      setLoading(true);
-      try {
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) throw new Error("No access token");
+  const fetchFlights = useCallback(async (page, limit, currentFilters) => {
+    setLoading(true);
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) throw new Error("No access token");
 
-        const activeFilters = Object.fromEntries(
-          Object.entries(currentFilters).filter(([_, v]) => v !== "")
-        );
-        const requestBody = { ...activeFilters, page, limit };
+      const activeFilters = Object.fromEntries(
+        Object.entries(currentFilters).filter(([_, v]) => v !== "")
+      );
+      const requestBody = { ...activeFilters, page, limit };
 
-        const response = await api.post(
-          "/searchflights",
-          requestBody
-        );
+      const response = await api.post(
+        "/searchflights",
+        requestBody
+      );
 
-        setFlgtsTableData(response.data.data || []);
-        setTotalFlights(response.data.total || 0);
-      } catch (error) {
-        console.error("Error fetching flights:", error);
-      } finally {
-        setLoading(false);
-      }
-    }, 500),
-    []
+      setFlgtsTableData(response.data.data || []);
+      setTotalFlights(response.data.total || 0);
+    } catch (error) {
+      console.error("Error fetching flights:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchResults = useMemo(
+    () => debounce((page, limit, currentFilters) => fetchFlights(page, limit, currentFilters), 500),
+    [fetchFlights]
   );
 
   useEffect(() => {
     fetchResults(currentPage, rowsPerPage, filters);
+    return () => fetchResults.cancel();
   }, [currentPage, filters, fetchResults]);
+
+  useEffect(() => {
+    const onAssignmentsUpdated = () => {
+      fetchFlights(currentPage, rowsPerPage, filters);
+    };
+
+    window.addEventListener("assignments:updated", onAssignmentsUpdated);
+    return () => window.removeEventListener("assignments:updated", onAssignmentsUpdated);
+  }, [currentPage, rowsPerPage, filters, fetchFlights]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -251,12 +281,16 @@ const FlgtsTable = ({ isMaster = true }) => {
                           <ArrowUp size={12} className="opacity-0 group-hover:opacity-30" />
                         )}
                       </div>
-                      <TableInput
-                        name={col.key} // Maintains filter bindings to the correct DB schema field
-                        value={filters[col.key]}
-                        onChange={handleFilterChange}
-                        placeholder="Filter..."
-                      />
+                      {col.filterable === false ? (
+                        <div className="h-7 mt-1 rounded border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/30" />
+                      ) : (
+                        <TableInput
+                          name={col.key} // Maintains filter bindings to the correct DB schema field
+                          value={filters[col.key]}
+                          onChange={handleFilterChange}
+                          placeholder="Filter..."
+                        />
+                      )}
                     </div>
                   </th>
                 ))}

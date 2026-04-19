@@ -4,8 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { X, Save, AlertCircle, Calendar, Plus, Search } from "lucide-react";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { calculateAutoSta } from "./networkStaUtils";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -128,15 +129,17 @@ const ComboboxField = ({ label, name, value, onChange, error, options = [], disa
 
 // --- MAIN COMPONENT ---
 const AddNetwork = ({ setAdd }) => {
+  const initialFormData = {
+    flight: "", depStn: "", std: "", bt: "", sta: "", arrStn: "", variant: "",
+    effFromDt: "", effToDt: "", dow: "", domINTL: "",
+    userTag1: "", userTag2: "", remarks1: "", remarks2: ""
+  };
+
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [stationsData, setStationsData] = useState([]);
   const [dropdownData, setDropdownData] = useState({ from: [], to: [] });
-  const [formData, setFormData] = useState({
-    flight: "", depStn: "", std: "", bt: "", sta: "", arrStn: "", variant: "",
-    effFromDt: "", effToDt: "", dow: "", domINTL: "",
-    userTag1: "", userTag2: "", remarks1: "", remarks2: ""
-  });
+  const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
 
   const timeOptions = useMemo(() => {
@@ -184,81 +187,34 @@ const AddNetwork = ({ setAdd }) => {
 
   // --- DST-AWARE AUTO-CALCULATE STA ENGINE ---
   useEffect(() => {
-    const { std, bt, depStn, arrStn, effFromDt } = formData;
+    const calculatedSTA = calculateAutoSta({
+      std: formData.std,
+      bt: formData.bt,
+      depStn: formData.depStn,
+      arrStn: formData.arrStn,
+      stationsData,
+      effFromDt: formData.effFromDt,
+    });
 
-    // We only explicitly require STD and BT to attempt calculation. 
-    // This ensures calculation runs even for brand new stations.
-    if (std && bt) {
-      let depTzMins = null;
-      let arrTzMins = null;
-
-      // Only attempt to find timezone offsets if stations are typed
-      if (depStn && arrStn && stationsData.length > 0) {
-        // Find configuration using Case-Insensitive matching
-        const depConfig = stationsData.find(s => s.stationName?.toUpperCase() === depStn?.toUpperCase());
-        const arrConfig = stationsData.find(s => s.stationName?.toUpperCase() === arrStn?.toUpperCase());
-
-        const getTzMins = (config, flightDateStr) => {
-          if (!config) return null; // Fallback for completely new/unrecognized stations
-
-          let tz = config.stdtz;
-
-          if (flightDateStr && config.nextDSTStart && config.nextDSTEnd) {
-            const fDate = new Date(flightDateStr);
-            const dStart = new Date(config.nextDSTStart);
-            const dEnd = new Date(config.nextDSTEnd);
-            if (!isNaN(fDate) && !isNaN(dStart) && !isNaN(dEnd)) {
-              if (fDate >= dStart && fDate <= dEnd) {
-                tz = config.dsttz || config.stdtz;
-              }
-            }
-          }
-
-          if (!tz || !tz.startsWith('UTC')) return null;
-          if (tz === 'UTC') return 0;
-          
-          const sign = tz.includes('-') ? -1 : 1;
-          const timePart = tz.replace(/UTC[+-]/, '');
-          if (!timePart) return 0;
-          const [hours, minutes] = timePart.split(':').map(Number);
-          return sign * ((hours * 60) + (minutes || 0));
-        };
-
-        depTzMins = getTzMins(depConfig, effFromDt);
-        arrTzMins = getTzMins(arrConfig, effFromDt);
-      }
-
-      // Parse the Time Strings
-      const [stdH, stdM] = std.split(':').map(Number);
-      const [btH, btM] = bt.split(':').map(Number);
-
-      // Only run math if time parts are successfully converted to numbers
-      if (!isNaN(stdH) && !isNaN(btH)) {
-        // FORMULA: STA = STD + BT + Diff in TZ (ArrTZ - DepTZ)
-        const diffInTzMins = (depTzMins !== null && arrTzMins !== null && !isNaN(depTzMins) && !isNaN(arrTzMins)) 
-          ? arrTzMins - depTzMins 
-          : 0;
-        let totalMins = (stdH * 60 + (stdM || 0)) + (btH * 60 + (btM || 0)) + diffInTzMins;
-
-        // Wrap around 24 hours to cleanly handle midnight crossovers (forwards or backwards)
-        totalMins = ((totalMins % 1440) + 1440) % 1440;
-
-        const staH = Math.floor(totalMins / 60);
-        const staM = totalMins % 60;
-        const calculatedSTA = `${String(staH).padStart(2, '0')}:${String(staM).padStart(2, '0')}`;
-
-        setFormData(prev => {
-          // Check prevents endless re-renders and lets user manually override
-          if (prev.sta !== calculatedSTA) return { ...prev, sta: calculatedSTA };
-          return prev;
-        });
-      }
-    }
+    setFormData((prev) => {
+      if (prev.sta === calculatedSTA) return prev;
+      return { ...prev, sta: calculatedSTA };
+    });
   }, [formData.std, formData.bt, formData.depStn, formData.arrStn, formData.effFromDt, stationsData]);
 
   // --- HANDLERS ---
-  const handleOpen = () => { setIsOpen(true); if (setAdd) setAdd(false); };
-  const handleClose = () => { setIsOpen(false); if (setAdd) setAdd(true); setErrors({}); };
+  const handleOpen = () => {
+    setFormData(initialFormData);
+    setErrors({});
+    setIsOpen(true);
+    if (setAdd) setAdd(false);
+  };
+  const handleClose = () => {
+    setIsOpen(false);
+    setFormData(initialFormData);
+    if (setAdd) setAdd(true);
+    setErrors({});
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -393,7 +349,10 @@ const AddNetwork = ({ setAdd }) => {
                       error={errors.bt}
                       required
                     />
-                    <ComboboxField label="STA (Local) - Auto Calculated" name="sta" placeholder="HH:MM" value={formData.sta} onChange={handleChange} options={timeOptions} className="font-bold bg-indigo-50/50 dark:bg-indigo-900/20" />
+                    <ComboboxField label="STA (Local) - Default Auto, Editable" name="sta" placeholder="HH:MM" value={formData.sta} onChange={handleChange} options={timeOptions} className="font-bold bg-indigo-50/50 dark:bg-indigo-900/20" />
+                    <div className="lg:col-span-3 -mt-3 text-xs text-slate-500 dark:text-slate-400">
+                      STA defaults to STD + BT + timezone difference. If you edit it, your value is saved as-is.
+                    </div>
 
                     <InputField label="Effective From" name="effFromDt" type="date" icon={Calendar} value={formData.effFromDt} onChange={handleChange} error={errors.effFromDt} required />
                     <InputField label="Effective To" name="effToDt" type="date" icon={Calendar} value={formData.effToDt} onChange={handleChange} error={errors.effToDt} required min={formData.effFromDt} />
@@ -421,7 +380,6 @@ const AddNetwork = ({ setAdd }) => {
           </>
         )}
       </AnimatePresence>
-      <ToastContainer position="bottom-right" theme="colored" />
     </>
   );
 };

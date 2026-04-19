@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { twMerge } from "tailwind-merge";
 import { Save, Clock, RadioTower } from "lucide-react";
 import { clsx } from "clsx";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // --- CONSTANTS ---
@@ -216,6 +216,7 @@ const StationsTable = () => {
 
                     <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-orange-50/10">
                       <StyledInput
+                        type="time"
                         value={row.avgTaxiOutTime}
                         onChange={(e) => handleInputChange(e, index, 'avgTaxiOutTime')}
                         placeholder="00:00"
@@ -223,6 +224,7 @@ const StationsTable = () => {
                     </td>
                     <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-orange-50/10">
                       <StyledInput
+                        type="time"
                         value={row.avgTaxiInTime}
                         onChange={(e) => handleInputChange(e, index, 'avgTaxiInTime')}
                         placeholder="00:00"
@@ -307,7 +309,6 @@ const StationsTable = () => {
         </div>
       </div>
 
-      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 };

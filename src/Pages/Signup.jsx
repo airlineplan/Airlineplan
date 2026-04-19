@@ -4,7 +4,7 @@ import { API_BASE_URL } from '../apiConfig';
 import { motion } from 'framer-motion';
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { User, Mail, Lock, Hexagon, ArrowRight } from "lucide-react";
 
@@ -198,7 +198,6 @@ export default function Signup() {
         </p>
       </motion.div>
 
-      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 }

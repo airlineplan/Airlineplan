@@ -6,7 +6,7 @@ import { twMerge } from "tailwind-merge";
 import {
   Link2, ChevronDown, Check, RefreshCw
 } from "lucide-react";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // --- UTILITIES ---
@@ -431,7 +431,6 @@ const ConnectionTable = () => {
         </div>
       </div>
 
-      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 };

@@ -8,7 +8,7 @@ import {
   Trash2, Plus, ArrowUp, ArrowDown, Search,
   Map, RefreshCw, ChevronLeft, ChevronRight
 } from "lucide-react";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 // --- IMPORT YOUR MODERNIZED MODAL COMPONENTS ---
@@ -414,7 +414,6 @@ const SectorsTable = () => {
 
       </div>
 
-      <ToastContainer position="bottom-right" theme="colored" />
     </div>
   );
 };
