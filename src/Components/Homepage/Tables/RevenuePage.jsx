@@ -1,47 +1,302 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import api from "../../../apiConfig";
-import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronDown, ChevronRight, DollarSign, Filter, Search } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import PropTypes from "prop-types";
+import { ChevronDown, Check, LayoutDashboard, Download, Layers, RefreshCw } from "lucide-react";
+import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-const LABEL_OPTIONS = [
-  { label: "Domestic OD", value: "domestic_od" },
-  { label: "International OD", value: "international_od" },
-  { label: "Domestic Sector", value: "domestic_sector" },
-  { label: "International Sector", value: "international_sector" },
-];
+const BLANK_OPTION_VALUE = "__BLANK__";
+
+const getPeriodSortKey = (dateStr, periodicity) => {
+  if (!dateStr) return "Unknown";
+
+  let d = new Date(dateStr);
+
+  if (
+    Number.isNaN(d.getTime()) &&
+    typeof dateStr === "string" &&
+    dateStr.split("-").length === 3
+  ) {
+    const parts = dateStr.split("-");
+    if (parts[2]?.length === 4) {
+      d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+    }
+  }
+
+  if (Number.isNaN(d.getTime())) return "Unknown";
+
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1;
+
+  switch (periodicity) {
+    case "annually":
+      return `${year}-12-31`;
+
+    case "monthly": {
+      const lastDay = new Date(year, month, 0);
+      const mm = String(lastDay.getMonth() + 1).padStart(2, "0");
+      const dd = String(lastDay.getDate()).padStart(2, "0");
+      return `${year}-${mm}-${dd}`;
+    }
+
+    case "quarterly": {
+      const q = Math.ceil(month / 3);
+      const lastMonthOfQ = q * 3;
+      const lastDay = new Date(year, lastMonthOfQ, 0);
+      const mm = String(lastMonthOfQ).padStart(2, "0");
+      const dd = String(lastDay.getDate()).padStart(2, "0");
+      return `${year}-${mm}-${dd}`;
+    }
+
+    case "weekly": {
+      const dayOfWeek = d.getDay();
+      const diffToSunday = 7 - dayOfWeek;
+      const weekEnd = new Date(d);
+      weekEnd.setDate(d.getDate() + (dayOfWeek === 0 ? 0 : diffToSunday));
+
+      const mm = String(weekEnd.getMonth() + 1).padStart(2, "0");
+      const dd = String(weekEnd.getDate()).padStart(2, "0");
+
+      return `${weekEnd.getFullYear()}-${mm}-${dd}`;
+    }
+
+    case "daily": {
+      const mm = String(month).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${year}-${mm}-${dd}`;
+    }
+
+    default:
+      return `${year}-${String(month).padStart(2, "0")}-01`;
+  }
+};
+
+const formatHeaderDate = (inputDate, periodicity) => {
+  if (!inputDate || inputDate === "Unknown") return "Unknown";
+
+  if (periodicity === "quarterly") {
+    const date = new Date(inputDate);
+    if (Number.isNaN(date.getTime())) return inputDate;
+    const q = Math.ceil((date.getMonth() + 1) / 3);
+    return `Q${q} ${String(date.getFullYear()).slice(-2)}`;
+  }
+
+  if (periodicity === "annually") {
+    const date = new Date(inputDate);
+    if (Number.isNaN(date.getTime())) return inputDate;
+    return String(date.getFullYear());
+  }
+
+  const date = new Date(inputDate);
+  if (Number.isNaN(date.getTime())) return inputDate;
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = new Intl.DateTimeFormat("en-US", { month: "short" }).format(date);
+  const year = String(date.getFullYear()).slice(-2);
+
+  return `${day} ${month} ${year}`;
+};
+
+const formatMetricValue = (metricKey, value) => {
+  const numeric = Number(value || 0);
+
+  if (["fnlRccyPaxRev", "fnlRccyCargoRev"].includes(metricKey)) {
+    return numeric.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  if (metricKey === "cargoT") {
+    return numeric.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  return Math.round(numeric).toLocaleString();
+};
+
+const normalizeRowValue = (value) => {
+  const normalized = String(value ?? "").trim();
+  return normalized ? normalized : "(blank)";
+};
+
+const MultiSelectDropdown = ({ placeholder, options = [], onChange, selected = [] }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const toggleOption = (opt) => {
+    const alreadySelected = selected.some((item) => item.value === opt.value);
+    const next = alreadySelected
+      ? selected.filter((item) => item.value !== opt.value)
+      : [...selected, opt];
+
+    if (onChange) onChange(next);
+  };
+
+  const safeOptions = Array.isArray(options) ? options : [];
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={cn(
+          "w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg border transition-all duration-200 bg-white dark:bg-slate-900/50",
+          isOpen
+            ? "border-indigo-500 ring-1 ring-indigo-500"
+            : "border-slate-300 dark:border-slate-700 hover:border-slate-400"
+        )}
+      >
+        <span className="text-slate-700 dark:text-slate-300 truncate font-medium">
+          {selected.length > 0 ? `${selected.length} selected` : placeholder}
+        </span>
+        <ChevronDown
+          size={14}
+          className={cn("text-slate-400 transition-transform ml-2", isOpen && "rotate-180")}
+        />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 5 }}
+            className="absolute z-[100] w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
+          >
+            {safeOptions.map((opt) => {
+              const isSelected = selected.some((item) => item.value === opt.value);
+
+              return (
+                <div
+                  key={opt.value}
+                  onClick={() => toggleOption(opt)}
+                  className="flex items-center px-3 py-2 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <div
+                    className={cn(
+                      "w-4 h-4 rounded border mr-3 flex items-center justify-center transition-colors shrink-0",
+                      isSelected ? "bg-indigo-500 border-indigo-500" : "border-slate-300 dark:border-slate-600"
+                    )}
+                  >
+                    {isSelected && <Check size={12} className="text-white" />}
+                  </div>
+                  <span className="text-slate-700 dark:text-slate-300 truncate">{opt.label}</span>
+                </div>
+              );
+            })}
+            {safeOptions.length === 0 && (
+              <div className="p-3 text-sm text-slate-400 text-center">No options</div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const SingleSelectDropdown = ({ placeholder, options = [], onChange, selected }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const safeOptions = Array.isArray(options) ? options : [];
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className={cn(
+          "w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg border transition-all duration-200 bg-white dark:bg-slate-900/50",
+          isOpen
+            ? "border-indigo-500 ring-1 ring-indigo-500"
+            : "border-slate-300 dark:border-slate-700 hover:border-slate-400"
+        )}
+      >
+        <span className="text-slate-700 dark:text-slate-200 font-medium truncate">
+          {selected ? selected.label : placeholder}
+        </span>
+        <ChevronDown
+          size={14}
+          className={cn("text-slate-400 transition-transform ml-2", isOpen && "rotate-180")}
+        />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 5 }}
+            className="absolute z-[100] w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
+          >
+            {safeOptions.map((opt) => (
+              <div
+                key={opt.value}
+                onClick={() => {
+                  setIsOpen(false);
+                  if (onChange) onChange(opt);
+                }}
+                className="flex items-center px-4 py-2 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300"
+              >
+                {opt.label}
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 const PERIODICITY_OPTIONS = [
-  { label: "Annually", value: "annually" },
+  { label: "Annual", value: "annually" },
   { label: "Quarterly", value: "quarterly" },
   { label: "Monthly", value: "monthly" },
   { label: "Weekly", value: "weekly" },
-];
-
-const TRAFFIC_OPTIONS = [
-  { label: "Leg", value: "leg" },
-  { label: "Beyond", value: "beyond" },
-  { label: "Behind", value: "behind" },
-  { label: "Transit", value: "transit" },
-  { label: "Interline", value: "interline" },
-  { label: "Codeshare", value: "codeshare" },
+  { label: "Daily", value: "daily" },
 ];
 
 const METRIC_OPTIONS = [
   { label: "Pax", value: "pax" },
-  { label: "CargoT", value: "cargoT" },
-  { label: "Pax revenue", value: "paxRev" },
-  { label: "Cargo revenue", value: "cargoRev" },
+  { label: "Cargo T", value: "cargoT" },
+  { label: "Pax revenue", value: "fnlRccyPaxRev" },
+  { label: "Cargo revenue", value: "fnlRccyCargoRev" },
 ];
 
-const GROUP_BY_OPTIONS = [
+const GROUPING_OPTIONS = [
+  { label: "None", value: "none" },
   { label: "POO", value: "poo" },
   { label: "OD", value: "od" },
   { label: "Sector", value: "sector" },
@@ -50,726 +305,469 @@ const GROUP_BY_OPTIONS = [
   { label: "Identifier", value: "identifier" },
 ];
 
-const createInitialRouteFilters = () => ({
+const TRAFFIC_CLASS_OPTIONS = [
+  { label: "Leg", value: "leg" },
+  { label: "Beyond", value: "beyond" },
+  { label: "Behind", value: "behind" },
+  { label: "Transit", value: "transit" },
+  { label: "Interline", value: "interline" },
+  { label: "Codeshare", value: "codeshare" },
+];
+
+const createInitialFilters = () => ({
   from: [],
   to: [],
   sector: [],
-  variant: [],
-  poo: [],
   flight: [],
+  poo: [],
+  variant: [],
   userTag1: [],
   userTag2: [],
-});
-
-const MultiSelectDropdown = ({ placeholder, options = [], value = [], onChange }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const toggleOption = (option) => {
-    const isSelected = value.some((item) => item.value === option.value);
-    const nextValue = isSelected
-      ? value.filter((item) => item.value !== option.value)
-      : [...value, option];
-
-    onChange?.(nextValue);
-  };
-
-  const summary = value.length === 0
-    ? placeholder
-    : value.length <= 2
-      ? value.map((item) => item.label).join(", ")
-      : `${value.length} selected`;
-
-  return (
-    <div className="relative w-full" ref={containerRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className={cn(
-          "flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-200",
-          isOpen
-            ? "border-indigo-500 bg-white shadow-md shadow-indigo-500/10"
-            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200"
-        )}
-      >
-        <span className="truncate">{summary}</span>
-        <ChevronDown size={16} className={cn("shrink-0 text-slate-400 transition-transform", isOpen && "rotate-180")} />
-      </button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            className="absolute left-0 top-full z-50 mt-2 w-full min-w-[200px] rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
-          >
-            <div className="max-h-56 overflow-y-auto custom-scrollbar">
-              {options.map((option) => {
-                const isSelected = value.some((item) => item.value === option.value);
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => toggleOption(option)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
-                      isSelected
-                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300"
-                        : "text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex h-4 w-4 items-center justify-center rounded border",
-                        isSelected ? "border-indigo-500 bg-indigo-500" : "border-slate-300 dark:border-slate-600"
-                      )}
-                    >
-                      {isSelected ? <Check size={11} className="text-white" /> : null}
-                    </span>
-                    <span className="truncate">{option.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-const SingleSelectDropdown = ({ placeholder, options = [], value = null, onChange }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const label = value?.label || placeholder;
-
-  return (
-    <div className="relative w-full" ref={containerRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className={cn(
-          "flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-200",
-          isOpen
-            ? "border-indigo-500 bg-white shadow-md shadow-indigo-500/10"
-            : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200"
-        )}
-      >
-        <span className="truncate text-slate-500 dark:text-slate-300">{label}</span>
-        <ChevronDown size={16} className={cn("shrink-0 text-slate-400 transition-transform", isOpen && "rotate-180")} />
-      </button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            className="absolute left-0 top-full z-50 mt-2 w-full min-w-[200px] rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
-          >
-            <div className="max-h-56 overflow-y-auto custom-scrollbar">
-              {options.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    onChange?.(option);
-                    setIsOpen(false);
-                  }}
-                  className={cn(
-                    "flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
-                    value?.value === option.value
-                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300"
-                      : "text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800"
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-MultiSelectDropdown.propTypes = {
-  placeholder: PropTypes.string.isRequired,
-  options: PropTypes.arrayOf(PropTypes.shape({
-    label: PropTypes.string.isRequired,
-    value: PropTypes.string.isRequired,
-  })),
-  value: PropTypes.arrayOf(PropTypes.shape({
-    label: PropTypes.string.isRequired,
-    value: PropTypes.string.isRequired,
-  })),
-  onChange: PropTypes.func,
-};
-
-SingleSelectDropdown.propTypes = {
-  placeholder: PropTypes.string.isRequired,
-  options: PropTypes.arrayOf(PropTypes.shape({
-    label: PropTypes.string.isRequired,
-    value: PropTypes.string.isRequired,
-  })),
-  value: PropTypes.shape({
-    label: PropTypes.string.isRequired,
-    value: PropTypes.string.isRequired,
-  }),
-  onChange: PropTypes.func,
-};
-
-const createInitialControls = () => ({
-  labels: [],
-  trafficClasses: [],
-  periodicity: PERIODICITY_OPTIONS[2],
-  metric: METRIC_OPTIONS[2],
-  groupBy: [GROUP_BY_OPTIONS[0], null, null],
-  routeFilters: createInitialRouteFilters(),
+  od: [],
+  identifier: [],
+  stop: [],
+  al: [],
+  odDI: [],
+  legDI: [],
+  trafficClass: [],
+  metrics: [METRIC_OPTIONS[2]],
 });
 
 const RevenuePage = () => {
-  const [controls, setControls] = useState(createInitialControls);
-  const [data, setData] = useState({});
-  const [periods, setPeriods] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState({});
+  const [rawRows, setRawRows] = useState([]);
   const [dropdownOptions, setDropdownOptions] = useState({
     from: [],
     to: [],
     sector: [],
-    variant: [],
-    poo: [],
     flight: [],
+    poo: [],
+    variant: [],
     userTag1: [],
     userTag2: [],
+    od: [],
+    identifier: [],
+    stop: [],
+    al: [],
+    odDI: [],
+    legDI: [],
   });
+  const [filters, setFilters] = useState(createInitialFilters());
+  const [periodicity, setPeriodicity] = useState(PERIODICITY_OPTIONS[2]);
+  const [level1, setLevel1] = useState(GROUPING_OPTIONS[1]);
+  const [level2, setLevel2] = useState(GROUPING_OPTIONS[2]);
+  const [level3, setLevel3] = useState(GROUPING_OPTIONS[3]);
 
   useEffect(() => {
-    const loadDropdownOptions = async () => {
+    const loadDropdowns = async () => {
       try {
         const response = await api.get("/dashboard/populateDropDowns");
         const payload = response.data || {};
 
         setDropdownOptions({
-          from: Array.isArray(payload.from) ? payload.from : [],
-          to: Array.isArray(payload.to) ? payload.to : [],
-          sector: Array.isArray(payload.sector) ? payload.sector : [],
-          variant: Array.isArray(payload.variant) ? payload.variant : [],
-          poo: Array.isArray(payload.poo) ? payload.poo : [],
-          flight: Array.isArray(payload.flight) ? payload.flight : [],
-          userTag1: Array.isArray(payload.userTag1) ? payload.userTag1 : [],
-          userTag2: Array.isArray(payload.userTag2) ? payload.userTag2 : [],
+          from: payload.from || [],
+          to: payload.to || [],
+          sector: payload.sector || [],
+          flight: payload.flight || [],
+          poo: payload.poo || [],
+          variant: payload.variant || [],
+          userTag1: payload.userTag1 || [],
+          userTag2: payload.userTag2 || [],
+          od: payload.od || [],
+          identifier: payload.identifier || [],
+          stop: payload.stop || [],
+          al: payload.al || [],
+          odDI: payload.odDI || [],
+          legDI: payload.legDI || [],
         });
       } catch (error) {
-        console.error("Failed to load revenue dropdowns:", error);
+        console.error("Error fetching revenue dropdowns:", error);
+        toast.error("Failed to load revenue dropdowns.");
       }
     };
 
-    loadDropdownOptions();
-  }, []);
-
-  const fetchRevenue = useCallback(async (snapshot) => {
-    setLoading(true);
-
-    try {
-      const groupByFields = snapshot.groupBy.map((option) => option?.value).filter(Boolean);
-      const params = {
-        periodicity: snapshot.periodicity.value,
-        groupBy: (groupByFields.length > 0 ? groupByFields : ["poo"]).join(","),
-      };
-
-      if (snapshot.labels.length > 0) {
-        params.label = snapshot.labels.map((option) => option.value).join(",");
-      }
-
-      if (snapshot.trafficClasses.length > 0) {
-        params.trafficClass = snapshot.trafficClasses.map((option) => option.value).join(",");
-      }
-
-      const routeFilters = snapshot.routeFilters || createInitialRouteFilters();
-      const addJoinedParam = (key, values) => {
-        if (Array.isArray(values) && values.length > 0) {
-          params[key] = values.map((option) => option.value).join(",");
-        }
-      };
-
-      addJoinedParam("from", routeFilters.from);
-      addJoinedParam("to", routeFilters.to);
-      addJoinedParam("sector", routeFilters.sector);
-      addJoinedParam("variant", routeFilters.variant);
-      addJoinedParam("poo", routeFilters.poo);
-      addJoinedParam("flight", routeFilters.flight);
-      addJoinedParam("userTag1", routeFilters.userTag1);
-      addJoinedParam("userTag2", routeFilters.userTag2);
-
-      const response = await api.get("/revenue", { params });
-      const nextData = response.data?.data || {};
-      const nextPeriods = response.data?.periods || [];
-
-      setData(nextData);
-      setPeriods(nextPeriods);
-      setExpandedGroups(
-        Object.keys(nextData)
-          .slice(0, 5)
-          .reduce((acc, key) => {
-            acc[key] = true;
-            return acc;
-          }, {})
-      );
-    } catch (error) {
-      console.error("Failed to fetch revenue data:", error);
-      toast.error("Failed to fetch revenue data");
-    } finally {
-      setLoading(false);
-    }
+    loadDropdowns();
   }, []);
 
   useEffect(() => {
-    fetchRevenue(createInitialControls());
-  }, [fetchRevenue]);
+    const fetchRevenueRows = async () => {
+      try {
+        setLoading(true);
 
-  const selectedMetric = controls.metric.value;
-  const groupByLabel = controls.groupBy
-    .map((option) => option?.label)
-    .filter(Boolean)
-    .join(" / ") || "POO";
+        const serializeValues = (items = []) =>
+          items.map((item) => item.value).filter((value) => value !== undefined).join(",");
 
-  const metricsByOption = useMemo(() => (
-    METRIC_OPTIONS.reduce((acc, option) => {
-      acc[option.value] = option;
-      return acc;
-    }, {})
-  ), []);
+        const params = {
+          mode: "detail",
+          from: serializeValues(filters.from),
+          to: serializeValues(filters.to),
+          sector: serializeValues(filters.sector),
+          flight: serializeValues(filters.flight),
+          poo: serializeValues(filters.poo),
+          variant: serializeValues(filters.variant),
+          userTag1: serializeValues(filters.userTag1),
+          userTag2: serializeValues(filters.userTag2),
+          od: serializeValues(filters.od),
+          identifier: serializeValues(filters.identifier),
+          stop: serializeValues(filters.stop),
+          al: serializeValues(filters.al),
+          odDI: serializeValues(filters.odDI),
+          legDI: serializeValues(filters.legDI),
+          trafficClass: serializeValues(filters.trafficClass),
+        };
 
-  const formatMetricValue = (value, metric = selectedMetric) => {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return "—";
+        Object.keys(params).forEach((key) => {
+          if (!params[key]) delete params[key];
+        });
 
-    if (metric === "cargoT") {
-      return numeric.toLocaleString(undefined, { minimumFractionDigits: numeric === 0 ? 0 : 1, maximumFractionDigits: 1 });
+        const response = await api.get("/revenue", { params });
+        const rows = response.data?.rows || [];
+        setRawRows(Array.isArray(rows) ? rows : []);
+      } catch (error) {
+        console.error("Error fetching revenue data:", error);
+        setRawRows([]);
+        toast.error("Failed to load revenue data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRevenueRows();
+  }, [filters]);
+
+  const { tableColumns, tableData } = useMemo(() => {
+    if (!rawRows.length) {
+      return { tableColumns: [], tableData: [] };
     }
 
-    if (metric === "pax" || metric === "count") {
-      return numeric.toLocaleString(undefined, { maximumFractionDigits: 0 });
-    }
+    const selectedMetrics = filters.metrics?.length ? filters.metrics : [METRIC_OPTIONS[2]];
+    const groupLevels = [level1, level2, level3].filter((level) => level && level.value !== "none");
+    const periodSet = new Set();
 
-    return numeric.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
+    const processedRows = rawRows.map((row) => {
+      const periodKey = getPeriodSortKey(row.date, periodicity.value);
+      periodSet.add(periodKey);
 
-  const formatPeriod = (period) => {
-    if (!period) return "—";
-
-    if (/^\d{4}$/.test(period)) return period;
-
-    if (/^\d{4}-Q[1-4]$/.test(period)) return period;
-
-    if (/^\d{4}-\d{2}$/.test(period)) {
-      const [year, month] = period.split("-");
-      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      return `${monthNames[Number(month) - 1]} ${year}`;
-    }
-
-    return period;
-  };
-
-  const toggleGroup = (key) => {
-    setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const handleFetch = () => fetchRevenue(controls);
-
-  const resetControls = () => {
-    const next = createInitialControls();
-    setControls(next);
-    fetchRevenue(next);
-  };
-
-  const groupRows = useMemo(() => {
-    return Object.entries(data)
-      .map(([groupKey, periodData]) => {
-        const total = periods.reduce((sum, period) => sum + (periodData[period]?.[selectedMetric] || 0), 0);
-        return { groupKey, periodData, total };
-      })
-      .sort((a, b) => b.total - a.total || String(a.groupKey).localeCompare(String(b.groupKey)));
-  }, [data, periods, selectedMetric]);
-
-  const periodTotals = useMemo(() => {
-    const totals = {};
-    periods.forEach((period) => {
-      totals[period] = groupRows.reduce((sum, row) => sum + (row.periodData[period]?.[selectedMetric] || 0), 0);
+      return {
+        ...row,
+        _periodKey: periodKey,
+        _metricValues: {
+          pax: Number(row.pax || 0),
+          cargoT: Number(row.cargoT || 0),
+          fnlRccyPaxRev: Number(row.fnlRccyPaxRev || 0),
+          fnlRccyCargoRev: Number(row.fnlRccyCargoRev || 0),
+        },
+      };
     });
-    return totals;
-  }, [groupRows, periods, selectedMetric]);
 
-  const grandTotal = useMemo(() => Object.values(periodTotals).reduce((sum, value) => sum + value, 0), [periodTotals]);
-  const detailMetrics = METRIC_OPTIONS.filter((metric) => metric.value !== selectedMetric);
-  const activeFilterCount =
-    controls.labels.length +
-    controls.trafficClasses.length +
-    controls.groupBy.filter(Boolean).length +
-    Object.values(controls.routeFilters || {}).reduce((sum, values) => sum + values.length, 0) +
-    (controls.periodicity?.value !== PERIODICITY_OPTIONS[2].value ? 1 : 0) +
-    (controls.metric?.value !== METRIC_OPTIONS[2].value ? 1 : 0);
+    const sortedColumns = Array.from(periodSet).sort();
+    const columnIndexMap = {};
+
+    sortedColumns.forEach((column, index) => {
+      columnIndexMap[column] = index;
+    });
+
+    const createZeroArray = () => Array(sortedColumns.length).fill(0);
+    const finalRows = [];
+    let idCounter = 1;
+
+    const buildMetricRows = (subset, depth, label, type, pathKey) => {
+      selectedMetrics.forEach((metric, metricIndex) => {
+        const totals = createZeroArray();
+
+        subset.forEach((row) => {
+          const columnIndex = columnIndexMap[row._periodKey];
+          if (columnIndex !== undefined) {
+            totals[columnIndex] += Number(row._metricValues[metric.value] || 0);
+          }
+        });
+
+        finalRows.push({
+          id: `${pathKey}-${metric.value}-${metricIndex}-${idCounter++}`,
+          type,
+          label,
+          metricLabel: metric.label,
+          metricKey: metric.value,
+          level: depth,
+          data: totals,
+          isGrandTotal: false,
+        });
+      });
+    };
+
+    const buildTree = (subset, depth, parentPath = "root") => {
+      if (depth >= groupLevels.length) {
+        buildMetricRows(subset, depth, "Metric", "Metric", `${parentPath}-metric`);
+        return;
+      }
+
+      const groupField = groupLevels[depth].value;
+      const groupLabel = groupLevels[depth].label;
+      const groups = {};
+
+      subset.forEach((row) => {
+        const key = normalizeRowValue(row[groupField]);
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(row);
+      });
+
+      Object.keys(groups)
+        .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }))
+        .forEach((key) => {
+          const groupSubset = groups[key];
+          const nextPath = `${parentPath}-${groupField}-${key}`;
+
+          buildMetricRows(groupSubset, depth, key, groupLabel, nextPath);
+          buildTree(groupSubset, depth + 1, nextPath);
+        });
+    };
+
+    buildTree(processedRows, 0);
+
+    const grandTotals = selectedMetrics.map((metric, metricIndex) => {
+      const totals = createZeroArray();
+
+      processedRows.forEach((row) => {
+        const columnIndex = columnIndexMap[row._periodKey];
+        if (columnIndex !== undefined) {
+          totals[columnIndex] += Number(row._metricValues[metric.value] || 0);
+        }
+      });
+
+      return {
+        id: `grand-total-${metric.value}-${metricIndex}`,
+        type: "Grand Total",
+        label: "Grand Total",
+        metricLabel: metric.label,
+        metricKey: metric.value,
+        level: 0,
+        data: totals,
+        isGrandTotal: true,
+      };
+    });
+
+    return {
+      tableColumns: sortedColumns,
+      tableData: [...grandTotals, ...finalRows],
+    };
+  }, [filters.metrics, level1, level2, level3, periodicity, rawRows]);
+
+  const updateFilter = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const downloadExcel = () => {
+    if (!tableData.length) {
+      toast.warn("No data available to export.");
+      return;
+    }
+
+    try {
+      const headers = [
+        "Hierarchy / Grouping",
+        "Metric",
+        ...tableColumns.map((column) => formatHeaderDate(column, periodicity.value)),
+      ];
+
+      const excelRows = tableData.map((row) => [
+        `${"    ".repeat(row.level)}${row.label}`,
+        row.metricLabel,
+        ...row.data.map((value) => formatMetricValue(row.metricKey, value)),
+      ]);
+
+      const worksheetData = [headers, ...excelRows];
+      const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+      ws["!cols"] = [
+        { wch: 42 },
+        { wch: 18 },
+        ...tableColumns.map(() => ({ wch: 16 })),
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Revenue");
+      XLSX.writeFile(wb, "Revenue_Export.xlsx");
+      toast.success("Excel exported successfully!");
+    } catch (error) {
+      console.error("Error exporting revenue:", error);
+      toast.error("Failed to export revenue data.");
+    }
+  };
+
+  const filterFields = [
+    { key: "from", placeholder: "From", options: dropdownOptions.from },
+    { key: "to", placeholder: "To", options: dropdownOptions.to },
+    { key: "sector", placeholder: "Sector", options: dropdownOptions.sector },
+    { key: "flight", placeholder: "Flight #", options: dropdownOptions.flight },
+    { key: "poo", placeholder: "POO", options: dropdownOptions.poo },
+    { key: "variant", placeholder: "Variant", options: dropdownOptions.variant },
+    { key: "userTag1", placeholder: "User Tag 1", options: dropdownOptions.userTag1 },
+    { key: "userTag2", placeholder: "User Tag 2", options: dropdownOptions.userTag2 },
+    { key: "od", placeholder: "OD", options: dropdownOptions.od },
+    { key: "identifier", placeholder: "Identifier", options: dropdownOptions.identifier },
+    { key: "stop", placeholder: "Stop", options: dropdownOptions.stop },
+    { key: "al", placeholder: "AL", options: dropdownOptions.al },
+    { key: "odDI", placeholder: "OD D/I", options: dropdownOptions.odDI },
+    { key: "legDI", placeholder: "Sector D/I", options: dropdownOptions.legDI },
+    { key: "trafficClass", placeholder: "Traffic Class", options: TRAFFIC_CLASS_OPTIONS },
+    { key: "metrics", placeholder: "Metrics", options: METRIC_OPTIONS },
+  ];
 
   return (
-    <div className="flex h-full w-full flex-col">
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-900/50">
-        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-          <DollarSign size={20} />
-          <div>
-            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">Revenue Analysis</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Spreadsheet-style revenue controls and grouped output</p>
+    <div className="w-full h-full p-6 space-y-6 flex flex-col min-h-[calc(100vh-180px)]">
+      <div className="flex flex-col xl:flex-row gap-6 relative z-50">
+        <div className="w-full p-5 rounded-xl border-2 border-emerald-400/40 dark:border-emerald-500/30 bg-emerald-50/30 dark:bg-emerald-900/10 shadow-sm relative">
+          <div className="absolute -top-3 left-4 bg-slate-50 dark:bg-slate-950 px-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <LayoutDashboard size={14} /> Revenue Filter Criteria
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 mt-2">
+            <div>
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Periodicity
+              </div>
+              <SingleSelectDropdown
+                placeholder="Periodicity"
+                options={PERIODICITY_OPTIONS}
+                selected={periodicity}
+                onChange={setPeriodicity}
+              />
+            </div>
+
+            {filterFields.map((field) => (
+              <div key={field.key}>
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  {field.placeholder}
+                </div>
+                <MultiSelectDropdown
+                  placeholder={field.placeholder}
+                  options={field.options}
+                  selected={filters[field.key]}
+                  onChange={(value) => updateFilter(field.key, value)}
+                />
+              </div>
+            ))}
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={handleFetch}
-          disabled={loading}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <Search size={14} />
-          {loading ? "Loading…" : "Fetch"}
-        </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 lg:p-6 custom-scrollbar">
-        <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-xl shadow-slate-900/5 dark:border-slate-700 dark:bg-slate-900/60">
-          <div className="mb-6 flex items-center gap-2 border-b border-slate-200 pb-3 dark:border-slate-700">
-            <Filter size={16} className="text-indigo-600 dark:text-indigo-400" />
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Revenue Spreadsheet Controls</h3>
-            <span className="ml-auto text-xs text-slate-500 dark:text-slate-400">
-              {activeFilterCount} control{activeFilterCount === 1 ? "" : "s"} active
-            </span>
-          </div>
-
-          <div className="space-y-5">
-            <div className="relative mb-6 space-y-4 rounded-xl border-2 border-blue-400 bg-white p-5 dark:border-blue-500 dark:bg-slate-900/40">
-              <div className="flex max-w-md flex-col gap-4 md:flex-row">
-                <div className="flex-1">
-                  <MultiSelectDropdown
-                    placeholder="Labels"
-                    options={LABEL_OPTIONS}
-                    value={controls.labels}
-                    onChange={(next) => setControls((prev) => ({ ...prev, labels: next }))}
-                  />
-                </div>
-                <div className="flex-1">
-                  <SingleSelectDropdown
-                    placeholder="Periodicity"
-                    options={PERIODICITY_OPTIONS}
-                    value={controls.periodicity}
-                    onChange={(next) => setControls((prev) => ({ ...prev, periodicity: next }))}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-                <MultiSelectDropdown
-                  placeholder="Dep Stn"
-                  options={dropdownOptions.from}
-                  value={controls.routeFilters.from}
-                  onChange={(next) => setControls((prev) => ({
-                    ...prev,
-                    routeFilters: { ...prev.routeFilters, from: next },
-                  }))}
-                />
-                <MultiSelectDropdown
-                  placeholder="Arr Stn"
-                  options={dropdownOptions.to}
-                  value={controls.routeFilters.to}
-                  onChange={(next) => setControls((prev) => ({
-                    ...prev,
-                    routeFilters: { ...prev.routeFilters, to: next },
-                  }))}
-                />
-                <MultiSelectDropdown
-                  placeholder="Sector"
-                  options={dropdownOptions.sector}
-                  value={controls.routeFilters.sector}
-                  onChange={(next) => setControls((prev) => ({
-                    ...prev,
-                    routeFilters: { ...prev.routeFilters, sector: next },
-                  }))}
-                />
-                <MultiSelectDropdown
-                  placeholder="Variant"
-                  options={dropdownOptions.variant}
-                  value={controls.routeFilters.variant}
-                  onChange={(next) => setControls((prev) => ({
-                    ...prev,
-                    routeFilters: { ...prev.routeFilters, variant: next },
-                  }))}
-                />
-                <MultiSelectDropdown
-                  placeholder="POO"
-                  options={dropdownOptions.poo}
-                  value={controls.routeFilters.poo}
-                  onChange={(next) => setControls((prev) => ({
-                    ...prev,
-                    routeFilters: { ...prev.routeFilters, poo: next },
-                  }))}
-                />
-                <MultiSelectDropdown
-                  placeholder="Flight #"
-                  options={dropdownOptions.flight}
-                  value={controls.routeFilters.flight}
-                  onChange={(next) => setControls((prev) => ({
-                    ...prev,
-                    routeFilters: { ...prev.routeFilters, flight: next },
-                  }))}
-                />
-                <MultiSelectDropdown
-                  placeholder="User Tag 1"
-                  options={dropdownOptions.userTag1}
-                  value={controls.routeFilters.userTag1}
-                  onChange={(next) => setControls((prev) => ({
-                    ...prev,
-                    routeFilters: { ...prev.routeFilters, userTag1: next },
-                  }))}
-                />
-                <MultiSelectDropdown
-                  placeholder="User Tag 2"
-                  options={dropdownOptions.userTag2}
-                  value={controls.routeFilters.userTag2}
-                  onChange={(next) => setControls((prev) => ({
-                    ...prev,
-                    routeFilters: { ...prev.routeFilters, userTag2: next },
-                  }))}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:w-[36.5%]">
-                <MultiSelectDropdown
-                  placeholder="Traffic Class"
-                  options={TRAFFIC_OPTIONS}
-                  value={controls.trafficClasses}
-                  onChange={(next) => setControls((prev) => ({ ...prev, trafficClasses: next }))}
-                />
-                <div className="rounded-xl border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-400 dark:border-slate-700 dark:text-slate-500">
-                  Stop
-                </div>
-                <div className="rounded-xl border border-dashed border-slate-300 px-3 py-2 text-sm text-slate-400 dark:border-slate-700 dark:text-slate-500">
-                  AL
-                </div>
-              </div>
+      <div className="relative z-10 flex-1 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50 dark:bg-slate-800/50">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-1.5 text-sm font-bold text-slate-700 dark:text-slate-200">
+              <Layers size={16} className="text-indigo-500" /> Grouping:
             </div>
-
-            <div className="space-y-5 px-2">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
-                <label className="w-16 text-sm font-semibold text-slate-700 dark:text-slate-300">Metric</label>
-                <div className="w-full md:w-64">
-                  <SingleSelectDropdown
-                    placeholder="Metric"
-                    options={METRIC_OPTIONS}
-                    value={controls.metric}
-                    onChange={(next) => setControls((prev) => ({ ...prev, metric: next }))}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-6">
-                <label className="w-16 text-sm font-semibold text-slate-700 dark:text-slate-300">Group by</label>
-                <div className="flex flex-wrap gap-3">
-                  {controls.groupBy.map((selected, index) => (
-                    <div key={`group-by-${index}`} className="w-full md:w-32">
-                      <SingleSelectDropdown
-                        placeholder={`Group ${index + 1}`}
-                        options={GROUP_BY_OPTIONS}
-                        value={selected}
-                        onChange={(next) => setControls((prev) => {
-                          const groupBy = [...prev.groupBy];
-                          groupBy[index] = next;
-                          return { ...prev, groupBy };
-                        })}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 pt-5 dark:border-slate-700">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={resetControls}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:bg-slate-800"
-                >
-                  Reset
-                </button>
-                <button
-                  type="button"
-                  onClick={handleFetch}
-                  disabled={loading}
-                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <Search size={14} />
-                  Apply Filters
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-
-        <section className="mt-4 flex min-h-[420px] flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-xl shadow-slate-900/5 dark:border-slate-700 dark:bg-slate-900/60">
-          <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/80">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-300">Displayed metric:</span>
-              <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
-                {metricsByOption[selectedMetric]?.label}
-              </span>
-            </div>
-
-            <div className="ml-auto flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const nextExpanded = {};
-                  groupRows.forEach(({ groupKey }) => {
-                    nextExpanded[groupKey] = true;
-                  });
-                  setExpandedGroups(nextExpanded);
-                }}
-                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-white dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
-                Expand All
-              </button>
-              <button
-                type="button"
-                onClick={() => setExpandedGroups({})}
-                className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-white dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
-                Collapse All
-              </button>
+              <div className="w-32">
+                <SingleSelectDropdown options={GROUPING_OPTIONS} selected={level1} onChange={setLevel1} />
+              </div>
+              <span className="text-slate-300">&gt;</span>
+              <div className="w-32">
+                <SingleSelectDropdown options={GROUPING_OPTIONS} selected={level2} onChange={setLevel2} />
+              </div>
+              <span className="text-slate-300">&gt;</span>
+              <div className="w-32">
+                <SingleSelectDropdown options={GROUPING_OPTIONS} selected={level3} onChange={setLevel3} />
+              </div>
             </div>
           </div>
 
-          <div className="flex-1 overflow-x-auto">
-            {Object.keys(data).length === 0 && !loading ? (
-              <div className="flex h-full items-center justify-center py-20 text-center text-slate-400 dark:text-slate-500">
-                <div>
-                  <p className="text-lg font-medium">No revenue data</p>
-                  <p className="mt-1 text-sm">Use the controls above and click Fetch to load the table.</p>
-                </div>
-              </div>
-            ) : loading ? (
-              <div className="flex h-full items-center justify-center py-20 text-center text-slate-400 dark:text-slate-500">
-                <p className="text-lg">Loading revenue data…</p>
-              </div>
-            ) : (
-              <table className="min-w-full border-collapse text-left">
-                <thead>
-                  <tr>
-                    <th className="sticky left-0 z-10 min-w-[220px] border-b border-r border-slate-200 bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                      {groupByLabel}
-                    </th>
-                    {periods.map((period) => (
-                      <th key={period} className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-200">
-                        {formatPeriod(period)}
-                      </th>
-                    ))}
-                    <th className="border-b border-slate-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-800 dark:border-slate-700 dark:bg-indigo-500/10 dark:text-indigo-300">
-                      Total
-                    </th>
-                  </tr>
-                </thead>
+          <button
+            type="button"
+            onClick={downloadExcel}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20"
+          >
+            <Download size={14} /> Export
+          </button>
+        </div>
 
-                <tbody className="bg-white dark:bg-transparent">
-                  {groupRows.map(({ groupKey, periodData, total }) => {
-                    const isExpanded = expandedGroups[groupKey];
+        <div className="flex-1 overflow-auto custom-scrollbar relative">
+          {loading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-50">
+              <RefreshCw className="animate-spin text-indigo-500 mb-3" size={32} />
+              <span className="text-sm font-medium text-slate-600">Loading...</span>
+            </div>
+          )}
 
-                    return (
-                      <React.Fragment key={groupKey}>
-                        <tr
-                          className="cursor-pointer bg-slate-50/60 transition-colors hover:bg-slate-50 dark:bg-slate-900/20 dark:hover:bg-slate-800/30"
-                          onClick={() => toggleGroup(groupKey)}
-                        >
-                          <td className="sticky left-0 z-10 border-b border-r border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-100">
-                            <div className="flex items-center gap-2">
-                              <ChevronRight size={16} className={cn("shrink-0 transition-transform", isExpanded && "rotate-90")} />
-                              <span className="truncate">{String(groupKey)}</span>
-                            </div>
-                          </td>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr>
+                <th className="sticky left-0 z-20 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[260px] shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] text-xs font-bold uppercase text-slate-500">
+                  Grouping
+                </th>
+                <th className="sticky left-[260px] z-20 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[140px] shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] text-xs font-bold uppercase text-slate-500">
+                  Metric
+                </th>
+                {tableColumns.map((column) => (
+                  <th
+                    key={column}
+                    className="bg-slate-50/90 dark:bg-slate-800/90 border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[110px] text-center text-sm font-bold text-slate-800 dark:text-slate-200"
+                  >
+                    {formatHeaderDate(column, periodicity.value)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
 
-                          {periods.map((period) => (
-                            <td key={period} className="border-b border-slate-100 px-4 py-3 text-sm font-medium text-slate-600 dark:border-slate-800 dark:text-slate-300">
-                              {formatMetricValue(periodData[period]?.[selectedMetric], selectedMetric)}
-                            </td>
-                          ))}
-
-                          <td className="border-b border-slate-100 bg-indigo-50 px-4 py-3 text-sm font-bold text-indigo-700 dark:border-slate-800 dark:bg-indigo-500/10 dark:text-indigo-300">
-                            {formatMetricValue(total, selectedMetric)}
-                          </td>
-                        </tr>
-
-                        {isExpanded && detailMetrics.map((metric) => (
-                          <tr key={`${groupKey}-${metric.value}`} className="bg-white hover:bg-indigo-50/40 dark:bg-slate-900/40 dark:hover:bg-slate-800/20">
-                            <td className="sticky left-0 z-10 border-b border-r border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-400">
-                              {metric.label}
-                            </td>
-                            {periods.map((period) => (
-                              <td key={period} className="border-b border-slate-100 px-4 py-3 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                                {formatMetricValue(periodData[period]?.[metric.value], metric.value)}
-                              </td>
-                            ))}
-                            <td className="border-b border-slate-100 bg-indigo-50/40 px-4 py-3 text-sm text-slate-500 dark:border-slate-800 dark:bg-indigo-500/5 dark:text-slate-400">
-                              {formatMetricValue(periods.reduce((sum, period) => sum + ((periodData[period]?.[metric.value]) || 0), 0), metric.value)}
-                            </td>
-                          </tr>
-                        ))}
-                      </React.Fragment>
-                    );
-                  })}
-
-                  {Object.keys(data).length > 0 && (
-                    <tr className="border-t-2 border-slate-300 bg-slate-100 font-bold dark:border-slate-600 dark:bg-slate-800/80">
-                      <td className="sticky left-0 z-10 border-r border-slate-200 bg-slate-100 px-4 py-3 text-sm font-bold text-slate-800 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-100">
-                        TOTAL
-                      </td>
-                      {periods.map((period) => (
-                        <td key={period} className="px-4 py-3 text-sm font-bold text-slate-700 dark:text-slate-200">
-                          {formatMetricValue(periodTotals[period], selectedMetric)}
-                        </td>
-                      ))}
-                      <td className="bg-indigo-100 px-4 py-3 text-sm font-bold text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-300">
-                        {formatMetricValue(grandTotal, selectedMetric)}
-                      </td>
-                    </tr>
+            <tbody className="bg-white/50 dark:bg-slate-900/50">
+              {tableData.map((row) => (
+                <tr
+                  key={row.id}
+                  className={cn(
+                    "group transition-colors",
+                    row.isGrandTotal
+                      ? "bg-emerald-50 dark:bg-emerald-900/20 border-t-2 border-emerald-500/30"
+                      : "hover:bg-indigo-50/50 dark:hover:bg-slate-800/30"
                   )}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </section>
+                >
+                  <td
+                    className={cn(
+                      "sticky left-0 z-10 backdrop-blur border-r border-b border-slate-200 dark:border-slate-800 p-3 text-sm shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)]",
+                      row.isGrandTotal
+                        ? "bg-emerald-50/95 dark:bg-emerald-900/95 text-emerald-700 dark:text-emerald-400 font-black"
+                        : "bg-white/95 dark:bg-slate-900/95 group-hover:bg-indigo-50/90 dark:group-hover:bg-slate-800/90",
+                      row.level === 0 && !row.isGrandTotal && "font-bold text-slate-800 dark:text-slate-100",
+                      row.level === 1 && !row.isGrandTotal && "pl-8 font-semibold text-slate-700",
+                      row.level >= 2 && !row.isGrandTotal && "pl-14 font-medium text-slate-600"
+                    )}
+                  >
+                    {row.label}
+                  </td>
+                  <td
+                    className={cn(
+                      "sticky left-[260px] z-10 backdrop-blur border-r border-b border-slate-200 dark:border-slate-800 p-3 text-sm shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)]",
+                      row.isGrandTotal
+                        ? "bg-emerald-50/95 dark:bg-emerald-900/95 text-emerald-700 dark:text-emerald-400 font-black"
+                        : "bg-white/95 dark:bg-slate-900/95 group-hover:bg-indigo-50/90 dark:group-hover:bg-slate-800/90 text-slate-600 dark:text-slate-300"
+                    )}
+                  >
+                    {row.metricLabel}
+                  </td>
+                  {row.data.map((value, index) => (
+                    <td
+                      key={`${row.id}-${index}`}
+                      className={cn(
+                        "p-3 border-r border-b border-slate-200 dark:border-slate-800 text-center text-sm tabular-nums",
+                        row.isGrandTotal
+                          ? "text-emerald-700 dark:text-emerald-400 font-black"
+                          : "text-slate-600 dark:text-slate-400"
+                      )}
+                    >
+                      {formatMetricValue(row.metricKey, value)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+
+              {!loading && tableData.length === 0 && (
+                <tr>
+                  <td colSpan={tableColumns.length + 2} className="p-6 text-center text-slate-500 italic">
+                    No revenue data found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

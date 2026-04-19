@@ -1,7 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { PlusCircle, RefreshCw, Save } from "lucide-react";
+import {
+  CalendarPlus2,
+  Filter,
+  PlusCircle,
+  RefreshCw,
+  Save,
+  Search,
+  X,
+} from "lucide-react";
 import { toast } from "react-toastify";
 
 import api from "../../../apiConfig";
@@ -18,10 +26,27 @@ const TYPE_STYLES = {
   "Transit SL": "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-300",
 };
 
+const blankTransitDraft = {
+  firstFlightNumber: "",
+  secondFlightNumber: "",
+  pax: "0",
+  cargoT: "0",
+  odFare: "0",
+  odRate: "0",
+  fareProrateRatioL1L2: "0",
+  rateProrateRatioL1L2: "0",
+  applySSPricing: false,
+  interline: "",
+  codeshare: "",
+};
+
 function formatNumber(value, maxFractionDigits = 2) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return "0";
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: maxFractionDigits }).format(numeric);
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: maxFractionDigits,
+    minimumFractionDigits: maxFractionDigits === 0 ? 0 : 0,
+  }).format(numeric);
 }
 
 function formatDate(value) {
@@ -35,43 +60,41 @@ function formatDate(value) {
   });
 }
 
-function parseApplyDates(raw) {
-  return raw
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function inputBaseClass(bgClass = "") {
+function inputBaseClass({ align = "right", invalid = false, readOnly = false } = {}) {
   return cn(
-    "w-24 rounded-md border border-slate-200 bg-white px-2 py-1 text-right text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100",
-    bgClass
+    "rounded-md border px-2 py-1.5 text-sm outline-none transition focus:ring-2 focus:ring-indigo-500/20",
+    align === "right" ? "text-right" : "text-left",
+    invalid
+      ? "border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-100"
+      : "border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100",
+    readOnly && "cursor-not-allowed bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-400"
   );
 }
 
-const blankTransitDraft = {
-  firstFlightNumber: "",
-  secondFlightNumber: "",
-  pax: "0",
-  cargoT: "0",
-  odFare: "0",
-  odRate: "0",
-  prorateRatioL1: "0",
-  pooCcy: "",
-  pooCcyToRccy: "1",
-  applySSPricing: false,
-  interline: "",
-  codeshare: "",
-};
+function buildErrorLookup(errors = []) {
+  const map = new Map();
+  errors.forEach((issue) => {
+    if (!issue?.rowId || !issue?.field) return;
+    map.set(`${issue.rowId}:${issue.field}`, issue.message);
+  });
+  return map;
+}
 
 const PooTable = () => {
   const [poo, setPoo] = useState("DEL");
   const [date, setDate] = useState("");
   const [records, setRecords] = useState([]);
+  const [meta, setMeta] = useState({ stationCurrency: "", reportingCurrency: "" });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dirtyMap, setDirtyMap] = useState({});
-  const [applyDates, setApplyDates] = useState("");
+  const [validationErrors, setValidationErrors] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("sNo");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [applyDates, setApplyDates] = useState([]);
+  const [pendingApplyDate, setPendingApplyDate] = useState("");
   const [transitDraft, setTransitDraft] = useState(blankTransitDraft);
 
   const fetchData = useCallback(async () => {
@@ -80,7 +103,9 @@ const PooTable = () => {
     try {
       const response = await api.get("/poo", { params: { poo, date } });
       setRecords(response.data.data || []);
+      setMeta(response.data.meta || { stationCurrency: "", reportingCurrency: "" });
       setDirtyMap({});
+      setValidationErrors([]);
     } catch (error) {
       console.error(error);
       toast.error("Failed to load POO traffic allocation");
@@ -93,7 +118,7 @@ const PooTable = () => {
     if (poo && date) fetchData();
   }, [fetchData, poo, date]);
 
-  const handlePopulate = async () => {
+  const refreshAllocation = async () => {
     if (!poo || !date) {
       toast.warn("Choose a POO station and date first");
       return;
@@ -102,12 +127,11 @@ const PooTable = () => {
     setLoading(true);
     try {
       const response = await api.post("/poo/populate", { poo, date });
-      setRecords(response.data.data || []);
-      setDirtyMap({});
-      toast.success(response.data.message || "POO traffic allocation refreshed");
+      toast.success(response.data.message || "POO allocation refreshed");
+      await fetchData();
     } catch (error) {
       console.error(error);
-      toast.error(error.response?.data?.message || "Failed to refresh POO traffic allocation");
+      toast.error(error.response?.data?.message || "Failed to refresh POO allocation");
     } finally {
       setLoading(false);
     }
@@ -135,6 +159,16 @@ const PooTable = () => {
     }));
   };
 
+  const addApplyDate = () => {
+    if (!pendingApplyDate) return;
+    setApplyDates((prev) => [...new Set([...prev, pendingApplyDate])].sort());
+    setPendingApplyDate("");
+  };
+
+  const removeApplyDate = (target) => {
+    setApplyDates((prev) => prev.filter((item) => item !== target));
+  };
+
   const handleSave = async () => {
     const payload = Object.values(dirtyMap);
     if (!payload.length) {
@@ -146,19 +180,22 @@ const PooTable = () => {
     try {
       const response = await api.post("/poo/update", {
         records: payload,
-        applyToDates: parseApplyDates(applyDates),
+        applyToDates: applyDates,
       });
+      setValidationErrors([]);
       toast.success(response.data.message || "POO traffic allocation saved");
       if (response.data.appliedDates?.length) {
         toast.info(`Applied to ${response.data.appliedDates.length} matching date(s)`);
       }
       if (response.data.skippedDates?.length) {
-        toast.warn(`Skipped ${response.data.skippedDates.length} date(s) that did not match the source flights`);
+        toast.warn(`Skipped ${response.data.skippedDates.length} date(s)`);
       }
       await fetchData();
     } catch (error) {
       console.error(error);
-      toast.error(error.response?.data?.message || "Failed to save POO traffic allocation");
+      const issues = error.response?.data?.errors || [];
+      setValidationErrors(issues);
+      toast.error(error.response?.data?.message || "Failed to save POO allocation");
     } finally {
       setSaving(false);
     }
@@ -183,42 +220,96 @@ const PooTable = () => {
           date,
         },
       });
-      toast.success(response.data.message || "Transit OD created");
       setTransitDraft(blankTransitDraft);
+      setValidationErrors([]);
+      toast.success(response.data.message || "Transit OD created");
       await fetchData();
     } catch (error) {
       console.error(error);
+      const issues = error.response?.data?.errors || [];
+      setValidationErrors(issues);
       toast.error(error.response?.data?.message || "Failed to create transit OD");
     } finally {
       setSaving(false);
     }
   };
 
-  const groupedRows = useMemo(() => {
-    const groups = new Map();
-    records.forEach((row) => {
-      const key = row.odGroupKey || row.rowMatchKey || row._id;
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(row);
+  const errorLookup = useMemo(() => buildErrorLookup(validationErrors), [validationErrors]);
+
+  const filteredRows = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    const next = records.filter((row) => {
+      if (typeFilter !== "all" && row.displayType !== typeFilter) return false;
+      if (!query) return true;
+      return [
+        row.poo,
+        row.od,
+        row.sector,
+        row.flightNumber,
+        row.connectedFlightNumber,
+        row.identifier,
+        row.odDI,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
     });
-    return [...groups.values()];
-  }, [records]);
+
+    next.sort((left, right) => {
+      const a = left[sortBy];
+      const b = right[sortBy];
+      let comparison = 0;
+
+      if (sortBy === "date") {
+        comparison = new Date(a).getTime() - new Date(b).getTime();
+      } else if (typeof a === "number" || typeof b === "number") {
+        comparison = Number(a || 0) - Number(b || 0);
+      } else {
+        comparison = String(a || "").localeCompare(String(b || ""));
+      }
+
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+
+    return next;
+  }, [records, searchTerm, sortBy, sortDirection, typeFilter]);
+
+  const sections = useMemo(() => {
+    const selected = filteredRows.filter((row) => !row.displayType.startsWith("Transit"));
+    const transit = filteredRows.filter((row) => row.displayType.startsWith("Transit"));
+    const external = filteredRows.filter((row) => row.interline || row.codeshare);
+    return [
+      { title: "Selected OD Pairs", rows: selected },
+      { title: "Transits (Same Aircraft)", rows: transit },
+      { title: "Interline / Codeshare", rows: external },
+    ];
+  }, [filteredRows]);
+
+  const summary = useMemo(() => {
+    return filteredRows.reduce((acc, row) => ({
+      pax: acc.pax + Number(row.pax || 0),
+      cargoT: acc.cargoT + Number(row.cargoT || 0),
+      odTotalRev: acc.odTotalRev + Number(row.odTotalRev || 0),
+      fnlRccyTotalRev: acc.fnlRccyTotalRev + Number(row.fnlRccyTotalRev || 0),
+    }), { pax: 0, cargoT: 0, odTotalRev: 0, fnlRccyTotalRev: 0 });
+  }, [filteredRows]);
 
   const totalDirtyRows = Object.keys(dirtyMap).length;
+
+  const renderCellError = (rowId, field) => errorLookup.get(`${rowId}:${field}`) || "";
 
   return (
     <div className="flex h-full w-full flex-col">
       <div className="border-b border-slate-200 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-900/60">
-        <div className="grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+        <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
           <div className="space-y-4">
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">POO</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Station / POO</label>
                 <input
                   type="text"
                   value={poo}
                   onChange={(e) => setPoo(e.target.value.toUpperCase())}
-                  className="w-24 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                  className="w-28 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -231,14 +322,70 @@ const PooTable = () => {
                 />
               </div>
               <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search</label>
+                <div className="flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
+                  <Search size={16} className="text-slate-400" />
+                  <input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="OD, flight, sector..."
+                    className="w-56 bg-transparent text-sm text-slate-900 outline-none dark:text-slate-100"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
                 <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Apply To Dates</label>
-                <input
-                  type="text"
-                  value={applyDates}
-                  onChange={(e) => setApplyDates(e.target.value)}
-                  placeholder="2026-03-05, 2026-03-12"
-                  className="w-72 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={pendingApplyDate}
+                    onChange={(e) => setPendingApplyDate(e.target.value)}
+                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                  />
+                  <button
+                    type="button"
+                    onClick={addApplyDate}
+                    className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200"
+                  >
+                    <CalendarPlus2 size={16} />
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {applyDates.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {applyDates.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => removeApplyDate(item)}
+                    className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  >
+                    {item}
+                    <X size={12} />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/50">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">POO Currency</div>
+                <div className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{meta.stationCurrency || "--"}</div>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/50">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Reporting Currency</div>
+                <div className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{meta.reportingCurrency || "--"}</div>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/50">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pax Total</div>
+                <div className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{formatNumber(summary.pax, 0)}</div>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/50">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Final RCCY Total</div>
+                <div className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{formatNumber(summary.fnlRccyTotalRev)}</div>
               </div>
             </div>
 
@@ -247,7 +394,7 @@ const PooTable = () => {
                 <div>
                   <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">Create Transit OD</div>
                   <div className="text-xs text-slate-500 dark:text-slate-400">
-                    User-trusted setup for Transit FL / Transit SL rows on the selected POO page.
+                    User-defined same-aircraft transit setup. Balancing and deletion are handled server-side.
                   </div>
                 </div>
                 <button
@@ -259,92 +406,73 @@ const PooTable = () => {
                   Add Transit
                 </button>
               </div>
-              <div className="grid gap-3 md:grid-cols-5 xl:grid-cols-10">
-                <input
-                  value={transitDraft.firstFlightNumber}
-                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, firstFlightNumber: e.target.value }))}
-                  placeholder="First Flight"
-                  className={inputBaseClass("text-left")}
-                />
-                <input
-                  value={transitDraft.secondFlightNumber}
-                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, secondFlightNumber: e.target.value }))}
-                  placeholder="Second Flight"
-                  className={inputBaseClass("text-left")}
-                />
-                <input
-                  value={transitDraft.pax}
-                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, pax: e.target.value }))}
-                  placeholder="Pax"
-                  className={inputBaseClass()}
-                />
-                <input
-                  value={transitDraft.cargoT}
-                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, cargoT: e.target.value }))}
-                  placeholder="Cargo T"
-                  className={inputBaseClass()}
-                />
-                <input
-                  value={transitDraft.odFare}
-                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, odFare: e.target.value }))}
-                  placeholder="OD Fare"
-                  className={inputBaseClass()}
-                />
-                <input
-                  value={transitDraft.odRate}
-                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, odRate: e.target.value }))}
-                  placeholder="OD Rate"
-                  className={inputBaseClass()}
-                />
-                <input
-                  value={transitDraft.prorateRatioL1}
-                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, prorateRatioL1: e.target.value }))}
-                  placeholder="Prorate"
-                  className={inputBaseClass()}
-                />
-                <input
-                  value={transitDraft.pooCcy}
-                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, pooCcy: e.target.value.toUpperCase() }))}
-                  placeholder="CCY"
-                  className={inputBaseClass("text-left")}
-                />
-                <input
-                  value={transitDraft.pooCcyToRccy}
-                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, pooCcyToRccy: e.target.value }))}
-                  placeholder="FX"
-                  className={inputBaseClass()}
-                />
-                <label className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={transitDraft.applySSPricing}
-                    onChange={(e) => setTransitDraft((prev) => ({ ...prev, applySSPricing: e.target.checked }))}
-                  />
-                  SS Pricing
-                </label>
+              <div className="grid gap-3 md:grid-cols-4 xl:grid-cols-8">
+                <input value={transitDraft.firstFlightNumber} onChange={(e) => setTransitDraft((prev) => ({ ...prev, firstFlightNumber: e.target.value }))} placeholder="First flight" className={inputBaseClass({ align: "left" })} />
+                <input value={transitDraft.secondFlightNumber} onChange={(e) => setTransitDraft((prev) => ({ ...prev, secondFlightNumber: e.target.value }))} placeholder="Second flight" className={inputBaseClass({ align: "left" })} />
+                <input value={transitDraft.pax} onChange={(e) => setTransitDraft((prev) => ({ ...prev, pax: e.target.value }))} placeholder="Pax" className={inputBaseClass()} />
+                <input value={transitDraft.cargoT} onChange={(e) => setTransitDraft((prev) => ({ ...prev, cargoT: e.target.value }))} placeholder="Cargo T" className={inputBaseClass()} />
+                <input value={transitDraft.odFare} onChange={(e) => setTransitDraft((prev) => ({ ...prev, odFare: e.target.value }))} placeholder="OD Fare" className={inputBaseClass()} />
+                <input value={transitDraft.odRate} onChange={(e) => setTransitDraft((prev) => ({ ...prev, odRate: e.target.value }))} placeholder="OD Rate" className={inputBaseClass()} />
+                <input value={transitDraft.fareProrateRatioL1L2} onChange={(e) => setTransitDraft((prev) => ({ ...prev, fareProrateRatioL1L2: e.target.value }))} placeholder="Fare prorate" className={inputBaseClass()} />
+                <input value={transitDraft.rateProrateRatioL1L2} onChange={(e) => setTransitDraft((prev) => ({ ...prev, rateProrateRatioL1L2: e.target.value }))} placeholder="Rate prorate" className={inputBaseClass()} />
               </div>
             </div>
           </div>
 
           <div className="flex flex-col gap-3">
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
-              <div className="font-semibold text-slate-800 dark:text-slate-100">POO Operating Rules</div>
+              <div className="font-semibold text-slate-800 dark:text-slate-100">Global Validation</div>
               <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Traffic changes rebalance server-side across leg, connecting, and transit buckets. Transit rows are deleted automatically when both legs return to zero.
+                Any breached OD or balancing bucket rejects the whole save. Errors are shown below and highlighted in the sheet.
               </div>
             </div>
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-300">
-              <div className="font-semibold text-slate-800 dark:text-slate-100">Interline / Codeshare</div>
-              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Fields are visible on the table in this phase, but there is no downstream business logic attached yet.
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                <Filter size={15} />
+                Filter + Sort
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className={inputBaseClass({ align: "left" })}>
+                  <option value="all">All types</option>
+                  <option value="Leg">Leg</option>
+                  <option value="Behind">Behind</option>
+                  <option value="Beyond">Beyond</option>
+                  <option value="Transit FL">Transit FL</option>
+                  <option value="Transit SL">Transit SL</option>
+                </select>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={inputBaseClass({ align: "left" })}>
+                  <option value="sNo">S.No</option>
+                  <option value="date">Date</option>
+                  <option value="od">OD</option>
+                  <option value="flightNumber">Flight</option>
+                  <option value="pax">Pax</option>
+                  <option value="cargoT">Cargo T</option>
+                  <option value="fnlRccyTotalRev">Fnl RCCY Total</option>
+                </select>
+                <select value={sortDirection} onChange={(e) => setSortDirection(e.target.value)} className={inputBaseClass({ align: "left" })}>
+                  <option value="asc">Ascending</option>
+                  <option value="desc">Descending</option>
+                </select>
               </div>
             </div>
+
+            {validationErrors.length > 0 && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900 dark:bg-rose-950/20">
+                <div className="text-sm font-semibold text-rose-700 dark:text-rose-200">Validation errors</div>
+                <div className="mt-2 space-y-1 text-xs text-rose-700 dark:text-rose-300">
+                  {validationErrors.map((issue, index) => (
+                    <div key={`${issue.rowId}-${issue.field}-${index}`}>{issue.message}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-wrap items-center gap-3">
               <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                 {totalDirtyRows} pending change{totalDirtyRows === 1 ? "" : "s"}
               </div>
               <button
-                onClick={handlePopulate}
+                onClick={refreshAllocation}
                 disabled={loading || saving}
                 className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -365,234 +493,141 @@ const PooTable = () => {
       </div>
 
       <div className="flex-1 overflow-auto p-4">
-        {!loading && records.length === 0 && (
+        {!loading && filteredRows.length === 0 && (
           <div className="flex h-full min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-center dark:border-slate-700 dark:bg-slate-900/20">
             <div className="space-y-2 px-6">
               <div className="text-lg font-semibold text-slate-700 dark:text-slate-200">No POO traffic rows</div>
               <div className="text-sm text-slate-500 dark:text-slate-400">
-                Choose a station and date, then refresh allocation to generate leg, connection, and transit buckets.
+                Choose a station and date, refresh allocation, or loosen your filters.
               </div>
             </div>
           </div>
         )}
 
-        {records.length > 0 && (
-          <div className="space-y-4">
-            {groupedRows.map((group, groupIndex) => {
-              const lead = group[0];
-              return (
-                <div
-                  key={`${lead.odGroupKey || lead.rowMatchKey || lead._id}-${groupIndex}`}
-                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/40"
-                >
-                  <div className="flex flex-col gap-2 border-b border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/60 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                        {lead.od} • {lead.poo}
-                      </div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">
-                        {formatDate(lead.date)} • {lead.odDI} • Stops {lead.stops}
-                      </div>
-                    </div>
-                    <div className="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                      {lead.source === "user" ? "User Transit Group" : "System Group"}
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="min-w-[2200px] border-collapse">
-                      <thead>
-                        <tr className="bg-white/70 dark:bg-slate-950/40">
-                          {[
-                            "POO",
-                            "Type",
-                            "Sector",
-                            "Flight",
-                            "Connected",
-                            "Max Pax",
-                            "Max Cargo T",
-                            "Pax",
-                            "Cargo T",
-                            "Leg Fare",
-                            "Leg Rate",
-                            "OD Fare",
-                            "OD Rate",
-                            "Prorate",
-                            "CCY",
-                            "FX",
-                            "Leg Rev",
-                            "OD Rev",
-                            "RCCY Rev",
-                            "Interline",
-                            "Codeshare",
-                          ].map((label) => (
-                            <th
-                              key={label}
-                              className="border-b border-r border-slate-200 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400"
-                            >
-                              {label}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {group.map((row) => {
-                          const derivedLegPricing = row.stops === 1;
-                          return (
-                            <tr
-                              key={row._id}
-                              className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/20"
-                            >
-                              <td className="border-r border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:text-slate-200">
-                                {row.poo}
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
-                                <span
-                                  className={cn(
-                                    "inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold",
-                                    TYPE_STYLES[row.displayType] || "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                                  )}
-                                >
-                                  {row.displayType}
-                                </span>
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
-                                {row.sector}
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
-                                <div>{row.flightNumber}</div>
-                                <div className="text-xs text-slate-400">{row.std || "--"} - {row.sta || "--"}</div>
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
-                                <div>{row.connectedFlightNumber || "--"}</div>
-                                <div className="text-xs text-slate-400">{row.connectedStd || "--"} - {row.connectedSta || "--"}</div>
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
-                                {formatNumber(row.maxPax, 0)}
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
-                                {formatNumber(row.maxCargoT)}
-                              </td>
-                              <td className="border-r border-slate-200 bg-emerald-50/60 px-3 py-2 dark:border-slate-800 dark:bg-emerald-900/10">
-                                <input
-                                  type="number"
-                                  step="1"
-                                  min="0"
-                                  value={row.pax ?? ""}
-                                  onChange={(e) => updateField(row._id, "pax", e.target.value)}
-                                  className={inputBaseClass()}
-                                />
-                              </td>
-                              <td className="border-r border-slate-200 bg-cyan-50/60 px-3 py-2 dark:border-slate-800 dark:bg-cyan-900/10">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={row.cargoT ?? ""}
-                                  onChange={(e) => updateField(row._id, "cargoT", e.target.value)}
-                                  className={inputBaseClass()}
-                                />
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={row.legFare ?? ""}
-                                  onChange={(e) => updateField(row._id, "legFare", e.target.value)}
-                                  disabled={derivedLegPricing}
-                                  className={inputBaseClass(derivedLegPricing ? "opacity-70" : "")}
-                                />
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={row.legRate ?? ""}
-                                  onChange={(e) => updateField(row._id, "legRate", e.target.value)}
-                                  disabled={derivedLegPricing}
-                                  className={inputBaseClass(derivedLegPricing ? "opacity-70" : "")}
-                                />
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={row.odFare ?? ""}
-                                  onChange={(e) => updateField(row._id, "odFare", e.target.value)}
-                                  className={inputBaseClass()}
-                                />
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={row.odRate ?? ""}
-                                  onChange={(e) => updateField(row._id, "odRate", e.target.value)}
-                                  className={inputBaseClass()}
-                                />
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={row.prorateRatioL1 ?? ""}
-                                  onChange={(e) => updateField(row._id, "prorateRatioL1", e.target.value)}
-                                  className={inputBaseClass()}
-                                />
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
-                                <input
-                                  type="text"
-                                  value={row.pooCcy ?? ""}
-                                  onChange={(e) => updateField(row._id, "pooCcy", e.target.value.toUpperCase())}
-                                  className={cn(inputBaseClass("text-left"), "w-20")}
-                                />
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
-                                <input
-                                  type="number"
-                                  step="0.0001"
-                                  value={row.pooCcyToRccy ?? ""}
-                                  onChange={(e) => updateField(row._id, "pooCcyToRccy", e.target.value)}
-                                  className={inputBaseClass()}
-                                />
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
-                                {formatNumber(row.legTotalRev)}
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
-                                {formatNumber(row.odTotalRev)}
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 text-right text-sm font-semibold text-slate-700 dark:border-slate-800 dark:text-slate-200">
-                                {formatNumber(row.rccyTotalRev)}
-                              </td>
-                              <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
-                                <input
-                                  type="text"
-                                  value={row.interline ?? ""}
-                                  onChange={(e) => updateField(row._id, "interline", e.target.value)}
-                                  className={cn(inputBaseClass("text-left"), "w-28")}
-                                />
-                              </td>
-                              <td className="px-3 py-2">
-                                <input
-                                  type="text"
-                                  value={row.codeshare ?? ""}
-                                  onChange={(e) => updateField(row._id, "codeshare", e.target.value)}
-                                  className={cn(inputBaseClass("text-left"), "w-28")}
-                                />
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              );
-            })}
+        {sections.filter((section) => section.rows.length > 0).map((section) => (
+          <div key={section.title} className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/40">
+            <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/60">
+              <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">{section.title}</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">{section.rows.length} row(s)</div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-[3200px] border-collapse">
+                <thead>
+                  <tr className="bg-white/70 dark:bg-slate-950/40">
+                    {[
+                      "S.No",
+                      "POO",
+                      "OD",
+                      "OD D/I",
+                      "Stops",
+                      "Identifier",
+                      "Sector",
+                      "Flight #",
+                      "Connected",
+                      "Date",
+                      "Day",
+                      "Time incl LyOv",
+                      "Max Pax",
+                      "Max Cargo T",
+                      "Pax",
+                      "Cargo T",
+                      "Sector GCD",
+                      "OD/Total GCD",
+                      "OD Fare",
+                      "OD Rate",
+                      "Fare Prorate",
+                      "Rate Prorate",
+                      "Leg Fare",
+                      "Leg Rate",
+                      "Leg Rev",
+                      "OD Rev",
+                      "Fnl RCCY Total",
+                      "POO CCY",
+                      "FX",
+                      "Reporting CCY",
+                      "Apply SS",
+                      "Interline",
+                      "Codeshare",
+                    ].map((label) => (
+                      <th key={label} className="border-b border-r border-slate-200 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400">
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {section.rows.map((row) => {
+                    const paxError = renderCellError(row._id, "pax");
+                    const cargoError = renderCellError(row._id, "cargoT");
+                    return (
+                      <tr key={row._id} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/20">
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.sNo}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:text-slate-200">{row.poo}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-200">{row.od}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.odDI}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.stops}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
+                          <span className={cn("inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold", TYPE_STYLES[row.displayType] || "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200")}>
+                            {row.displayType}
+                          </span>
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.sector}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.flightNumber}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.connectedFlightNumber || "--"}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatDate(row.date)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.day || "--"}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.timeInclLayover || "--"}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.maxPax, 0)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.maxCargoT)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2">
+                          <input
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={row.pax ?? ""}
+                            title={paxError}
+                            onChange={(e) => updateField(row._id, "pax", e.target.value)}
+                            className={cn("w-24", inputBaseClass({ invalid: Boolean(paxError) }))}
+                          />
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.cargoT ?? ""}
+                            title={cargoError}
+                            onChange={(e) => updateField(row._id, "cargoT", e.target.value)}
+                            className={cn("w-24", inputBaseClass({ invalid: Boolean(cargoError) }))}
+                          />
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.sectorGcd, 0)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.totalGcd || row.odViaGcd, 0)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2"><input type="number" step="0.01" value={row.odFare ?? ""} onChange={(e) => updateField(row._id, "odFare", e.target.value)} className={cn("w-24", inputBaseClass())} /></td>
+                        <td className="border-r border-slate-200 px-3 py-2"><input type="number" step="0.01" value={row.odRate ?? ""} onChange={(e) => updateField(row._id, "odRate", e.target.value)} className={cn("w-24", inputBaseClass())} /></td>
+                        <td className="border-r border-slate-200 px-3 py-2"><input type="number" step="0.01" value={row.fareProrateRatioL1L2 ?? ""} onChange={(e) => updateField(row._id, "fareProrateRatioL1L2", e.target.value)} className={cn("w-24", inputBaseClass())} /></td>
+                        <td className="border-r border-slate-200 px-3 py-2"><input type="number" step="0.01" value={row.rateProrateRatioL1L2 ?? ""} onChange={(e) => updateField(row._id, "rateProrateRatioL1L2", e.target.value)} className={cn("w-24", inputBaseClass())} /></td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legFare)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legRate)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legTotalRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odTotalRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm font-semibold text-slate-700 dark:border-slate-800 dark:text-slate-200">{formatNumber(row.fnlRccyTotalRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.pooCcy || "--"}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.pooCcyToRccy, 4)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.reportingCurrency || "--"}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-center dark:border-slate-800">
+                          <input type="checkbox" checked={Boolean(row.applySSPricing)} onChange={(e) => updateField(row._id, "applySSPricing", e.target.checked)} />
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-2"><input type="text" value={row.interline ?? ""} onChange={(e) => updateField(row._id, "interline", e.target.value)} className={cn("w-24", inputBaseClass({ align: "left" }))} /></td>
+                        <td className="px-3 py-2"><input type="text" value={row.codeshare ?? ""} onChange={(e) => updateField(row._id, "codeshare", e.target.value)} className={cn("w-24", inputBaseClass({ align: "left" }))} /></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        )}
+        ))}
       </div>
     </div>
   );

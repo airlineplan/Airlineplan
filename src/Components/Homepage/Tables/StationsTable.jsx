@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from "../../../apiConfig";
 import dayjs from 'dayjs';
 import { twMerge } from "tailwind-merge";
-import { Save, Clock, RadioTower } from "lucide-react";
+import { Save, Clock } from "lucide-react";
 import { clsx } from "clsx";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -182,6 +182,7 @@ const StationsTable = () => {
 
                 <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[120px] text-xs font-bold text-slate-500 dark:text-slate-400">STD TZ</th>
                 <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[120px] text-xs font-bold text-slate-500 dark:text-slate-400">DST TZ</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[80px] text-xs font-bold text-slate-500 dark:text-slate-400">CCY</th>
                 <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[140px] text-xs font-bold text-slate-500 dark:text-slate-400">Next DST Start</th>
                 <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[140px] text-xs font-bold text-slate-500 dark:text-slate-400">Next DST End</th>
 
@@ -206,7 +207,7 @@ const StationsTable = () => {
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {isFetching ? (
                 <tr>
-                  <td colSpan={16} className="p-10 text-center text-slate-500 text-sm">Loading station data...</td>
+                  <td colSpan={17} className="p-10 text-center text-slate-500 text-sm">Loading station data...</td>
                 </tr>
               ) : (
                 data.map((row, index) => (
@@ -236,6 +237,14 @@ const StationsTable = () => {
                     </td>
                     <td className="p-1 border-r border-slate-100 dark:border-slate-800">
                       <StyledSelect value={row.dsttz} options={TIMEZONES} onChange={(e) => handleInputChange(e, index, 'dsttz')} />
+                    </td>
+                    <td className="p-1 border-r border-slate-100 dark:border-slate-800">
+                      <StyledInput
+                        value={row.currencyCode || ""}
+                        onChange={(e) => handleInputChange(e, index, 'currencyCode')}
+                        placeholder="USD"
+                        maxLength={3}
+                      />
                     </td>
 
                     <td className="p-1 border-r border-slate-100 dark:border-slate-800">
