@@ -66,15 +66,19 @@ const createMetricKey = (category, value) => {
     return normalized ? `${category}:${normalized}` : "";
 };
 
-// Derive today's auto-computed status for an Aircraft from metricsData
-const getTodayStatus = (asset, metricsData) => {
-    if (asset.category !== "Aircraft" || !asset.sn) return null;
+// Derive today's auto-computed status for an Aircraft from todayMetricsData
+const getTodayStatus = (asset, todayMetricsData) => {
+    if (!asset.sn) return asset.status || "Available";
     const todayStr = moment().format("DD MMM YY");
-    const metric = metricsData[createMetricKey("Aircraft", asset.sn)]?.[todayStr];
-    if (!metric) return "Available";
-    if (metric.status === "maintenance" || metric.status?.includes("check") || metric.status?.includes("ground")) return "Maintenance";
-    if (metric.status === "aircraft-assigned") return "Assigned";
-    return "Available";
+    const metric = todayMetricsData[createMetricKey(asset.category, asset.sn)]?.[todayStr];
+
+    if (metric) {
+        if (metric.status === "maintenance" || metric.status?.includes("check") || metric.status?.includes("ground")) return "Maintenance";
+        if (metric.status === "aircraft-assigned" || metric.status === "assigned") return "Assigned";
+        return "Available";
+    }
+
+    return asset.status || "Available";
 };
 
 const generateDatesForMonth = (monthYearStr) => {
@@ -101,6 +105,7 @@ const FleetTable = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [scheduleDates, setScheduleDates] = useState([]);
     const [metricsData, setMetricsData] = useState({});
+    const [todayMetricsData, setTodayMetricsData] = useState({});
     const metricsCacheRef = useRef(new Map());
     const activeMetricsReqIdRef = useRef(0);
 
@@ -112,6 +117,16 @@ const FleetTable = () => {
             schedule: {}
         }
     ]);
+
+    const fetchTodayMetrics = async () => {
+        try {
+            const currentMonthStr = moment().format("MMMM YYYY");
+            const response = await api.get(`/fleet/metrics?month=${encodeURIComponent(currentMonthStr)}`);
+            setTodayMetricsData(response.data.data || {});
+        } catch (error) {
+            console.error("Error fetching today metrics:", error);
+        }
+    };
 
     useEffect(() => {
         const fetchMonths = async () => {
@@ -133,7 +148,9 @@ const FleetTable = () => {
                 setSelectedMonth(currentMonth);
             }
         };
+
         fetchMonths();
+        fetchTodayMetrics();
     }, []);
 
     useEffect(() => {
@@ -150,6 +167,7 @@ const FleetTable = () => {
                 console.warn("Failed to clear fleet metrics cache from localStorage", error);
             }
             if (selectedMonth) fetchScheduleMetrics(selectedMonth, { forceRefresh });
+            fetchTodayMetrics();
         };
 
         const handleAssignmentsUpdated = () => refreshMetrics(true);
@@ -481,8 +499,8 @@ const FleetTable = () => {
                                             {summaryRow.label}
                                         </div>
                                         {scheduleDates.map((date) => (
-                                        <div
-                                            key={`header-${summaryRow.metricKey}-${date}`}
+                                            <div
+                                                key={`header-${summaryRow.metricKey}-${date}`}
                                                 className="w-20 flex-shrink-0 px-1 border-r border-slate-300 text-center text-slate-700 dark:text-slate-200"
                                                 title={summaryRow.label}
                                             >
@@ -546,23 +564,19 @@ const FleetTable = () => {
                                         <input type="number" value={asset.mtow} onChange={e => handleInputChange(asset.id, "mtow", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 text-right" placeholder="e.g. 77000" />
                                     </div>
                                     <div className="w-32 p-1 border-r flex items-center">
-                                        {asset.category === "Aircraft" ? (() => {
-                                            const todayStatus = getTodayStatus(asset, metricsData);
+                                        {(() => {
+                                            const todayStatus = getTodayStatus(asset, todayMetricsData);
                                             const badgeColor = todayStatus === "Maintenance"
                                                 ? "bg-stone-500 text-white"
                                                 : todayStatus === "Assigned"
-                                                ? "bg-[#8de08d] text-green-900"
-                                                : "bg-amber-700 text-white";
+                                                    ? "bg-[#8de08d] text-green-900"
+                                                    : "bg-amber-700 text-white";
                                             return (
                                                 <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${badgeColor}`}>
                                                     {todayStatus}
                                                 </span>
                                             );
-                                        })() : (
-                                            <select value={asset.status} onChange={e => handleInputChange(asset.id, "status", e.target.value)} className="w-full h-full bg-transparent outline-none cursor-pointer">
-                                                {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                                            </select>
-                                        )}
+                                        })()}
                                     </div>
                                     <div className="w-10 p-1 border-r flex items-center justify-center">
                                         <button onClick={() => handleDeleteRow(asset.id)} className="text-red-400 hover:text-red-600 transition-colors" title="Delete Row"><Trash2 size={14} /></button>
@@ -580,14 +594,14 @@ const FleetTable = () => {
 
                                         if (isAutoScheduleAsset && snStr && !hasManualOverride) {
                                             const metric = metricsData[snStr]?.[date];
-                                                if (metric) {
-                                                    if (metric.status === "maintenance" || metric.status?.includes("check") || metric.status?.includes("ground")) {
-                                                        const eventName = metric.event || metric.label || "Maintenance";
-                                                        dayData = {
+                                            if (metric) {
+                                                if (metric.status === "maintenance" || metric.status?.includes("check") || metric.status?.includes("ground")) {
+                                                    const eventName = metric.event || metric.label || "Maintenance";
+                                                    dayData = {
                                                         status: "maintenance",
                                                         label: eventName
-                                                        };
-                                                        cellTitle = `Ground Event: ${eventName}`;
+                                                    };
+                                                    cellTitle = `Ground Event: ${eventName}`;
                                                 } else if (metric.status === "aircraft-assigned") {
                                                     dayData = {
                                                         status: "aircraft-assigned",

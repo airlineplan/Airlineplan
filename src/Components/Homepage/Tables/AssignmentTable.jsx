@@ -4,12 +4,7 @@ import api from "../../../apiConfig"; // Adjust path as needed
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const SCENARIO_DATES = [
-    "2026-03-08",
-    "2026-03-15",
-    "2026-03-22",
-    "2026-03-29"
-];
+// Hardcoded dates replaced by dynamic fetch from /master-weeks
 
 const DAYS = [
     { key: "mon", label: "Mon", offset: -6 },
@@ -22,28 +17,57 @@ const DAYS = [
 ];
 
 const generateDatesForSunday = (sundayDateStr) => {
-    const sunday = new Date(sundayDateStr);
+    if (!sundayDateStr) return {};
+
+    // Parse "YYYY-MM-DD" explicitly to avoid browser-specific timezone parsing quirks
+    const [year, month, day] = sundayDateStr.split("-").map(Number);
+    const sunday = new Date(Date.UTC(year, month - 1, day));
+
     const dates = {};
-    DAYS.forEach(day => {
+    DAYS.forEach(dayInfo => {
         const d = new Date(sunday);
-        d.setDate(sunday.getDate() + day.offset);
-        dates[day.key] = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        d.setUTCDate(sunday.getUTCDate() + dayInfo.offset);
+        
+        // Use toLocaleDateString with UTC timezone to ensure the display matches the UTC date
+        dates[dayInfo.key] = d.toLocaleDateString('en-GB', { 
+            day: '2-digit', 
+            month: 'short', 
+            timeZone: 'UTC' 
+        });
     });
     return dates;
 };
 
 const AssignmentTable = () => {
-    const [selectedWeekEnding, setSelectedWeekEnding] = useState(SCENARIO_DATES[0]);
+    const [availableWeeks, setAvailableWeeks] = useState([]);
+    const [selectedWeekEnding, setSelectedWeekEnding] = useState("");
     const [assignmentsData, setAssignmentsData] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const [isLoadingData, setIsLoadingData] = useState(false);
 
-    const fileInputRef = useRef(null);
-    const weekDates = generateDatesForSunday(selectedWeekEnding);
+    const fetchWeeks = async () => {
+        try {
+            const response = await api.get("/master-weeks");
+            const weeks = response.data.weeks || [];
+            setAvailableWeeks(weeks);
+            if (weeks.length > 0 && !selectedWeekEnding) {
+                setSelectedWeekEnding(weeks[0]);
+            }
+        } catch (error) {
+            console.error("Error fetching weeks", error);
+        }
+    };
+
+    // Fetch available weeks on mount
+    useEffect(() => {
+        fetchWeeks();
+    }, []);
 
     // Fetch data when the selected week changes
     useEffect(() => {
-        fetchAssignments();
+        if (selectedWeekEnding) {
+            fetchAssignments();
+        }
     }, [selectedWeekEnding]);
 
     const fetchAssignments = async () => {
@@ -107,6 +131,9 @@ const AssignmentTable = () => {
         });
     };
 
+    const fileInputRef = useRef(null);
+    const weekDates = selectedWeekEnding ? generateDatesForSunday(selectedWeekEnding) : {};
+
     const handleUploadClick = () => {
         fileInputRef.current.click();
     };
@@ -125,6 +152,7 @@ const AssignmentTable = () => {
             });
             toast.success("Assignments uploaded successfully!");
             window.dispatchEvent(new CustomEvent("assignments:updated"));
+            await fetchWeeks(); // Refresh dropdown range
             fetchAssignments(); // Refresh table immediately
         } catch (error) {
             console.error("Upload error", error);
@@ -190,9 +218,13 @@ const AssignmentTable = () => {
                             onChange={(e) => setSelectedWeekEnding(e.target.value)}
                             className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
                         >
-                            {SCENARIO_DATES.map(date => (
-                                <option key={date} value={date}>{date} (Sunday)</option>
-                            ))}
+                            {availableWeeks.length === 0 ? (
+                                <option disabled value="">No flights found</option>
+                            ) : (
+                                availableWeeks.map(date => (
+                                    <option key={date} value={date}>{date} (Sunday)</option>
+                                ))
+                            )}
                         </select>
                     </div>
                 </div>
