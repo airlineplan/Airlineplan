@@ -224,57 +224,127 @@ const FINANCE_SECTIONS = [
     title: "Revenue",
     icon: CircleDollarSign,
     rows: [
-      { label: "Pax revenue" },
-      { label: "Cargo revenue" },
-      { label: "Total revenue", emphasize: true },
+      {
+        id: "revenue-total",
+        label: "Total revenue",
+        emphasize: true,
+        summaryAfterChildren: true,
+        children: [
+          { id: "revenue-pax", label: "Pax revenue" },
+          { id: "revenue-cargo", label: "Cargo revenue" },
+        ],
+      },
     ],
   },
   {
     title: "Fuel",
     icon: Fuel,
     rows: [
-      { label: "Total fuel cost", emphasize: true },
-      { label: "Engine fuel cost" },
-      { label: "APU fuel cost" },
+      {
+        id: "fuel-total",
+        label: "Total fuel cost",
+        emphasize: true,
+        children: [
+          { id: "fuel-engine", label: "Engine fuel cost" },
+          { id: "fuel-apu", label: "APU fuel cost" },
+        ],
+      },
     ],
   },
   {
     title: "Maintenance",
     icon: Wrench,
     rows: [
-      { label: "Total maintenance", emphasize: true },
-      { label: "MR contributions" },
-      { label: "Utilisation driven" },
-      { label: "Calendar driven" },
-      { label: "Sch. Mx. not cap" },
-      { label: "Sch. Mx. Event 1" },
-      { label: "MSN/ESN/APUN 1" },
-      { label: "MSN/ESN/APUN 2" },
-      { label: "Sch. Mx. Event 2" },
-      { label: "MSN/ESN/APUN 1" },
-    ],
-  },
-  {
-    title: "Other DOC",
-    icon: ShieldAlert,
-    rows: [
-      { label: "Transit maintenance" },
-      { label: "Other maintenance" },
-      { label: "Utilisation driven" },
-      { label: "Calendar driven" },
-      { label: "Rotable changes" },
-      { label: "Crew total direct", emphasize: true },
-      { label: "Allowances" },
-      { label: "Layovers" },
-      { label: "Positioning" },
-      { label: "Airport cost" },
-      { label: "Navigation cost" },
-      { label: "Other DOC" },
-      { label: "Total DOC", emphasize: true },
-      { label: "Gross profit/loss", emphasize: true },
+      {
+        id: "maintenance-total",
+        label: "Total Maintenance cost",
+        emphasize: true,
+        children: [
+          {
+            id: "maintenance-mr",
+            label: "MR contributions",
+            children: [
+              { id: "maintenance-mr-utilisation", label: "Utilisation driven" },
+              { id: "maintenance-mr-calendar", label: "Calendar driven" },
+            ],
+          },
+          {
+            id: "maintenance-schmx",
+            label: "Sch. Mx.",
+            children: [
+              {
+                id: "maintenance-event-1",
+                label: "Sch. Mx. Event 1",
+                children: [
+                  { id: "maintenance-event-1-apun-1", label: "MSN/ESN/APUN 1" },
+                  { id: "maintenance-event-1-apun-2", label: "MSN/ESN/APUN 2" },
+                ],
+              },
+              {
+                id: "maintenance-event-2",
+                label: "Sch. Mx. Event 2",
+                children: [{ id: "maintenance-event-2-apun-1", label: "MSN/ESN/APUN 1" }],
+              },
+            ],
+          },
+          {
+            id: "maintenance-transit-maintenance",
+            label: "Transit maintenance",
+          },
+          {
+            id: "maintenance-other-maintenance",
+            label: "Other maintenance",
+            children: [
+              { id: "maintenance-other-utilisation", label: "Utilisation driven" },
+              { id: "maintenance-other-calendar", label: "Calendar driven" },
+            ],
+          },
+          {
+            id: "maintenance-rotable",
+            label: "Rotable changes",
+          },
+          {
+            id: "crew-total-direct",
+            label: "Crew total direct",
+            emphasize: true,
+            children: [
+              { id: "crew-allowances", label: "Allowances" },
+              { id: "crew-layovers", label: "Layovers" },
+              { id: "crew-positioning", label: "Positioning" },
+            ],
+          },
+          { id: "other-airport-cost", label: "Airport cost", emphasize: true },
+          { id: "other-navigation-cost", label: "Navigation cost", emphasize: true },
+          { id: "other-doc", label: "Other DOC", emphasize: true },
+          { id: "total-doc", label: "Total DOC", emphasize: true },
+          { id: "gross-profit-loss", label: "Gross profit/loss", emphasize: true },
+        ],
+      },
     ],
   },
 ];
+
+function flattenFinanceNodes(nodes = [], level = 0) {
+  const rows = [];
+
+  nodes.forEach((node) => {
+    const childNodes = Array.isArray(node.children) ? node.children : [];
+
+    if (node.summaryAfterChildren && childNodes.length > 0) {
+      rows.push(...flattenFinanceNodes(childNodes, level + 1));
+      rows.push({ ...node, level });
+      return;
+    }
+
+    rows.push({ ...node, level });
+
+    if (childNodes.length > 0) {
+      rows.push(...flattenFinanceNodes(childNodes, level + 1));
+    }
+  });
+
+  return rows;
+}
 
 const MultiSelectDropdown = ({ placeholder, options = [], value = [], onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -425,7 +495,9 @@ const SmallStat = ({ label, value, accent = false }) => (
     )}
   >
     <div className="text-[11px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{label}</div>
-    <div className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-50">{value}</div>
+    <div className="mt-1 text-sm font-semibold leading-tight text-slate-900 dark:text-slate-50">
+      {value}
+    </div>
   </div>
 );
 
@@ -704,19 +776,6 @@ const FxRateModal = ({
                                     ...next[sourceIndex],
                                     pairs: {
                                       ...next[sourceIndex].pairs,
-                                      [pair]: e.target.value,
-                                    },
-                                  };
-                                  setFxRows(next);
-                                }}
-                                onBlur={(e) => {
-                                  const next = [...fxRows];
-                                  const sourceIndex = fxRows.findIndex((candidate) => candidate.key === row.key);
-                                  if (sourceIndex < 0) return;
-                                  next[sourceIndex] = {
-                                    ...next[sourceIndex],
-                                    pairs: {
-                                      ...next[sourceIndex].pairs,
                                       [pair]: formatFxRate(e.target.value),
                                     },
                                   };
@@ -910,7 +969,16 @@ const DashboardTable = () => {
   const [savedFxRates, setSavedFxRates] = useState([]);
   const [selectedFxDate, setSelectedFxDate] = useState("");
   const fxRowRefs = useRef([]);
+  const [creatingConnections, setCreatingConnections] = useState(false);
   const [exposureCurrency, setExposureCurrency] = useState("EUR");
+  const [expandedFinanceNodes, setExpandedFinanceNodes] = useState(() => ({
+    "revenue-total": true,
+    "fuel-total": true,
+    "maintenance-total": true,
+    "maintenance-event-1": true,
+    "maintenance-event-2": true,
+    "crew-total-direct": true,
+  }));
 
   const singleSelectLabelOptions = [
     { label: "Dom", value: "dom" },
@@ -1014,6 +1082,20 @@ const DashboardTable = () => {
     }
   };
 
+  const handleUpdateConnections = async () => {
+    try {
+      setCreatingConnections(true);
+      await api.get("/createConnections");
+      toast.success("Connections updated successfully");
+      await fetchData();
+    } catch (error) {
+      console.error("Error updating connections:", error);
+      toast.error("Failed to update connections");
+    } finally {
+      setCreatingConnections(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1049,72 +1131,103 @@ const DashboardTable = () => {
   const operationalSections = useMemo(() => OPERATIONAL_SECTIONS, []);
   const financeSections = useMemo(() => FINANCE_SECTIONS, []);
 
-  const transformOperationalRows = () => {
-    const rows = [
-      ["Dashboard"],
-      ["Label", selectedValues.label],
-      ["Periodicity", selectedValues.periodicity],
-      [""],
-      ["Flight #", (filters.flight || []).map((item) => item.value).join(", ") || "-"],
-      ["Dep Stn", (filters.from || []).map((item) => item.value).join(", ") || "-"],
-      ["Arr Stn", (filters.to || []).map((item) => item.value).join(", ") || "-"],
-      ["Sector", (filters.sector || []).map((item) => item.value).join(", ") || "-"],
-      ["Variant", (filters.variant || []).map((item) => item.value).join(", ") || "-"],
-      ["User Tag 1", (filters.userTag1 || []).map((item) => item.value).join(", ") || "-"],
-      ["User Tag 2", (filters.userTag2 || []).map((item) => item.value).join(", ") || "-"],
-      [""],
-      ["Period", ...periodColumns.map((period) => period.label)],
-      ["Date", ...periodColumns.map((period) => period.dateLabel)],
-    ];
+  const toggleFinanceNode = (nodeId) => {
+    setExpandedFinanceNodes((prev) => ({
+      ...prev,
+      [nodeId]: !(prev[nodeId] !== false),
+    }));
+  };
+
+  const isFinanceNodeExpanded = (nodeId) => expandedFinanceNodes[nodeId] !== false;
+
+  const buildDashboardExportRows = () => {
+    const rows = [["", ...periodColumns.map((period) => period.dateLabel)]];
+
+    const pushMetricRow = (label, values) => {
+      const hasValue = values.some((value) => value !== "" && value !== null && value !== undefined);
+      if (!hasValue) return;
+      rows.push([label, ...values]);
+    };
 
     operationalSections.forEach((section) => {
-      rows.push([section.title]);
       section.rows.forEach((row) => {
-        rows.push([row.label, ...periodColumns.map((period) => cnTableValue(row, period.data))]);
+        pushMetricRow(row.label, periodColumns.map((period) => cnTableValue(row, period.data)));
       });
-      rows.push([""]);
     });
-
-    return rows;
-  };
-
-  const transformFinanceRows = () => {
-    const rows = [
-      ["Financial Segment"],
-      ["Reporting CCY", reportingCurrency],
-      ["FX basis", fxBasis],
-      [""],
-      ["Row", ...periodColumns.map((period) => period.label)],
-    ];
 
     financeSections.forEach((section) => {
-      rows.push([section.title]);
-      section.rows.forEach((row) => {
-        rows.push([row.label, ...periodColumns.map(() => "0.00")]);
+      flattenFinanceNodes(section.rows).forEach((row) => {
+        const indent = "  ".repeat(row.level || 0);
+        pushMetricRow(`${indent}${row.label}`, periodColumns.map(() => "0.00"));
       });
-      rows.push([""]);
     });
 
     return rows;
   };
 
-  const transformFxRows = () => {
-    const rows = [["FX Rate Settings"], ["Reporting Currency", reportingCurrency], [""]];
-    rows.push(["Date", ...buildCurrencyPairs(currencyCodes, reportingCurrency)]);
-    fxRows.forEach((row) => {
-      rows.push([row.dateLabel, ...Object.values(row.pairs)]);
-    });
-    return rows;
-  };
+  const renderFinanceNodes = (nodes = [], level = 0) =>
+    nodes.flatMap((node) => {
+      const childNodes = Array.isArray(node.children) ? node.children : [];
+      const expanded = childNodes.length === 0 ? false : isFinanceNodeExpanded(node.id);
+      const rowPaddingLeft = `${1 + level * 1.35}rem`;
 
-  const transformRiskRows = () => {
-    return [
-      ["Risk Exposures"],
-      ["Currency", exposureCurrency],
-      ["Series", "EUR revenue & cost"],
-      ["Guidance", "Graphical output with MMM-YY in X axis and value on Y axis"],
-    ];
-  };
+      const renderRow = () => (
+        <tr key={node.id} className="group hover:bg-indigo-50/40 dark:hover:bg-indigo-500/5">
+          <td
+            className={cn(
+              "sticky left-0 z-20 w-[340px] min-w-[340px] max-w-[340px] border-b border-r border-slate-200 bg-white px-4 py-3 text-sm shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] dark:border-slate-800 dark:bg-slate-900",
+              node.emphasize ? "font-semibold text-slate-900 dark:text-slate-50" : "text-slate-700 dark:text-slate-200"
+            )}
+          >
+            <div className="flex items-center gap-2" style={{ paddingLeft: rowPaddingLeft }}>
+              {childNodes.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => toggleFinanceNode(node.id)}
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                  aria-label={`${expanded ? "Collapse" : "Expand"} ${node.label}`}
+                >
+                  <ChevronRight
+                    size={14}
+                    className={cn("transition-transform", expanded ? "rotate-90" : "rotate-0")}
+                  />
+                </button>
+              ) : (
+                <span className="inline-flex h-5 w-5" />
+              )}
+              <span>{node.label}</span>
+            </div>
+          </td>
+          {periodColumns.map((period, index) => (
+            <td
+              key={`${node.id}-${period.key}`}
+              className={cn(
+                "w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 px-3 py-3 text-center text-sm tabular-nums text-slate-700 dark:border-slate-800 dark:text-slate-300",
+                index === 0 && "bg-indigo-50/70 dark:bg-indigo-500/10"
+              )}
+            >
+              <span className={cn(node.emphasize && "font-semibold text-slate-900 dark:text-slate-50")}>0.00</span>
+            </td>
+          ))}
+        </tr>
+      );
+
+      if (childNodes.length === 0) {
+        return [renderRow()];
+      }
+
+      if (node.summaryAfterChildren) {
+        return [
+          ...(expanded ? renderFinanceNodes(childNodes, level + 1) : []),
+          renderRow(),
+        ];
+      }
+
+      return [
+        renderRow(),
+        ...(expanded ? renderFinanceNodes(childNodes, level + 1) : []),
+      ];
+    });
 
   const downloadDashboardTable = () => {
     if (!data || data.length === 0) {
@@ -1122,11 +1235,15 @@ const DashboardTable = () => {
       return;
     }
 
+    const worksheetData = buildDashboardExportRows();
+    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+    ws["!cols"] = [
+      { wch: 42 },
+      ...periodColumns.map(() => ({ wch: 16 })),
+    ];
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(transformOperationalRows()), "Dashboard View");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(transformFinanceRows()), "Finance");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(transformFxRows()), "FX Rates");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(transformRiskRows()), "Risk Notes");
+    XLSX.utils.book_append_sheet(wb, ws, "Dashboard");
     XLSX.writeFile(wb, "dashboard_redesign.xlsx");
   };
 
@@ -1238,11 +1355,12 @@ const DashboardTable = () => {
 
             <button
               type="button"
-              onClick={() => setShowRiskModal(true)}
+              onClick={handleUpdateConnections}
+              disabled={creatingConnections}
               className="mt-4 inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
             >
-              Risk exposures
-              <ChevronRight size={16} />
+              {creatingConnections ? "Updating Connections..." : "Update Connections"}
+              <RefreshCw size={16} className={creatingConnections ? "animate-spin" : ""} />
             </button>
           </aside>
         </div>
@@ -1329,9 +1447,10 @@ const DashboardTable = () => {
                       <button
                         type="button"
                         onClick={() => setShowRiskModal(true)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100 dark:border-sky-900/40 dark:bg-sky-500/10 dark:text-sky-300"
+                        className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sky-500"
                       >
-                        Risk exposures
+                        Risk Exposures
+                        <ChevronRight size={16} />
                       </button>
                       <div className="w-[220px] min-w-[220px]">
                         <SingleSelectDropdown
@@ -1360,24 +1479,7 @@ const DashboardTable = () => {
                           </span>
                         </td>
                       </tr>
-                      {section.rows.map((row) => (
-                        <tr key={row.label} className="group hover:bg-indigo-50/40 dark:hover:bg-indigo-500/5">
-                          <td className={cn("sticky left-0 z-20 w-[340px] min-w-[340px] max-w-[340px] border-b border-r border-slate-200 bg-white px-4 py-3 text-sm shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] dark:border-slate-800 dark:bg-slate-900", row.emphasize ? "font-semibold text-slate-900 dark:text-slate-50" : "text-slate-700 dark:text-slate-200")}>
-                            {row.label}
-                          </td>
-                          {periodColumns.map((period, index) => (
-                            <td
-                              key={`${row.label}-${period.key}`}
-                              className={cn(
-                                "w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 px-3 py-3 text-center text-sm tabular-nums text-slate-700 dark:border-slate-800 dark:text-slate-300",
-                                index === 0 && "bg-indigo-50/70 dark:bg-indigo-500/10"
-                              )}
-                            >
-                              <span className={cn(row.emphasize && "font-semibold text-slate-900 dark:text-slate-50")}>0.00</span>
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
+                      {renderFinanceNodes(section.rows)}
                     </React.Fragment>
                   );
                 })}
@@ -1416,6 +1518,7 @@ const DashboardTable = () => {
         setExposureCurrency={setExposureCurrency}
         periodColumns={periodColumns}
       />
+
     </div>
   );
 };
