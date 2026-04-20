@@ -704,6 +704,19 @@ const FxRateModal = ({
                                     ...next[sourceIndex],
                                     pairs: {
                                       ...next[sourceIndex].pairs,
+                                      [pair]: e.target.value,
+                                    },
+                                  };
+                                  setFxRows(next);
+                                }}
+                                onBlur={(e) => {
+                                  const next = [...fxRows];
+                                  const sourceIndex = fxRows.findIndex((candidate) => candidate.key === row.key);
+                                  if (sourceIndex < 0) return;
+                                  next[sourceIndex] = {
+                                    ...next[sourceIndex],
+                                    pairs: {
+                                      ...next[sourceIndex].pairs,
                                       [pair]: formatFxRate(e.target.value),
                                     },
                                   };
