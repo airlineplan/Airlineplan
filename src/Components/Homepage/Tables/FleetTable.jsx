@@ -6,7 +6,6 @@ import { toast } from "react-toastify";
 
 const CATEGORIES = ["Aircraft", "Engine", "APU"];
 const STATUSES = ["Active", "Available", "Assigned", "Maintenance", "Retired"];
-const OWNERSHIP_TYPES = ["Owned with no lien", "Operating lease", "Finance lease", "Wet lease"];
 const METRIC_OPTIONS = [
     { label: "FH", value: "fh" },
     { label: "BH", value: "bh" },
@@ -95,6 +94,26 @@ const formatMetricValue = (value, metricKey) => {
     const numericValue = Number(value) || 0;
     if (metricKey === "dep") return String(Math.round(numericValue));
     return numericValue.toFixed(2);
+};
+
+const isSpareComponentAsset = (asset) =>
+    ["Engine", "APU"].includes(asset?.category) &&
+    String(asset?.titled || "").toLowerCase().includes("spare");
+
+const isTitledComponentAsset = (asset) =>
+    ["Engine", "APU"].includes(asset?.category) &&
+    Boolean(String(asset?.titled || "").trim());
+
+const shouldBlankOwnership = (asset) =>
+    isTitledComponentAsset(asset);
+
+const getOwnershipOptions = (asset) => {
+    const baseOptions = ["Owned with no lien", "Operating lease", "Finance lease"];
+    return shouldBlankOwnership(asset)
+        ? []
+        : isSpareComponentAsset(asset)
+        ? baseOptions
+        : [...baseOptions, "Wet lease"];
 };
 
 const FleetTable = () => {
@@ -288,7 +307,22 @@ const FleetTable = () => {
 
     const handleInputChange = (id, field, value) => {
         setAssets(prev => prev.map(asset =>
-            asset.id === id ? { ...asset, [field]: value } : asset
+            asset.id !== id
+                ? asset
+                : (() => {
+                    const nextAsset = { ...asset, [field]: value };
+                    if (field === "titled" || field === "category") {
+                        if (shouldBlankOwnership(nextAsset)) {
+                            nextAsset.ownership = "";
+                        } else if (isSpareComponentAsset(nextAsset) && asset.ownership === "Wet lease") {
+                            nextAsset.ownership = "";
+                        }
+                    }
+                    if (field === "ownership" && shouldBlankOwnership(asset)) {
+                        nextAsset.ownership = "";
+                    }
+                    return nextAsset;
+                })()
         ));
     };
 
@@ -555,10 +589,19 @@ const FleetTable = () => {
                                         <input type="text" value={asset.titled} onChange={e => handleInputChange(asset.id, "titled", e.target.value)} className="w-full h-full bg-transparent outline-none px-1" placeholder="e.g. VT-DKU #1" />
                                     </div>
                                     <div className="w-32 p-1 border-r">
-                                        <select value={asset.ownership} onChange={e => handleInputChange(asset.id, "ownership", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 cursor-pointer">
-                                            <option value="" disabled className="text-gray-400">Select Lease</option>
-                                            {OWNERSHIP_TYPES.map(o => <option key={o} value={o}>{o}</option>)}
-                                        </select>
+                                        {shouldBlankOwnership(asset)
+                                            ? <div className="w-full h-full px-1 flex items-center" />
+                                            : (
+                                                <select
+                                                    value={asset.ownership}
+                                                    onChange={e => handleInputChange(asset.id, "ownership", e.target.value)}
+                                                    className="w-full h-full bg-transparent outline-none px-1 cursor-pointer"
+                                                >
+                                                    <option value="" disabled className="text-gray-400">Select</option>
+                                                    {getOwnershipOptions(asset).map(o => <option key={o} value={o}>{o}</option>)}
+                                                </select>
+                                            )
+                                        }
                                     </div>
                                     <div className="w-24 p-1 border-r">
                                         <input type="number" value={asset.mtow} onChange={e => handleInputChange(asset.id, "mtow", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 text-right" placeholder="e.g. 77000" />
