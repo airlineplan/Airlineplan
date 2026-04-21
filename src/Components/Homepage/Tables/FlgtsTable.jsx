@@ -96,6 +96,58 @@ const COLUMNS_CONFIG = [
   { id: 'rotationNumber', key: 'rotationNumber', label: 'Rotation #', minWidth: '100px', masterOnly: true },
 ];
 
+const COST_COLUMN_KEYS = new Set([
+  'engineFuelConsumption',
+  'engineFuelCost',
+  'engineFuelCostCCY',
+  'engineFuelCostRCCY',
+  'maintenanceReserveContribution',
+  'maintenanceReserveContributionCCY',
+  'maintenanceReserveContributionRCCY',
+  'mrContribution',
+  'mrContributionCCY',
+  'mrContributionRCCY',
+  'transitMaintenance',
+  'transitMaintenanceCCY',
+  'transitMaintenanceRCCY',
+  'otherMaintenance',
+  'otherMaintenanceCCY',
+  'otherMaintenanceRCCY',
+  'navigation',
+  'navigationCCY',
+  'navigationRCCY',
+  'airport',
+  'airportCCY',
+  'airportRCCY',
+  'otherDoc',
+  'otherDocCCY',
+  'otherDocRCCY',
+  'crewAllowances',
+  'crewAllowancesCCY',
+  'crewAllowancesRCCY',
+  'layoverCost',
+  'layoverCostCCY',
+  'layoverCostRCCY',
+  'crewPositioningCost',
+  'crewPositioningCostCCY',
+  'crewPositioningCostRCCY',
+  'apuFuelCost',
+  'apuFuelCostCCY',
+  'apuFuelCostRCCY',
+  'mrMonthly',
+  'mrMonthlyCCY',
+  'mrMonthlyRCCY',
+  'qualifyingSchMxEvents',
+  'qualifyingSchMxEventsCCY',
+  'qualifyingSchMxEventsRCCY',
+  'otherMxExpenses',
+  'otherMxExpensesCCY',
+  'otherMxExpensesRCCY',
+  'rotableChanges',
+  'rotableChangesCCY',
+  'rotableChangesRCCY',
+]);
+
 // --- COMPONENTS ---
 const TableInput = ({ name, value, onChange, placeholder }) => (
   <div className="relative group mt-1">
@@ -111,7 +163,7 @@ const TableInput = ({ name, value, onChange, placeholder }) => (
   </div>
 );
 
-const FlgtsTable = ({ isMaster = true }) => {
+const FlgtsTable = ({ isMaster = true, showCostColumns = true }) => {
   const [flgtsTableData, setFlgtsTableData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -123,8 +175,9 @@ const FlgtsTable = ({ isMaster = true }) => {
   const [filters, setFilters] = useState({});
 
   const visibleColumns = useMemo(() => {
-    return COLUMNS_CONFIG.filter(col => isMaster || !col.masterOnly);
-  }, [isMaster]);
+    return COLUMNS_CONFIG.filter(col => isMaster || !col.masterOnly)
+      .filter(col => showCostColumns || !COST_COLUMN_KEYS.has(col.key));
+  }, [isMaster, showCostColumns]);
 
   const fetchFlights = useCallback(async (page, limit, currentFilters) => {
     setLoading(true);

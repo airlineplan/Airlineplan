@@ -44,7 +44,7 @@ const TABS = [
   { id: 1, label: "Sectors", icon: Map, component: SectorsTable },
   { id: 2, label: "Stations", icon: RadioTower, component: StationsTable },
   { id: 3, label: "Rotations", icon: RotateCw, component: Rotations },
-  { id: 4, label: "FLGTs", icon: Plane, component: FlgtsTable },
+  { id: 4, label: "FLGTs", icon: Plane, component: (props) => <FlgtsTable {...props} showCostColumns={false} /> },
   { id: 5, label: "View", icon: Eye, component: ViewPage },
   { id: 6, label: "Dashboard", icon: LayoutDashboard, component: DashboardTable },
   { id: 7, label: "List", icon: List, component: ListTable },

@@ -355,6 +355,7 @@ const UpdatePopUp = (props) => {
           setLoading(false);
           toast.success("Updated successfully");
           setMessage(data.message);
+          window.dispatchEvent(new CustomEvent("assignments:updated"));
           setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
         })
         .catch((error) => {
