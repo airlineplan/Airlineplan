@@ -112,8 +112,8 @@ const getOwnershipOptions = (asset) => {
     return shouldBlankOwnership(asset)
         ? []
         : isSpareComponentAsset(asset)
-        ? baseOptions
-        : [...baseOptions, "Wet lease"];
+            ? baseOptions
+            : [...baseOptions, "Wet lease"];
 };
 
 const FleetTable = () => {
@@ -391,7 +391,7 @@ const FleetTable = () => {
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400">
-                            Fleet Status & Asset Management
+                            Fleet
                         </h2>
                     </div>
                     <div className="flex gap-3">

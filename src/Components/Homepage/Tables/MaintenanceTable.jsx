@@ -78,6 +78,7 @@ const MaintenanceDashboard = () => {
     const [isEditingCalendar, setIsEditingCalendar] = useState(false);
 
     const fetchDashboardData = async () => {
+        setMaintenanceData([]);
         try {
             const res = await api.get('/maintenance/dashboard', {
                 params: {
@@ -85,9 +86,7 @@ const MaintenanceDashboard = () => {
                     msnEsn: selectedMsn || undefined
                 }
             });
-            if (res.data && res.data.success && res.data.data.maintenanceData) {
-                setMaintenanceData(res.data.data.maintenanceData);
-            }
+            setMaintenanceData(Array.isArray(res.data?.data?.maintenanceData) ? res.data.data.maintenanceData : []);
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
         }
@@ -122,7 +121,7 @@ const MaintenanceDashboard = () => {
         const newRow = {
             id: `temp-${Date.now()}`,
             isNew: true,
-            calLabel: "", lineBase: "", calMsn: "", schEvent: "", calPn: "", snBn: "", 
+            calLabel: "", lineBase: "", calMsn: "", schEvent: "", calPn: "", snBn: "",
             eTsn: "", eCsn: "", eDsn: "", eTso: "", eCso: "", eDso: "", eTsr: "", eCsr: "", eDsr: "",
             lastOccurre: "", nextEstima: "", downDays: "", avgDownda: "", occurrence: "", soTsr: ""
         };
@@ -646,15 +645,13 @@ const MaintenanceDashboard = () => {
                 <div className="flex items-start justify-between">
                     <div>
                         <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400">
-                            Maintenance Logic Dashboard
+                            Maintenance
                         </h2>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 flex items-center gap-2">
-                            Application runs maintenance logic on updated data tables on click of 'Compute'
-                        </p>
+
                     </div>
 
                     <div className="flex flex-col items-end gap-3">
-                        <button 
+                        <button
                             onClick={handleCompute}
                             disabled={isComputing}
                             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-md transition-all ${isComputing ? "bg-slate-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}
@@ -670,17 +667,17 @@ const MaintenanceDashboard = () => {
                                 </>
                             )}
                         </button>
-                        <div className="flex flex-col gap-2 text-xs font-medium">
+                        <div className="flex flex-row gap-3 text-xs font-medium">
                             <button
                                 onClick={() => setShowSetResetModal(true)}
-                                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded transition-colors w-full text-left"
+                                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded transition-colors whitespace-nowrap"
                             >
                                 <Settings size={14} /> Set/Reset Maintenance status
                             </button>
-                            <button onClick={handleTargetsClick} className="flex items-center gap-2 text-green-600 hover:text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-3 py-1.5 rounded transition-colors w-full text-left">
+                            <button onClick={handleTargetsClick} className="flex items-center gap-2 text-green-600 hover:text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-3 py-1.5 rounded transition-colors whitespace-nowrap">
                                 <RefreshCw size={14} /> Set/Reset Target status
                             </button>
-                            <button onClick={handleRotablesClick} className="flex items-center gap-2 text-purple-600 hover:text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 px-3 py-1.5 rounded transition-colors w-full text-left">
+                            <button onClick={handleRotablesClick} className="flex items-center gap-2 text-purple-600 hover:text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 px-3 py-1.5 rounded transition-colors whitespace-nowrap">
                                 <Layers size={14} /> Major rotables movement
                             </button>
                         </div>
@@ -700,28 +697,9 @@ const MaintenanceDashboard = () => {
                             onChange={(e) => setSelectedDate(e.target.value)}
                             className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs px-2 py-1 rounded"
                         />
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="text"
-                                value={selectedMsn}
-                                onChange={(e) => setSelectedMsn(e.target.value)}
-                                placeholder="MSN/ESN"
-                                className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs px-2 py-1 rounded w-36"
-                            />
-                            {selectedMsn ? (
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedMsn("")}
-                                    className="text-[10px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                                >
-                                    Clear
-                                </button>
-                            ) : null}
-                        </div>
+
                     </div>
-                    <span className="text-[10px] text-slate-500 italic text-right max-w-sm">
-                        For each MSN/ESN+PN+SN/BN, metrics can be set/reset only on one date.<br />Metrics for all other dates (historical/forecast) will be (re)calculated.
-                    </span>
+
                 </div>
                 <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm">
                     <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
@@ -1240,7 +1218,7 @@ const MaintenanceDashboard = () => {
                         </div>
                     </div>
                 </div>
-            , document.body)}
+                , document.body)}
 
             {/* --- MAJOR ROTABLES MOVEMENT MODAL --- */}
             {showRotablesModal && createPortal(
@@ -1371,7 +1349,7 @@ const MaintenanceDashboard = () => {
                         </div>
                     </div>
                 </div>
-            , document.body)}
+                , document.body)}
 
             {/* --- TARGET MAINTENANCE MODAL --- */}
             {showTargetsModal && createPortal(
@@ -1527,7 +1505,7 @@ const MaintenanceDashboard = () => {
                         </div>
                     </div>
                 </div>
-            , document.body)}
+                , document.body)}
         </div>
     );
 };

@@ -27,12 +27,12 @@ const generateDatesForSunday = (sundayDateStr) => {
     DAYS.forEach(dayInfo => {
         const d = new Date(sunday);
         d.setUTCDate(sunday.getUTCDate() + dayInfo.offset);
-        
+
         // Use toLocaleDateString with UTC timezone to ensure the display matches the UTC date
-        dates[dayInfo.key] = d.toLocaleDateString('en-GB', { 
-            day: '2-digit', 
-            month: 'short', 
-            timeZone: 'UTC' 
+        dates[dayInfo.key] = d.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            timeZone: 'UTC'
         });
     });
     return dates;
@@ -179,11 +179,9 @@ const AssignmentTable = () => {
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
-                            Assignment Table
+                            Assignment
                         </h2>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-                            Assign aircraft to flights mapped by rotation
-                        </p>
+
                     </div>
                     <div>
                         <button
