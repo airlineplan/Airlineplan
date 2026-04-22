@@ -17,21 +17,6 @@ const dummyMaintenanceData = [
     { id: 3, msn: "685912", pn: "", sn: "", titled: "VT-DKU #1", tsn: "19376.80", csn: "9914", dsn: "3285", tso: "19376.80", cso: "9914", dso: "", tsr: "", csr: "9914", dsr: "", allDisplay: "" },
 ];
 
-const dummyTargetData = [
-    {
-        id: 1, targetLabel: "ABC", targetMsn: "685782", targetPn: "CFM56-5B", targetSn: "685782", category: "Run-down", date: "12/Oct/25",
-        tsn: "", csn: "", dsn: "", tso: "7150", cso: "3850", dso: "", tsr: "", csr: "3850", dsr: "",
-        fTsn: "", fCsn: "", fDsn: "", fTso: "2.27", fCso: "-3", fDso: "",
-        highlights: ["tso", "cso"]
-    },
-    {
-        id: 2, targetLabel: "DEF", targetMsn: "685912", targetPn: "CFM56-5B", targetSn: "685912", category: "Conserve", date: "13/Oct/25",
-        tsn: "19385", csn: "9800", dsn: "", tso: "", cso: "9900", dso: "", tsr: "", csr: "", dsr: "",
-        fTsn: "3.52", fCsn: "-116", fDsn: "", fTso: "", fCso: "-16", fDso: "",
-        highlights: ["csn", "cso"]
-    },
-];
-
 const dummyCalendarData = [
     {
         id: 1, calLabel: "XYZ", lineBase: "Base", calMsn: "4120", schEvent: "C-check", calPn: "A320ceo", snBn: "4120",
@@ -73,7 +58,7 @@ const MaintenanceDashboard = () => {
 
     // Dynamic State for Main Tables
     const [maintenanceData, setMaintenanceData] = useState([]);
-    const [targetData] = useState(dummyTargetData);
+    const [targetData, setTargetData] = useState([]);
     const [calendarData, setCalendarData] = useState([]);
     const [isEditingCalendar, setIsEditingCalendar] = useState(false);
 
@@ -92,6 +77,21 @@ const MaintenanceDashboard = () => {
         }
     };
 
+    const fetchTargetsData = async () => {
+        setTargetData([]);
+        try {
+            const res = await api.get('/maintenance/targets', {
+                params: {
+                    date: selectedDate,
+                    msnEsn: selectedMsn || undefined
+                }
+            });
+            setTargetData(Array.isArray(res.data?.data) ? res.data.data : []);
+        } catch (error) {
+            console.error("Failed to fetch targets data:", error);
+        }
+    };
+
     const fetchCalendarData = async () => {
         try {
             const res = await api.get('/maintenance/calendar');
@@ -106,6 +106,7 @@ const MaintenanceDashboard = () => {
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             fetchDashboardData();
+            fetchTargetsData();
         }, 300);
 
         fetchCalendarData();
@@ -429,7 +430,7 @@ const MaintenanceDashboard = () => {
     const [targetsSortConfig, setTargetsSortConfig] = useState({ key: null, direction: "Up" });
     const [targetsFilters, setTargetsFilters] = useState({ label: "", msnEsn: "", pn: "", snBn: "", category: "", date: "" });
 
-    const fetchTargetsData = async () => {
+    const fetchTargetsModalData = async () => {
         try {
             const res = await api.get('/maintenance/targets');
             if (res.data && res.data.success) {
@@ -442,7 +443,7 @@ const MaintenanceDashboard = () => {
 
     const handleTargetsClick = () => {
         setShowTargetsModal(true);
-        fetchTargetsData();
+        fetchTargetsModalData();
     };
 
     const handleTargetsSort = (key) => {
@@ -1026,7 +1027,6 @@ const MaintenanceDashboard = () => {
                                                 </ul>
                                             )}
                                         </div>
-                                        <span className="text-slate-500 font-normal">User selected / autopopulated if other criteria entered</span>
                                     </div>
 
                                     <span className="w-16 text-center text-slate-400 italic">(Or)</span>
@@ -1040,7 +1040,6 @@ const MaintenanceDashboard = () => {
                                             onChange={(e) => setResetDate(e.target.value)}
                                             className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 rounded w-36 outline-none focus:ring-1 focus:ring-blue-500"
                                         />
-                                        <span className="text-slate-500 font-normal">User selected / autopopulated if other criteria entered</span>
                                     </div>
 
                                 </div>
