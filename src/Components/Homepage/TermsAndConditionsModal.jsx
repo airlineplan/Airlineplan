@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, FileText, ShieldCheck } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import useEscapeKey from "../../hooks/useEscapeKey";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -46,15 +47,7 @@ export default function TermsAndConditionsModal() {
   const [isOpen, setIsOpen] = useState(false);
   const contentRef = useRef(null);
 
-  // Close on Escape key
-  
-  useEffect(() => {
-    const handleEsc = (e) => {
-      if (e.key === "Escape") setIsOpen(false);
-    };
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, []);
+  useEscapeKey(isOpen, () => setIsOpen(false));
 
   // Prevent body scroll when open
   useEffect(() => {

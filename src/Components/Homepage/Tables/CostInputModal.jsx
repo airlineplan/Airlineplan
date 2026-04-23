@@ -6,6 +6,7 @@ import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import api from "../../../apiConfig";
 import { toast } from "react-toastify";
+import useEscapeKey from "../../../hooks/useEscapeKey";
 
 // --- Helper Components ---
 function cn(...inputs) {
@@ -137,6 +138,8 @@ function EditableTable({ title, columns, data, setData }) {
 // --- Main Modal Component ---
 
 export default function CostInputModal({ isOpen, onClose }) {
+  useEscapeKey(isOpen, onClose);
+
   // === FUEL STATE ===
   const [fuelConsum, setFuelConsum] = useState([]);
   const [apuUsage, setApuUsage] = useState([]);

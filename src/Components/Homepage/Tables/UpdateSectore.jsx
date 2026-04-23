@@ -7,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { X, PenLine } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import useEscapeKey from "../../../hooks/useEscapeKey";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -91,6 +92,11 @@ const UpdateSectore = (props) => {
   const [cargoLFPercentError, setCargoLfPercentError] = useState("");
   const [fromDtError, setFromDtError] = useState("");
   const [toDtError, setToDtError] = useState("");
+
+  useEscapeKey(openUpdateModal, () => {
+    setOpenUpdateModal(false);
+    props.setAdd(true);
+  });
 
   const DataId = props.checkedRows?.[0];
   const productId = props.checkedRows;

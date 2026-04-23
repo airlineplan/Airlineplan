@@ -6,6 +6,7 @@ import { twMerge } from "tailwind-merge";
 import { X, Save, AlertCircle, Calendar, Plus, Search } from "lucide-react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import useEscapeKey from "../../../hooks/useEscapeKey";
 import { calculateAutoSta } from "./networkStaUtils";
 
 // --- UTILITIES ---
@@ -141,6 +142,11 @@ const AddNetwork = ({ setAdd }) => {
   const [dropdownData, setDropdownData] = useState({ from: [], to: [] });
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
+
+  useEscapeKey(isOpen, () => {
+    setIsOpen(false);
+    if (setAdd) setAdd(true);
+  });
 
   const timeOptions = useMemo(() => {
     const times = [];

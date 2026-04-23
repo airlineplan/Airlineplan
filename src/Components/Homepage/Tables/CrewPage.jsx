@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { ChevronDown, Check, UploadCloud, FileText, Settings, X, Calendar, Activity, DollarSign, Clock, Users } from "lucide-react";
+import useEscapeKey from "../../../hooks/useEscapeKey";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -98,6 +99,8 @@ const ActionButton = ({ label, icon: Icon, onClick, variant = "primary" }) => {
 
 // --- MODAL COMPONENT ---
 const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-4xl" }) => {
+    useEscapeKey(isOpen, onClose);
+
     return (
         <AnimatePresence>
             {isOpen && (

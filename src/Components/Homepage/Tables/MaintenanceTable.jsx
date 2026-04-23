@@ -8,13 +8,14 @@ import {
 import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import useEscapeKey from "../../../hooks/useEscapeKey";
 
 // --- DUMMY DATA STRUCTURES (Replace with API Response later) ---
 
 const dummyMaintenanceData = [
-    { id: 1, msn: "4120", pn: "", sn: "", titled: "", tsn: "25104.45", csn: "12855", dsn: "3285", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "", allDisplay: "All display only" },
-    { id: 2, msn: "685911", pn: "", sn: "", titled: "VT-DKU #2", tsn: "20841.10", csn: "10275", dsn: "3285", tso: "746.50", cso: "315", dso: "40", tsr: "", csr: "10275", dsr: "", allDisplay: "" },
-    { id: 3, msn: "685912", pn: "", sn: "", titled: "VT-DKU #1", tsn: "19376.80", csn: "9914", dsn: "3285", tso: "19376.80", cso: "9914", dso: "", tsr: "", csr: "9914", dsr: "", allDisplay: "" },
+    { id: 1, msn: "4120", pn: "", sn: "", titled: "", tsn: "25104.45", csn: "12855", dsn: "3285", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "" },
+    { id: 2, msn: "685911", pn: "", sn: "", titled: "VT-DKU #2", tsn: "20841.10", csn: "10275", dsn: "3285", tso: "746.50", cso: "315", dso: "40", tsr: "", csr: "10275", dsr: "" },
+    { id: 3, msn: "685912", pn: "", sn: "", titled: "VT-DKU #1", tsn: "19376.80", csn: "9914", dsn: "3285", tso: "19376.80", cso: "9914", dso: "", tsr: "", csr: "9914", dsr: "" },
 ];
 
 const dummyCalendarData = [
@@ -157,6 +158,17 @@ const MaintenanceDashboard = () => {
     // Autocomplete Dropdown State
     const [showDropdown, setShowDropdown] = useState(false);
     const [dropdownOptions, setDropdownOptions] = useState([]);
+
+    const openSetResetModal = ({ msnEsn = "", date = "" } = {}) => {
+        setModalFilters({ msnEsn: "", pn: "", snBn: "" });
+        setModalSortConfig({ key: null, direction: "Up" });
+        setModalTableData([]);
+        setDropdownOptions([]);
+        setShowDropdown(false);
+        setResetAssetSN(msnEsn);
+        setResetDate(date || selectedDate || "");
+        setShowSetResetModal(true);
+    };
 
     // Filter Modal Table whenever Asset SN or Date changes (now via API)
     useEffect(() => {
@@ -430,6 +442,15 @@ const MaintenanceDashboard = () => {
     const [targetsSortConfig, setTargetsSortConfig] = useState({ key: null, direction: "Up" });
     const [targetsFilters, setTargetsFilters] = useState({ label: "", msnEsn: "", pn: "", snBn: "", category: "", date: "" });
 
+    useEscapeKey(
+        showSetResetModal || showRotablesModal || showTargetsModal,
+        () => {
+            setShowSetResetModal(false);
+            setShowRotablesModal(false);
+            setShowTargetsModal(false);
+        }
+    );
+
     const fetchTargetsModalData = async () => {
         try {
             const res = await api.get('/maintenance/targets');
@@ -670,7 +691,7 @@ const MaintenanceDashboard = () => {
                         </button>
                         <div className="flex flex-row gap-3 text-xs font-medium">
                             <button
-                                onClick={() => setShowSetResetModal(true)}
+                                onClick={() => openSetResetModal({ date: selectedDate })}
                                 className="flex items-center gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded transition-colors whitespace-nowrap"
                             >
                                 <Settings size={14} /> Set/Reset Maintenance status
@@ -711,7 +732,7 @@ const MaintenanceDashboard = () => {
                                 {renderHeader("SN/BN", "sn")}
                                 {renderHeader("Titled/Spare", "titled")}
                                 <th colSpan={9} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Maintenance status</th>
-                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-semibold align-bottom">All display</th>
+                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-100 dark:bg-slate-800/90">Action</th>
                             </tr>
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
                                 <th className="p-2 border border-slate-200 dark:border-slate-700">TSN</th>
@@ -741,7 +762,15 @@ const MaintenanceDashboard = () => {
                                     <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.tsr}</td>
                                     <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.csr}</td>
                                     <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.dsr}</td>
-                                    <td className={`p-2 ${row.allDisplay ? "text-slate-400 italic text-[10px]" : ""}`}>{row.allDisplay}</td>
+                                    <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center">
+                                        <button
+                                            type="button"
+                                            onClick={() => openSetResetModal({ msnEsn: row.msnEsn || row.msn, date: row.asOnDate || selectedDate })}
+                                            className="px-2 py-1 rounded text-[10px] font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
+                                        >
+                                            Set/Reset
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

@@ -8,6 +8,7 @@ import { X, Copy, Search } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { calculateAutoSta } from "./networkStaUtils";
+import useEscapeKey from "../../../hooks/useEscapeKey";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -149,6 +150,11 @@ export default function CopyRow(props) {
   const [userTag2Error, setUserTag2Error] = useState("");
   const [remarks1Error, setRemarks1Error] = useState("");
   const [remarks2Error, setRemarks2Error] = useState("");
+
+  useEscapeKey(open, () => {
+    setOpen(false);
+    props.setAdd(true);
+  });
 
   // --- API: Fetch Dropdowns ---
   useEffect(() => {

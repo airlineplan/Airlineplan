@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import useEscapeKey from "../../../hooks/useEscapeKey";
 
 // --- EXTERNAL COMPONENTS ---
 // Make sure these are properly imported from your directory structure
@@ -72,35 +73,39 @@ const Checkbox = ({ checked, onChange }) => (
   </div>
 );
 
-const Modal = ({ isOpen, onClose, title, children }) => (
-  <AnimatePresence>
-    {isOpen && (
-      <>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
-        />
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="fixed inset-0 m-auto z-50 w-full max-w-lg h-fit max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6"
-        >
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg font-semibold text-slate-800 dark:text-white">{title}</h3>
-            <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-              <X size={20} className="text-slate-500" />
-            </button>
-          </div>
-          {children}
-        </motion.div>
-      </>
-    )}
-  </AnimatePresence>
-);
+const Modal = ({ isOpen, onClose, title, children }) => {
+  useEscapeKey(isOpen, onClose);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="fixed inset-0 m-auto z-50 w-full max-w-lg h-fit max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold text-slate-800 dark:text-white">{title}</h3>
+              <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+            {children}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
 
 // --- MAIN PAGE COMPONENT ---
 const RowsPerPage = 8;

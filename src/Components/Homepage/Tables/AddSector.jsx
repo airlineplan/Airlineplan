@@ -6,6 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { X } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import useEscapeKey from "../../../hooks/useEscapeKey";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -89,6 +90,11 @@ const AddSector = (props) => {
   const [cargoLFPercentError, setCargoLfPercentError] = useState("");
   const [fromDtError, setFromDtError] = useState("");
   const [toDtError, setToDtError] = useState("");
+
+  useEscapeKey(openNewModal, () => {
+    setOpenNewModal(false);
+    props.setAdd(true);
+  });
 
   // --- API: Fetch Stations for Timezone Logic ---
   useEffect(() => {
