@@ -10,33 +10,6 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import useEscapeKey from "../../../hooks/useEscapeKey";
 
-// --- DUMMY DATA STRUCTURES (Replace with API Response later) ---
-
-const dummyMaintenanceData = [
-    { id: 1, msn: "4120", pn: "", sn: "", titled: "", tsn: "25104.45", csn: "12855", dsn: "3285", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "" },
-    { id: 2, msn: "685911", pn: "", sn: "", titled: "VT-DKU #2", tsn: "20841.10", csn: "10275", dsn: "3285", tso: "746.50", cso: "315", dso: "40", tsr: "", csr: "10275", dsr: "" },
-    { id: 3, msn: "685912", pn: "", sn: "", titled: "VT-DKU #1", tsn: "19376.80", csn: "9914", dsn: "3285", tso: "19376.80", cso: "9914", dso: "", tsr: "", csr: "9914", dsr: "" },
-];
-
-const dummyCalendarData = [
-    {
-        id: 1, calLabel: "XYZ", lineBase: "Base", calMsn: "4120", schEvent: "C-check", calPn: "A320ceo", snBn: "4120",
-        eTsn: "", eCsn: "12860", eDsn: "3300", eTso: "", eCso: "", eDso: "", eTsr: "", eCsr: "", eDsr: "",
-        lastOccurre: "14 Oct 25", nextEstima: "15 Nov 26\n19 Nov 26", downDays: "3", avgDownda: "5", occurrence: "2", soTsr: "0",
-        highlights: ["eCsn", "eDsn"]
-    }
-];
-
-// Dummy Data for the Reset Maintenance Modal Table
-const dummyResetData = [
-    { id: 1, date: "2025-10-09", msnEsn: "685911", pn: "82-940-A4", snBn: "96040", tsn: "3802.6", csn: "", dsn: "384", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "", metric: "BH" },
-    { id: 2, date: "2025-10-10", msnEsn: "685782", pn: "CFM56-5B", snBn: "685782", tsn: "42891.25", csn: "22833", dsn: "5094", tso: "7147.73", cso: "3853", dso: "1548", tsr: "7147.73", csr: "3853", dsr: "1548", metric: "FH" },
-    { id: 3, date: "2025-10-10", msnEsn: "685911", pn: "382-940-A", snBn: "96040", tsn: "3802.60", csn: "", dsn: "384", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "", metric: "BH" },
-    { id: 4, date: "2025-10-10", msnEsn: "685911", pn: "114039", snBn: "S9FL85", tsn: "", csn: "", dsn: "", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "5930", metric: "" },
-    { id: 5, date: "2025-10-12", msnEsn: "4120", pn: "A320ceo", snBn: "4120", tsn: "25104.45", csn: "12855", dsn: "3285", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "", metric: "BH" },
-    { id: 6, date: "2025-10-12", msnEsn: "685911", pn: "CFM56-5B", snBn: "685911", tsn: "20841.10", csn: "10275", dsn: "3285", tso: "746.50", cso: "315", dso: "40", tsr: "", csr: "10275", dsr: "", metric: "FH" },
-    { id: 7, date: "2025-10-12", msnEsn: "685912", pn: "CFM56-5B", snBn: "685912", tsn: "19376.80", csn: "9914", dsn: "3285", tso: "19376.80", cso: "9914", dso: "", tsr: "", csr: "9914", dsr: "", metric: "FH" }
-];
 
 // --- COMPONENTS ---
 const TableInput = ({ name, value, onChange, placeholder }) => (
@@ -564,6 +537,7 @@ const MaintenanceDashboard = () => {
             "MSN/ESN": row.msnEsn,
             "PN": row.pn,
             "SN/BN": row.snBn,
+            "As on": row.date || resetDate || selectedDate || "",
             "TSN": row.tsn,
             "CSN": row.csn,
             "DSN": row.dsn,

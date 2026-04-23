@@ -147,16 +147,24 @@ const AssignmentTable = () => {
 
         setIsUploading(true);
         try {
-            await api.post("/uploadAssignments", formData, {
+            const response = await api.post("/uploadAssignments", formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
-            toast.success("Assignments uploaded successfully!");
+            const message = response.data?.message || "Assignments uploaded successfully!";
+            if (response.status === 422 || response.data?.success === false) {
+                toast.error(message);
+            } else if (response.data?.diagnostics?.rejections && Object.values(response.data.diagnostics.rejections).some((count) => Number(count) > 0)) {
+                toast.warning(message);
+            } else {
+                toast.success(message);
+            }
             window.dispatchEvent(new CustomEvent("assignments:updated"));
             await fetchWeeks(); // Refresh dropdown range
             fetchAssignments(); // Refresh table immediately
         } catch (error) {
             console.error("Upload error", error);
-            toast.error(error.response?.data?.message || "Error uploading file");
+            const message = error.response?.data?.message || "Error uploading file";
+            toast.error(message);
         } finally {
             setIsUploading(false);
             event.target.value = null; // Reset input
@@ -204,6 +212,7 @@ const AssignmentTable = () => {
                         <p className="pl-6 border-l-2 border-slate-200 dark:border-slate-700 ml-2">
                             Excel/CSV format <br />
                             <span className="font-mono text-xs bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">Date | Flight # | ACFT</span> <br />
+                            <span className="text-xs text-slate-500 dark:text-slate-400">ACFT must be the aircraft registration, for example VT-AAB.</span>
                         </p>
                     </div>
 
