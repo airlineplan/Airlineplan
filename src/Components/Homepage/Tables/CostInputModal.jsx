@@ -1332,6 +1332,7 @@ export default function CostInputModal({ isOpen, onClose }) {
   const [airportDom, setAirportDom] = useState([]);
   const [airportIntl, setAirportIntl] = useState([]);
   const [airportAvsec, setAirportAvsec] = useState([]);
+  const [airportOther, setAirportOther] = useState([]);
 
   // === OTHER DOC STATE ===
   const [otherDoc, setOtherDoc] = useState([]);
@@ -1364,6 +1365,7 @@ export default function CostInputModal({ isOpen, onClose }) {
             setAirportDom(d.airportDom || []);
             setAirportIntl(d.airportIntl || []);
             setAirportAvsec(d.airportAvsec || []);
+            setAirportOther(d.airportOther || []);
 
             setOtherDoc(d.otherDoc || []);
           }
@@ -1378,7 +1380,7 @@ export default function CostInputModal({ isOpen, onClose }) {
         allocationTable,
         fuelConsum, fuelConsumIndex, apuUsage, plfEffect, ccyFuel,
         leasedReserve, schMxEvents, transitMx, otherMx, rotableChanges,
-        navMtowTiers, navEnr, navTerm, airportLanding, airportDom, airportIntl, airportAvsec,
+        navMtowTiers, navEnr, navTerm, airportLanding, airportDom, airportIntl, airportAvsec, airportOther,
         otherDoc
       };
 
@@ -1698,18 +1700,6 @@ export default function CostInputModal({ isOpen, onClose }) {
                     ]}
                   />
                   <EditableTable
-                    title="AvSec"
-                    data={airportAvsec}
-                    setData={setAirportAvsec}
-                    columns={[
-                      { label: "Arr Stn", key: "arrStn" },
-                      { label: "Variant", key: "variant" },
-                      { label: "Month", key: "month" },
-                      { label: "Cost", key: "cost", type: "number" },
-                      { label: "CCY", key: "ccy" },
-                    ]}
-                  />
-                  <EditableTable
                     title="Dom flight handling"
                     titleNote="Handling rows match by Arr Stn, MTOW, and date range on the flight."
                     data={airportDom}
@@ -1730,6 +1720,29 @@ export default function CostInputModal({ isOpen, onClose }) {
                     columns={[
                       { label: "Arr Stn", key: "arrStn" },
                       { label: "MTOW", key: "mtow", type: "number" },
+                      { label: "Variant", key: "variant" },
+                      { label: "Month", key: "month" },
+                      { label: "Cost", key: "cost", type: "number" },
+                      { label: "CCY", key: "ccy" },
+                    ]}
+                  />
+                  <CompactEditableTable
+                    title="Other APT costs @ Arr Stn"
+                    className="xl:col-span-2"
+                    data={airportOther}
+                    setData={setAirportOther}
+                    columns={[
+                      { label: "Arr Stn", key: "arrStn" },
+                      { label: "CCY", key: "ccy" },
+                      ...navMtowTiers.map((tier) => ({ label: String(tier), key: String(tier), type: "number" })),
+                    ]}
+                  />
+                  <EditableTable
+                    title="AvSec"
+                    data={airportAvsec}
+                    setData={setAirportAvsec}
+                    columns={[
+                      { label: "Arr Stn", key: "arrStn" },
                       { label: "Variant", key: "variant" },
                       { label: "Month", key: "month" },
                       { label: "Cost", key: "cost", type: "number" },
