@@ -1,9 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
   CalendarPlus2,
-  Filter,
   PlusCircle,
   RefreshCw,
   Save,
@@ -85,17 +84,44 @@ const PooTable = () => {
   const [date, setDate] = useState("");
   const [records, setRecords] = useState([]);
   const [meta, setMeta] = useState({ stationCurrency: "", reportingCurrency: "" });
+  const [stationsData, setStationsData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dirtyMap, setDirtyMap] = useState({});
   const [validationErrors, setValidationErrors] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("sNo");
-  const [sortDirection, setSortDirection] = useState("asc");
   const [applyDates, setApplyDates] = useState([]);
   const [pendingApplyDate, setPendingApplyDate] = useState("");
   const [transitDraft, setTransitDraft] = useState(blankTransitDraft);
+
+  useEffect(() => {
+    const loadStations = async () => {
+      try {
+        const response = await api.get("/get-stationData");
+        const stations = Array.isArray(response.data?.data) ? response.data.data : [];
+        setStationsData(stations);
+      } catch (error) {
+        console.error("Failed to load station data for POO dropdown", error);
+        setStationsData([]);
+      }
+    };
+
+    loadStations();
+  }, []);
+
+  const stationOptions = useMemo(() => {
+    const names = stationsData
+      .map((station) => String(station.stationName || "").trim().toUpperCase())
+      .filter(Boolean);
+
+    const uniqueNames = [...new Set(names)].sort((a, b) => a.localeCompare(b));
+
+    if (poo && !uniqueNames.includes(poo.trim().toUpperCase())) {
+      uniqueNames.unshift(poo.trim().toUpperCase());
+    }
+
+    return uniqueNames;
+  }, [stationsData, poo]);
 
   const fetchData = useCallback(async () => {
     if (!poo || !date) return;
@@ -142,9 +168,9 @@ const PooTable = () => {
       prev.map((row) =>
         row._id === rowId
           ? {
-              ...row,
-              [field]: value,
-            }
+            ...row,
+            [field]: value,
+          }
           : row
       )
     );
@@ -236,10 +262,9 @@ const PooTable = () => {
 
   const errorLookup = useMemo(() => buildErrorLookup(validationErrors), [validationErrors]);
 
-  const filteredRows = useMemo(() => {
+  const visibleRows = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    const next = records.filter((row) => {
-      if (typeFilter !== "all" && row.displayType !== typeFilter) return false;
+    return records.filter((row) => {
       if (!query) return true;
       return [
         row.poo,
@@ -253,47 +278,35 @@ const PooTable = () => {
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query));
     });
-
-    next.sort((left, right) => {
-      const a = left[sortBy];
-      const b = right[sortBy];
-      let comparison = 0;
-
-      if (sortBy === "date") {
-        comparison = new Date(a).getTime() - new Date(b).getTime();
-      } else if (typeof a === "number" || typeof b === "number") {
-        comparison = Number(a || 0) - Number(b || 0);
-      } else {
-        comparison = String(a || "").localeCompare(String(b || ""));
-      }
-
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-
-    return next;
-  }, [records, searchTerm, sortBy, sortDirection, typeFilter]);
+  }, [records, searchTerm]);
 
   const sections = useMemo(() => {
-    const selected = filteredRows.filter((row) => !row.displayType.startsWith("Transit"));
-    const transit = filteredRows.filter((row) => row.displayType.startsWith("Transit"));
-    const external = filteredRows.filter((row) => row.interline || row.codeshare);
+    const legRows = visibleRows.filter((row) => row.displayType === "Leg");
+    const odRows = visibleRows.filter((row) => row.displayType === "Behind" || row.displayType === "Beyond");
+    const transitRows = visibleRows.filter((row) => row.displayType?.startsWith("Transit"));
+    const usedIds = new Set([...legRows, ...odRows, ...transitRows].map((row) => row._id));
+    const external = visibleRows.filter((row) => (row.interline || row.codeshare) && !usedIds.has(row._id));
     return [
-      { title: "Selected OD Pairs", rows: selected },
-      { title: "Transits (Same Aircraft)", rows: transit },
-      { title: "Interline / Codeshare", rows: external },
+      { title: "Leg Data", subtitle: "Flight-level rows for the selected POO", rows: legRows },
+      { title: "OD Data", subtitle: "OD pairs related to the selected POO", rows: odRows },
+      { title: "Transits (Same Aircraft)", subtitle: "Transit rows created for this POO", rows: transitRows },
+      { title: "Interline / Codeshare", subtitle: "External rows tied to the same selection", rows: external },
     ];
-  }, [filteredRows]);
+  }, [visibleRows]);
 
   const summary = useMemo(() => {
-    return filteredRows.reduce((acc, row) => ({
+    return visibleRows.reduce((acc, row) => ({
       pax: acc.pax + Number(row.pax || 0),
       cargoT: acc.cargoT + Number(row.cargoT || 0),
       odTotalRev: acc.odTotalRev + Number(row.odTotalRev || 0),
       fnlRccyTotalRev: acc.fnlRccyTotalRev + Number(row.fnlRccyTotalRev || 0),
     }), { pax: 0, cargoT: 0, odTotalRev: 0, fnlRccyTotalRev: 0 });
-  }, [filteredRows]);
+  }, [visibleRows]);
 
   const totalDirtyRows = Object.keys(dirtyMap).length;
+  const legCount = sections.find((section) => section.title === "Leg Data")?.rows.length || 0;
+  const odCount = sections.find((section) => section.title === "OD Data")?.rows.length || 0;
+  const transitCount = sections.find((section) => section.title === "Transits (Same Aircraft)")?.rows.length || 0;
 
   const renderCellError = (rowId, field) => errorLookup.get(`${rowId}:${field}`) || "";
 
@@ -304,13 +317,22 @@ const PooTable = () => {
           <div className="space-y-4">
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Station / POO</label>
-                <input
-                  type="text"
+                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">POO</label>
+                <select
                   value={poo}
                   onChange={(e) => setPoo(e.target.value.toUpperCase())}
                   className="w-28 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-                />
+                >
+                  {stationOptions.length === 0 ? (
+                    <option value="">No stations</option>
+                  ) : (
+                    stationOptions.map((station) => (
+                      <option key={station} value={station}>
+                        {station}
+                      </option>
+                    ))
+                  )}
+                </select>
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Date</label>
@@ -427,32 +449,23 @@ const PooTable = () => {
               </div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                <Filter size={15} />
-                Filter + Sort
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Selected POO Overview</div>
+              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Leg rows first, OD rows below, with transits and interline rows grouped after that.
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className={inputBaseClass({ align: "left" })}>
-                  <option value="all">All types</option>
-                  <option value="Leg">Leg</option>
-                  <option value="Behind">Behind</option>
-                  <option value="Beyond">Beyond</option>
-                  <option value="Transit FL">Transit FL</option>
-                  <option value="Transit SL">Transit SL</option>
-                </select>
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={inputBaseClass({ align: "left" })}>
-                  <option value="sNo">S.No</option>
-                  <option value="date">Date</option>
-                  <option value="od">OD</option>
-                  <option value="flightNumber">Flight</option>
-                  <option value="pax">Pax</option>
-                  <option value="cargoT">Cargo T</option>
-                  <option value="fnlRccyTotalRev">Fnl RCCY Total</option>
-                </select>
-                <select value={sortDirection} onChange={(e) => setSortDirection(e.target.value)} className={inputBaseClass({ align: "left" })}>
-                  <option value="asc">Ascending</option>
-                  <option value="desc">Descending</option>
-                </select>
+              <div className="mt-4 grid grid-cols-3 gap-3">
+                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900/60">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Leg</div>
+                  <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{legCount}</div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900/60">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">OD</div>
+                  <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{odCount}</div>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900/60">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Transit</div>
+                  <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{transitCount}</div>
+                </div>
               </div>
             </div>
 
@@ -493,12 +506,12 @@ const PooTable = () => {
       </div>
 
       <div className="flex-1 overflow-auto p-4">
-        {!loading && filteredRows.length === 0 && (
+        {!loading && visibleRows.length === 0 && (
           <div className="flex h-full min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-center dark:border-slate-700 dark:bg-slate-900/20">
             <div className="space-y-2 px-6">
               <div className="text-lg font-semibold text-slate-700 dark:text-slate-200">No POO traffic rows</div>
               <div className="text-sm text-slate-500 dark:text-slate-400">
-                Choose a station and date, refresh allocation, or loosen your filters.
+                Choose a station and date, refresh allocation, or adjust your search.
               </div>
             </div>
           </div>
@@ -508,7 +521,9 @@ const PooTable = () => {
           <div key={section.title} className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/40">
             <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/60">
               <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">{section.title}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">{section.rows.length} row(s)</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">
+                {section.subtitle} · {section.rows.length} row(s)
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="min-w-[3200px] border-collapse">

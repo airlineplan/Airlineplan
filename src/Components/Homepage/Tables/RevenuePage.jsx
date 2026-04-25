@@ -129,7 +129,14 @@ const normalizeRowValue = (value) => {
   return normalized ? normalized : "(blank)";
 };
 
-const MultiSelectDropdown = ({ placeholder, options = [], onChange, selected = [] }) => {
+const MultiSelectDropdown = ({
+  placeholder,
+  options = [],
+  onChange,
+  selected = [],
+  buttonClassName = "",
+  menuClassName = "",
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -164,7 +171,8 @@ const MultiSelectDropdown = ({ placeholder, options = [], onChange, selected = [
           "w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg border transition-all duration-200 bg-white dark:bg-slate-900/50",
           isOpen
             ? "border-indigo-500 ring-1 ring-indigo-500"
-            : "border-slate-300 dark:border-slate-700 hover:border-slate-400"
+            : "border-slate-300 dark:border-slate-700 hover:border-slate-400",
+          buttonClassName
         )}
       >
         <span className="text-slate-700 dark:text-slate-300 truncate font-medium">
@@ -182,7 +190,10 @@ const MultiSelectDropdown = ({ placeholder, options = [], onChange, selected = [
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 5 }}
-            className="absolute z-[100] w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
+            className={cn(
+              "absolute z-[100] w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar",
+              menuClassName
+            )}
           >
             {safeOptions.map((opt) => {
               const isSelected = selected.some((item) => item.value === opt.value);
@@ -215,7 +226,14 @@ const MultiSelectDropdown = ({ placeholder, options = [], onChange, selected = [
   );
 };
 
-const SingleSelectDropdown = ({ placeholder, options = [], onChange, selected }) => {
+const SingleSelectDropdown = ({
+  placeholder,
+  options = [],
+  onChange,
+  selected,
+  buttonClassName = "",
+  menuClassName = "",
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -241,7 +259,8 @@ const SingleSelectDropdown = ({ placeholder, options = [], onChange, selected })
           "w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg border transition-all duration-200 bg-white dark:bg-slate-900/50",
           isOpen
             ? "border-indigo-500 ring-1 ring-indigo-500"
-            : "border-slate-300 dark:border-slate-700 hover:border-slate-400"
+            : "border-slate-300 dark:border-slate-700 hover:border-slate-400",
+          buttonClassName
         )}
       >
         <span className="text-slate-700 dark:text-slate-200 font-medium truncate">
@@ -259,7 +278,10 @@ const SingleSelectDropdown = ({ placeholder, options = [], onChange, selected })
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 5 }}
-            className="absolute z-[100] w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
+            className={cn(
+              "absolute z-[100] w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar",
+              menuClassName
+            )}
           >
             {safeOptions.map((opt) => (
               <div
@@ -281,7 +303,7 @@ const SingleSelectDropdown = ({ placeholder, options = [], onChange, selected })
 };
 
 const PERIODICITY_OPTIONS = [
-  { label: "Annual", value: "annually" },
+  { label: "Annually", value: "annually" },
   { label: "Quarterly", value: "quarterly" },
   { label: "Monthly", value: "monthly" },
   { label: "Weekly", value: "weekly" },
@@ -290,9 +312,16 @@ const PERIODICITY_OPTIONS = [
 
 const METRIC_OPTIONS = [
   { label: "Pax", value: "pax" },
-  { label: "Cargo T", value: "cargoT" },
+  { label: "CargoT", value: "cargoT" },
   { label: "Pax revenue", value: "fnlRccyPaxRev" },
   { label: "Cargo revenue", value: "fnlRccyCargoRev" },
+];
+
+const REVENUE_LABEL_OPTIONS = [
+  { label: "Domestic OD", value: "domestic_od" },
+  { label: "International OD", value: "international_od" },
+  { label: "Domestic Sector", value: "domestic_sector" },
+  { label: "International Sector", value: "international_sector" },
 ];
 
 const GROUPING_OPTIONS = [
@@ -330,6 +359,7 @@ const createInitialFilters = () => ({
   odDI: [],
   legDI: [],
   trafficClass: [],
+  revenueLabel: [],
   metrics: [METRIC_OPTIONS[2]],
 });
 
@@ -354,9 +384,9 @@ const RevenuePage = () => {
   });
   const [filters, setFilters] = useState(createInitialFilters());
   const [periodicity, setPeriodicity] = useState(PERIODICITY_OPTIONS[2]);
-  const [level1, setLevel1] = useState(GROUPING_OPTIONS[1]);
-  const [level2, setLevel2] = useState(GROUPING_OPTIONS[2]);
-  const [level3, setLevel3] = useState(GROUPING_OPTIONS[3]);
+  const [level1, setLevel1] = useState(null);
+  const [level2, setLevel2] = useState(null);
+  const [level3, setLevel3] = useState(null);
 
   useEffect(() => {
     const loadDropdowns = async () => {
@@ -414,6 +444,7 @@ const RevenuePage = () => {
           odDI: serializeValues(filters.odDI),
           legDI: serializeValues(filters.legDI),
           trafficClass: serializeValues(filters.trafficClass),
+          label: serializeValues(filters.revenueLabel),
         };
 
         Object.keys(params).forEach((key) => {
@@ -593,38 +624,33 @@ const RevenuePage = () => {
     }
   };
 
-  const filterFields = [
-    { key: "from", placeholder: "From", options: dropdownOptions.from },
-    { key: "to", placeholder: "To", options: dropdownOptions.to },
+  const primaryFilterFields = [
+    { key: "from", placeholder: "Dep Stn", options: dropdownOptions.from },
+    { key: "to", placeholder: "Arr Stn", options: dropdownOptions.to },
     { key: "sector", placeholder: "Sector", options: dropdownOptions.sector },
-    { key: "flight", placeholder: "Flight #", options: dropdownOptions.flight },
-    { key: "poo", placeholder: "POO", options: dropdownOptions.poo },
     { key: "variant", placeholder: "Variant", options: dropdownOptions.variant },
+    { key: "poo", placeholder: "POO", options: dropdownOptions.poo },
+    { key: "flight", placeholder: "Flight #", options: dropdownOptions.flight },
     { key: "userTag1", placeholder: "User Tag 1", options: dropdownOptions.userTag1 },
     { key: "userTag2", placeholder: "User Tag 2", options: dropdownOptions.userTag2 },
-    { key: "od", placeholder: "OD", options: dropdownOptions.od },
-    { key: "identifier", placeholder: "Identifier", options: dropdownOptions.identifier },
-    { key: "stop", placeholder: "Stop", options: dropdownOptions.stop },
-    { key: "al", placeholder: "AL", options: dropdownOptions.al },
-    { key: "odDI", placeholder: "OD D/I", options: dropdownOptions.odDI },
-    { key: "legDI", placeholder: "Sector D/I", options: dropdownOptions.legDI },
-    { key: "trafficClass", placeholder: "Traffic Class", options: TRAFFIC_CLASS_OPTIONS },
-    { key: "metrics", placeholder: "Metrics", options: METRIC_OPTIONS },
   ];
 
   return (
     <div className="w-full h-full p-6 space-y-6 flex flex-col min-h-[calc(100vh-180px)]">
-      <div className="flex flex-col xl:flex-row gap-6 relative z-50">
-        <div className="w-full p-5 rounded-xl border-2 border-emerald-400/40 dark:border-emerald-500/30 bg-emerald-50/30 dark:bg-emerald-900/10 shadow-sm relative">
-          <div className="absolute -top-3 left-4 bg-slate-50 dark:bg-slate-950 px-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-            <LayoutDashboard size={14} /> Revenue Filter Criteria
+      <div className="flex flex-col gap-6 relative z-50">
+        <div className="w-full p-5 rounded-xl border-2 border-indigo-400/40 dark:border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-900/10 shadow-sm relative">
+          <div className="absolute -top-3 left-4 bg-slate-50 dark:bg-slate-950 px-2 flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+            <LayoutDashboard size={14} /> Filter Criteria
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 mt-2">
-            <div>
-              <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Periodicity
-              </div>
+          <div className="flex flex-col gap-4 mt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <MultiSelectDropdown
+                placeholder="Revenue Label"
+                options={REVENUE_LABEL_OPTIONS}
+                selected={filters.revenueLabel}
+                onChange={(value) => updateFilter("revenueLabel", value)}
+              />
               <SingleSelectDropdown
                 placeholder="Periodicity"
                 options={PERIODICITY_OPTIONS}
@@ -633,19 +659,47 @@ const RevenuePage = () => {
               />
             </div>
 
-            {filterFields.map((field) => (
-              <div key={field.key}>
-                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  {field.placeholder}
-                </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2 p-3 bg-white/40 dark:bg-slate-900/40 border border-indigo-200/50 dark:border-indigo-800/50 rounded-lg shadow-inner">
+              {primaryFilterFields.map((field) => (
                 <MultiSelectDropdown
+                  key={field.key}
                   placeholder={field.placeholder}
                   options={field.options}
                   selected={filters[field.key]}
                   onChange={(value) => updateFilter(field.key, value)}
                 />
-              </div>
-            ))}
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 p-3 bg-white/40 dark:bg-slate-900/40 border border-indigo-200/50 dark:border-indigo-800/50 rounded-lg shadow-inner">
+              <MultiSelectDropdown
+                placeholder="Traffic Class"
+                options={TRAFFIC_CLASS_OPTIONS}
+                selected={filters.trafficClass}
+                onChange={(value) => updateFilter("trafficClass", value)}
+              />
+              <MultiSelectDropdown
+                placeholder="Stop"
+                options={dropdownOptions.stop}
+                selected={filters.stop}
+                onChange={(value) => updateFilter("stop", value)}
+              />
+              <MultiSelectDropdown
+                placeholder="AL"
+                options={dropdownOptions.al}
+                selected={filters.al}
+                onChange={(value) => updateFilter("al", value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-[120px_minmax(0,1fr)] gap-3 items-start p-3 bg-white/40 dark:bg-slate-900/40 border border-indigo-200/50 dark:border-indigo-800/50 rounded-lg shadow-inner">
+              <MultiSelectDropdown
+                placeholder="Metrics"
+                options={METRIC_OPTIONS}
+                selected={filters.metrics}
+                onChange={(value) => updateFilter("metrics", value)}
+              />
+            </div>
           </div>
         </div>
       </div>

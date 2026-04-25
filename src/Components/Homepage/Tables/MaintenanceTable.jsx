@@ -127,28 +127,55 @@ const MaintenanceDashboard = () => {
     const [modalSortConfig, setModalSortConfig] = useState({ key: null, direction: "Up" });
     const [modalFilters, setModalFilters] = useState({ msnEsn: "", pn: "", snBn: "" });
     const [isComputing, setIsComputing] = useState(false);
-
-    // Autocomplete Dropdown State
-    const [showDropdown, setShowDropdown] = useState(false);
-    const [dropdownOptions, setDropdownOptions] = useState([]);
+    const [assetSnOptions, setAssetSnOptions] = useState([]);
 
     const openSetResetModal = ({ msnEsn = "", date = "" } = {}) => {
         setModalFilters({ msnEsn: "", pn: "", snBn: "" });
         setModalSortConfig({ key: null, direction: "Up" });
         setModalTableData([]);
-        setDropdownOptions([]);
-        setShowDropdown(false);
         setResetAssetSN(msnEsn);
         setResetDate(date || selectedDate || "");
         setShowSetResetModal(true);
     };
+
+    useEffect(() => {
+        if (!showSetResetModal) return;
+
+        let isActive = true;
+
+        const fetchFleetOptions = async () => {
+            try {
+                const res = await api.get("/fleet");
+                const fleetRows = Array.isArray(res.data?.data) ? res.data.data : [];
+                const uniqueSnValues = [...new Set(
+                    fleetRows
+                        .map(asset => String(asset?.sn || "").trim())
+                        .filter(Boolean)
+                )].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+
+                if (isActive) {
+                    setAssetSnOptions(uniqueSnValues);
+                }
+            } catch (error) {
+                console.error("Failed to fetch fleet options:", error);
+                if (isActive) {
+                    setAssetSnOptions([]);
+                }
+            }
+        };
+
+        fetchFleetOptions();
+
+        return () => {
+            isActive = false;
+        };
+    }, [showSetResetModal]);
 
     // Filter Modal Table whenever Asset SN or Date changes (now via API)
     useEffect(() => {
         const fetchRecords = async () => {
             if (!resetAssetSN && !resetDate) {
                 setModalTableData([]);
-                setDropdownOptions([]);
                 return;
             }
 
@@ -162,12 +189,6 @@ const MaintenanceDashboard = () => {
 
                 if (res.data && res.data.success) {
                     const records = res.data.data;
-
-                    // Extract unique MSN/ESN options for the dropdown
-                    if (resetAssetSN) {
-                        const uniqueMsns = [...new Set(records.map(r => r.msnEsn).filter(Boolean))];
-                        setDropdownOptions(uniqueMsns);
-                    }
 
                     // Populate table
                     setModalTableData(records);
@@ -184,17 +205,6 @@ const MaintenanceDashboard = () => {
 
         return () => clearTimeout(timeoutId);
     }, [resetAssetSN, resetDate]);
-
-    const handleAssetSNChange = (e) => {
-        const val = e.target.value;
-        setResetAssetSN(val);
-        if (val) {
-            setShowDropdown(true);
-        } else {
-            setShowDropdown(false);
-            setDropdownOptions([]);
-        }
-    };
 
     const handleModalSort = (key) => {
         setModalSortConfig(prev => ({
@@ -1000,35 +1010,28 @@ const MaintenanceDashboard = () => {
                             <div className="flex justify-between items-start">
                                 <div className="flex flex-col gap-3 text-xs text-slate-700 dark:text-slate-300 font-medium">
 
-                                    {/* SEARCHABLE DROPDOWN for Asset SN */}
+                                    {/* DROPDOWN for Asset SN */}
                                     <div className="flex items-center gap-3">
                                         <span className="w-16">Asset SN</span>
                                         <div className="relative w-36">
-                                            <input
-                                                type="text"
+                                            <select
                                                 value={resetAssetSN}
-                                                onChange={handleAssetSNChange}
-                                                onFocus={() => { if (resetAssetSN) setShowDropdown(true) }}
-                                                onBlur={() => setTimeout(() => setShowDropdown(false), 200)} // delay to allow click
-                                                placeholder="Search MSN/ESN..."
-                                                className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 rounded w-full outline-none focus:ring-1 focus:ring-blue-500"
-                                            />
-                                            {showDropdown && dropdownOptions.length > 0 && (
-                                                <ul className="absolute z-10 w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded mt-1 max-h-40 overflow-y-auto shadow-lg">
-                                                    {dropdownOptions.map(opt => (
-                                                        <li
-                                                            key={opt}
-                                                            className="px-3 py-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer text-xs"
-                                                            onMouseDown={() => {
-                                                                setResetAssetSN(opt);
-                                                                setShowDropdown(false);
-                                                            }}
-                                                        >
+                                                onChange={(e) => setResetAssetSN(e.target.value)}
+                                                className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 rounded w-full outline-none focus:ring-1 focus:ring-blue-500 text-[11px]"
+                                            >
+                                                <option value="">Select ASN</option>
+                                                {assetSnOptions.length > 0 ? (
+                                                    assetSnOptions.map(opt => (
+                                                        <option key={opt} value={opt}>
                                                             {opt}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            )}
+                                                        </option>
+                                                    ))
+                                                ) : (
+                                                    <option value="" disabled>
+                                                        No fleet assets found
+                                                    </option>
+                                                )}
+                                            </select>
                                         </div>
                                     </div>
 
