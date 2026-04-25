@@ -17,7 +17,7 @@ function Input({ value, onChange, placeholder, type = "text", className, ...rest
   return (
     <input
       type={type}
-      value={value || ""}
+      value={value ?? ""}
       onChange={onChange}
       placeholder={placeholder}
       {...rest}
@@ -344,7 +344,7 @@ function PlfEffectTable({ data, setData, className }) {
                       <Input
                         value={sectorRow ? row.sectorOrGcd : row.acftRegn}
                         onChange={(e) => {
-                        if (disabledPlaceholder) {
+                          if (disabledPlaceholder) {
                             setData([{ rowType: "sector", sectorOrGcd: e.target.value, gcd: "" }]);
                             return;
                           }
@@ -364,18 +364,18 @@ function PlfEffectTable({ data, setData, className }) {
                         <Input
                           value={row.gcd}
                           onChange={(e) => {
-                          if (disabledPlaceholder) {
-                            setData([{ rowType: "sector", sectorOrGcd: "", gcd: e.target.value }]);
-                            return;
-                          }
-                          updateSectorGroup(index, "gcd", e.target.value);
+                            if (disabledPlaceholder) {
+                              setData([{ rowType: "sector", sectorOrGcd: "", gcd: e.target.value }]);
+                              return;
+                            }
+                            updateSectorGroup(index, "gcd", e.target.value);
                           }}
                           type="number"
                           placeholder="GCD"
                           className="border-0 rounded-none text-right bg-slate-50 dark:bg-slate-800/60"
                         />
                       ) : (
-                        <div className="h-8 bg-slate-100 dark:bg-slate-800" />
+                        <div className="h-8 bg-slate-100 dark:bg-slate-80011" />
                       )}
                     </td>
                     {[
@@ -881,7 +881,16 @@ function FuelPriceTable({ data, setData, className }) {
 }
 
 // A simple editable table component
-function EditableTable({ title, columns, data, setData, className, titleNote, sortFilter = false }) {
+function EditableTable({
+  title,
+  columns,
+  data,
+  setData,
+  className,
+  titleNote,
+  sortFilter = false,
+  highlightAutoFields = false,
+}) {
   const [editingIndex, setEditingIndex] = useState(null);
   const [editRow, setEditRow] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "Up" });
@@ -1016,19 +1025,36 @@ function EditableTable({ title, columns, data, setData, className, titleNote, so
             )}
             {visibleRows.map(({ row, index }) => {
               const isEditing = editingIndex === index;
+              const autoFields = new Set(Array.isArray(row._hydratedFields) ? row._hydratedFields : []);
               return (
-                <tr key={index} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                <tr
+                  key={index}
+                  className={cn(
+                    "hover:bg-slate-50/50 dark:hover:bg-slate-800/50",
+                    highlightAutoFields && autoFields.size > 0 && "bg-emerald-50/20 dark:bg-emerald-900/10"
+                  )}
+                >
                   {columns.map((col) => (
-                    <td key={col.key} className={cn("px-3 py-2", col.cellClassName)}>
+                    <td
+                      key={col.key}
+                      className={cn(
+                        "px-3 py-2",
+                        col.cellClassName,
+                        highlightAutoFields && autoFields.has(col.key) && "bg-emerald-50/70 dark:bg-emerald-900/20"
+                      )}
+                    >
                       {isEditing ? (
                         <Input
                           value={editRow[col.key]}
                           onChange={(e) => setEditRow({ ...editRow, [col.key]: e.target.value })}
                           type={col.type || "text"}
+                          className={cn(
+                            highlightAutoFields && autoFields.has(col.key) && "bg-emerald-50 dark:bg-emerald-900/20"
+                          )}
                         />
                       ) : (
                         <span className="text-slate-700 dark:text-slate-300">
-                          {row[col.key] || <span className="text-slate-400">-</span>}
+                          {row[col.key] !== "" && row[col.key] !== null && row[col.key] !== undefined ? row[col.key] : <span className="text-slate-400">-</span>}
                         </span>
                       )}
                     </td>
@@ -1395,8 +1421,10 @@ export default function CostInputModal({ isOpen, onClose }) {
                 />
                 <EditableTable
                   title="Schedule Maintenance Events calendar table"
+                  titleNote="Green cells are auto-filled from maintenance logic."
                   data={schMxEvents}
                   setData={setSchMxEvents}
+                  highlightAutoFields
                   columns={[
                     { label: "Date", key: "date", type: "date" },
                     { label: "SN/ESN/APU", key: "msnEsnApun" },
@@ -1420,11 +1448,15 @@ export default function CostInputModal({ isOpen, onClose }) {
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                   <EditableTable
                     title="Transit maintenance"
+                    titleNote="Fill the most specific identifier you have. Matching prefers SN, then ACFT Regn, then PN, then Variant."
                     data={transitMx}
                     setData={setTransitMx}
                     columns={[
                       { label: "Station", key: "depStn" },
                       { label: "Variant/ACFT", key: "variant" },
+                      { label: "ACFT Regn", key: "acftRegn" },
+                      { label: "PN", key: "pn" },
+                      { label: "SN", key: "sn" },
                       { label: "Cost per dep", key: "costPerDeparture", type: "number" },
                       { label: "CCY", key: "ccy" },
                       { label: "From date", key: "fromDate", type: "date" },
@@ -1433,10 +1465,15 @@ export default function CostInputModal({ isOpen, onClose }) {
                   />
                   <EditableTable
                     title="Other maintenance expenses (consumption, loan charges...etc)"
+                    titleNote="Fill whichever identifiers exist. Matching is additive, so a flight can pick up both a variant row and a regn row."
                     data={otherMx}
                     setData={setOtherMx}
                     columns={[
+                      { label: "Station", key: "depStn" },
                       { label: "Variant/ACFT", key: "variant" },
+                      { label: "ACFT Regn", key: "acftRegn" },
+                      { label: "PN", key: "pn" },
+                      { label: "SN", key: "sn" },
                       { label: "Cost per BH", key: "costPerBh", type: "number" },
                       { label: "Cost per dep", key: "costPerDeparture", type: "number" },
                       { label: "Cost per mon", key: "costPerMonth", type: "number" },
