@@ -13,13 +13,14 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-function Input({ value, onChange, placeholder, type = "text", className }) {
+function Input({ value, onChange, placeholder, type = "text", className, ...rest }) {
   return (
     <input
       type={type}
       value={value || ""}
       onChange={onChange}
       placeholder={placeholder}
+      {...rest}
       className={cn(
         "w-full px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-indigo-500",
         "bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200",
@@ -225,8 +226,32 @@ function FuelConsumptionTable({ data, setData, className }) {
 function PlfEffectTable({ data, setData, className }) {
   const isSectorRow = (row) => (row.rowType ? row.rowType === "sector" : !row.acftRegn);
 
+  const thresholdKeys = ["p80", "p90", "p95", "p98"];
+
+  const getCarryForwardValue = (row) => {
+    let lastValue = "";
+    for (const key of thresholdKeys) {
+      const value = row?.[key];
+      if (value !== "" && value !== null && value !== undefined) lastValue = value;
+    }
+    return lastValue || row?.p100 || "1.00";
+  };
+
+  const normalizeAircraftRow = (row) => {
+    const p100 = getCarryForwardValue(row);
+    return {
+      ...row,
+      p100: p100 === "" ? "1.00" : p100,
+    };
+  };
+
   const updateRow = (index, key, value) => {
-    setData(data.map((row, rowIndex) => (rowIndex === index ? { ...row, [key]: value } : row)));
+    setData(data.map((row, rowIndex) => {
+      if (rowIndex !== index) return row;
+      if (isSectorRow(row)) return { ...row, [key]: value };
+      const next = { ...row, [key]: value };
+      return normalizeAircraftRow(next);
+    }));
   };
 
   const updateSectorGroup = (index, key, value) => {
@@ -236,6 +261,7 @@ function PlfEffectTable({ data, setData, className }) {
     for (let rowIndex = index + 1; rowIndex < next.length; rowIndex += 1) {
       if (isSectorRow(next[rowIndex])) break;
       next[rowIndex][key] = value;
+      next[rowIndex] = normalizeAircraftRow(next[rowIndex]);
     }
 
     setData(next);
@@ -257,7 +283,7 @@ function PlfEffectTable({ data, setData, className }) {
       }
     }
 
-    setData([...data, { rowType: "aircraft", sectorOrGcd, gcd, acftRegn: "", p50: "", p60: "", p75: "", p100: "" }]);
+    setData([...data, normalizeAircraftRow({ rowType: "aircraft", sectorOrGcd, gcd, acftRegn: "", p80: "", p90: "", p95: "", p98: "", p100: "1.00" })]);
   };
 
   const deleteRow = (index) => {
@@ -293,13 +319,15 @@ function PlfEffectTable({ data, setData, className }) {
                 <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">PLF effect</th>
                 <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">GCD</th>
                 {[
-                  ["50%", "p50"],
-                  ["60%", "p60"],
-                  ["75%", "p75"],
+                  ["80%", "p80"],
+                  ["90%", "p90"],
+                  ["95%", "p95"],
+                  ["98%", "p98"],
                   ["100%", "p100"],
-                ].map(([label]) => (
+                ].map(([label], idx) => (
                   <th key={label} className="min-w-[88px] border border-slate-300 dark:border-slate-700 px-2 py-1 text-right text-xs font-semibold text-slate-800 dark:text-slate-200">
                     {label}
+                    {idx === 4 && <div className="text-[10px] font-normal text-slate-500">Carry forward</div>}
                   </th>
                 ))}
                 <th className="w-9 border border-slate-300 dark:border-slate-700" />
@@ -316,7 +344,7 @@ function PlfEffectTable({ data, setData, className }) {
                       <Input
                         value={sectorRow ? row.sectorOrGcd : row.acftRegn}
                         onChange={(e) => {
-                          if (disabledPlaceholder) {
+                        if (disabledPlaceholder) {
                             setData([{ rowType: "sector", sectorOrGcd: e.target.value, gcd: "" }]);
                             return;
                           }
@@ -336,11 +364,11 @@ function PlfEffectTable({ data, setData, className }) {
                         <Input
                           value={row.gcd}
                           onChange={(e) => {
-                            if (disabledPlaceholder) {
-                              setData([{ rowType: "sector", sectorOrGcd: "", gcd: e.target.value }]);
-                              return;
-                            }
-                            updateSectorGroup(index, "gcd", e.target.value);
+                          if (disabledPlaceholder) {
+                            setData([{ rowType: "sector", sectorOrGcd: "", gcd: e.target.value }]);
+                            return;
+                          }
+                          updateSectorGroup(index, "gcd", e.target.value);
                           }}
                           type="number"
                           placeholder="GCD"
@@ -351,10 +379,10 @@ function PlfEffectTable({ data, setData, className }) {
                       )}
                     </td>
                     {[
-                      ["p50", row.p50],
-                      ["p60", row.p60],
-                      ["p75", row.p75],
-                      ["p100", row.p100],
+                      ["p80", row.p80],
+                      ["p90", row.p90],
+                      ["p95", row.p95],
+                      ["p98", row.p98],
                     ].map(([key, value]) => (
                       <td key={key} className="border border-slate-300 dark:border-slate-700 p-0">
                         {sectorRow ? (
@@ -369,6 +397,18 @@ function PlfEffectTable({ data, setData, className }) {
                         )}
                       </td>
                     ))}
+                    <td className="border border-slate-300 dark:border-slate-700 p-0">
+                      {sectorRow ? (
+                        <div className="h-8 bg-slate-100 dark:bg-slate-800" />
+                      ) : (
+                        <Input
+                          value={getCarryForwardValue(row)}
+                          type="number"
+                          readOnly
+                          className="border-0 rounded-none text-right bg-slate-50 dark:bg-slate-800/60"
+                        />
+                      )}
+                    </td>
                     <td className="border border-slate-300 dark:border-slate-700 px-1 text-center">
                       {!disabledPlaceholder && (
                         <button onClick={() => deleteRow(index)} className="p-1 text-rose-500 hover:bg-rose-50 rounded dark:hover:bg-rose-900/30">
@@ -393,6 +433,7 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
     ["month2", "m2"],
     ["month3", "m3"],
     ["month4", "m4"],
+    ["month5", "m5"],
   ];
 
   const getMonthLabel = (monthKey, fallback) => data.find((row) => row[monthKey])?.[monthKey] || fallback;
@@ -414,10 +455,12 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
         month2: getMonthLabel("month2", ""),
         month3: getMonthLabel("month3", ""),
         month4: getMonthLabel("month4", ""),
+        month5: getMonthLabel("month5", ""),
         m1: "",
         m2: "",
         m3: "",
         m4: "",
+        m5: "",
       },
     ]);
   };
@@ -426,7 +469,7 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
     setData(data.filter((_, rowIndex) => rowIndex !== index));
   };
 
-  const rows = data.length ? data : [{ acftRegn: "", m1: "", m2: "", m3: "", m4: "" }];
+  const rows = data.length ? data : [{ acftRegn: "", m1: "", m2: "", m3: "", m4: "", m5: "" }];
 
   return (
     <div className={cn("mb-8", className)}>
@@ -468,7 +511,7 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
                       value={row.acftRegn}
                       onChange={(e) => {
                         if (disabledPlaceholder) {
-                          setData([{ acftRegn: e.target.value, m1: "", m2: "", m3: "", m4: "" }]);
+                          setData([{ acftRegn: e.target.value, m1: "", m2: "", m3: "", m4: "", m5: "" }]);
                           return;
                         }
                         updateRow(index, "acftRegn", e.target.value);
@@ -487,6 +530,339 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
                       />
                     </td>
                   ))}
+                  <td className="border border-slate-300 dark:border-slate-700 px-1 text-center">
+                    {!disabledPlaceholder && (
+                      <button onClick={() => deleteRow(index)} className="p-1 text-rose-500 hover:bg-rose-50 rounded dark:hover:bg-rose-900/30">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ApuUsageTable({ data, setData, className }) {
+  const normalizeRow = (row) => {
+    const addlnUse = (row.addlnUse || "N").toString().toUpperCase() === "Y" ? "Y" : "N";
+    return {
+      ...row,
+      addlnUse,
+      arrStn: addlnUse === "Y" ? "" : (row.arrStn || ""),
+      toDate: addlnUse === "Y" ? (row.fromDate || row.toDate || "") : (row.toDate || ""),
+    };
+  };
+
+  const updateRow = (index, key, value) => {
+    setData(data.map((row, rowIndex) => {
+      if (rowIndex !== index) return row;
+      const next = { ...row, [key]: value };
+      if (key === "addlnUse") {
+        next.addlnUse = value === "Y" ? "Y" : "N";
+        if (next.addlnUse === "Y") {
+          next.arrStn = "";
+          next.toDate = next.fromDate || next.toDate || "";
+        }
+      }
+      if (key === "fromDate" && (row.addlnUse || "N") === "Y") {
+        next.toDate = value;
+      }
+      return normalizeRow(next);
+    }));
+  };
+
+  const addRow = () => {
+    setData([
+      ...data,
+      {
+        arrStn: "",
+        fromDate: "",
+        toDate: "",
+        variant: "",
+        acftRegn: "",
+        apuHours: "",
+        consumptionPerApuHour: "",
+        addlnUse: "N",
+        ccy: "",
+      },
+    ]);
+  };
+
+  const deleteRow = (index) => {
+    setData(data.filter((_, rowIndex) => rowIndex !== index));
+  };
+
+  const rows = data.length ? data.map(normalizeRow) : [{
+    arrStn: "",
+    fromDate: "",
+    toDate: "",
+    variant: "",
+    acftRegn: "",
+    apuHours: "",
+    consumptionPerApuHour: "",
+    addlnUse: "N",
+    ccy: "",
+  }];
+
+  return (
+    <div className={cn("mb-8", className)}>
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">APU Usage</h3>
+        <button
+          onClick={addRow}
+          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+        >
+          <Plus size={14} /> Add Row
+        </button>
+      </div>
+      <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+        <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
+          <thead>
+            <tr className="bg-white dark:bg-slate-900">
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Arr Stn</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">From date</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">To date</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Variant</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">ACFT Regn</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">APU Hr</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Consumption/APUHr</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Addln use</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">CCY</th>
+              <th className="w-9 border border-slate-300 dark:border-slate-700" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => {
+              const disabledPlaceholder = data.length === 0;
+              return (
+                <tr key={index}>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <Input
+                      value={row.arrStn}
+                      onChange={(e) => updateRow(index, "arrStn", e.target.value)}
+                      placeholder="Arr Stn"
+                      disabled={(row.addlnUse || "N") === "Y"}
+                      className="border-0 rounded-none"
+                    />
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <Input
+                      value={row.fromDate}
+                      onChange={(e) => updateRow(index, "fromDate", e.target.value)}
+                      type="date"
+                      className="border-0 rounded-none"
+                    />
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <Input
+                      value={row.toDate}
+                      onChange={(e) => updateRow(index, "toDate", e.target.value)}
+                      type="date"
+                      disabled={(row.addlnUse || "N") === "Y"}
+                      className="border-0 rounded-none"
+                    />
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <Input
+                      value={row.variant}
+                      onChange={(e) => updateRow(index, "variant", e.target.value)}
+                      placeholder="Variant"
+                      className="border-0 rounded-none"
+                    />
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <Input
+                      value={row.acftRegn}
+                      onChange={(e) => updateRow(index, "acftRegn", e.target.value)}
+                      placeholder="ACFT Regn"
+                      className="border-0 rounded-none"
+                    />
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <Input
+                      value={row.apuHours}
+                      onChange={(e) => updateRow(index, "apuHours", e.target.value)}
+                      type="number"
+                      className="border-0 rounded-none text-right"
+                    />
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <Input
+                      value={row.consumptionPerApuHour}
+                      onChange={(e) => updateRow(index, "consumptionPerApuHour", e.target.value)}
+                      type="number"
+                      className="border-0 rounded-none text-right"
+                    />
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <select
+                      value={row.addlnUse || "N"}
+                      onChange={(e) => updateRow(index, "addlnUse", e.target.value)}
+                      className="w-full h-8 px-2 text-xs outline-none bg-white dark:bg-slate-900 border-0 text-slate-800 dark:text-slate-200"
+                    >
+                      <option value="N">N</option>
+                      <option value="Y">Y</option>
+                    </select>
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <Input
+                      value={row.ccy}
+                      onChange={(e) => updateRow(index, "ccy", e.target.value)}
+                      placeholder="CCY"
+                      className="border-0 rounded-none"
+                    />
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-700 px-1 text-center">
+                    {!disabledPlaceholder && (
+                      <button onClick={() => deleteRow(index)} className="p-1 text-rose-500 hover:bg-rose-50 rounded dark:hover:bg-rose-900/30">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function FuelPriceTable({ data, setData, className }) {
+  const month1Row = data.find((row) => row.month1 || row.m1Label || row.month);
+  const month2Row = data.find((row) => row.month2 || row.m2Label);
+  const month1 = month1Row?.month1 || month1Row?.m1Label || month1Row?.month || "";
+  const month2 = month2Row?.month2 || month2Row?.m2Label || "";
+
+  const normalizeRow = (row) => {
+    return {
+      ...row,
+      month1: month1 || row.month1 || "",
+      month2: month2 || row.month2 || "",
+    };
+  };
+
+  const updateMonthLabel = (key, value) => {
+    setData(data.map((row) => ({ ...row, [key]: value })));
+  };
+
+  const updateRow = (index, key, value) => {
+    setData(data.map((row, rowIndex) => {
+      if (rowIndex !== index) return row;
+      const next = { ...row, [key]: value, month1, month2 };
+      return normalizeRow(next);
+    }));
+  };
+
+  const addRow = () => {
+    setData([
+      ...data,
+      normalizeRow({
+        station: "",
+        ccy: "",
+        kgPerLtr: "",
+        month1,
+        month2,
+        m1: "",
+        m2: "",
+      }),
+    ]);
+  };
+
+  const deleteRow = (index) => {
+    setData(data.filter((_, rowIndex) => rowIndex !== index));
+  };
+
+  const rows = data.length ? data.map(normalizeRow) : [{ station: "", ccy: "", kgPerLtr: "", month1, month2, m1: "", m2: "" }];
+
+  return (
+    <div className={cn("mb-8", className)}>
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Fuel Price</h3>
+        <button
+          onClick={addRow}
+          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+        >
+          <Plus size={14} /> Add Row
+        </button>
+      </div>
+      <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+        <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
+          <thead>
+            <tr className="bg-white dark:bg-slate-900">
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Kg/Ltr</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">CCY</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Into plane (per kLtr)</th>
+              <th className="border border-slate-300 dark:border-slate-700 p-0">
+                <Input
+                  value={month1}
+                  onChange={(e) => updateMonthLabel("month1", e.target.value)}
+                  placeholder="MMM-YY"
+                  className="border-0 rounded-none text-right font-semibold"
+                />
+              </th>
+              <th className="border border-slate-300 dark:border-slate-700 p-0">
+                <Input
+                  value={month2}
+                  onChange={(e) => updateMonthLabel("month2", e.target.value)}
+                  placeholder="MMM-YY"
+                  className="border-0 rounded-none text-right font-semibold"
+                />
+              </th>
+              <th className="w-9 border border-slate-300 dark:border-slate-700" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => {
+              const disabledPlaceholder = data.length === 0;
+              return (
+                <tr key={index}>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <Input
+                      value={row.kgPerLtr}
+                      onChange={(e) => updateRow(index, "kgPerLtr", e.target.value)}
+                      type="number"
+                      className="border-0 rounded-none text-right"
+                    />
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <Input
+                      value={row.ccy}
+                      onChange={(e) => updateRow(index, "ccy", e.target.value)}
+                      placeholder="CCY"
+                      className="border-0 rounded-none"
+                    />
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <Input
+                      value={row.station}
+                      onChange={(e) => updateRow(index, "station", e.target.value)}
+                      placeholder="Into plane"
+                      className="border-0 rounded-none"
+                    />
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <Input
+                      value={row.m1}
+                      onChange={(e) => updateRow(index, "m1", e.target.value)}
+                      type="number"
+                      className="border-0 rounded-none text-right"
+                    />
+                  </td>
+                  <td className="border border-slate-300 dark:border-slate-700 p-0">
+                    <Input
+                      value={row.m2}
+                      onChange={(e) => updateRow(index, "m2", e.target.value)}
+                      type="number"
+                      className="border-0 rounded-none text-right"
+                    />
+                  </td>
                   <td className="border border-slate-300 dark:border-slate-700 px-1 text-center">
                     {!disabledPlaceholder && (
                       <button onClick={() => deleteRow(index)} className="p-1 text-rose-500 hover:bg-rose-50 rounded dark:hover:bg-rose-900/30">
@@ -683,6 +1059,147 @@ function EditableTable({ title, columns, data, setData, className, titleNote, so
   );
 }
 
+function CompactEditableTable({ title, columns, data, setData, className, addLabel = "Add Row" }) {
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editRow, setEditRow] = useState({});
+
+  const handleEdit = (index, row) => {
+    setEditingIndex(index);
+    setEditRow({ ...row });
+  };
+
+  const handleSave = (index) => {
+    const next = [...data];
+    next[index] = editRow;
+    setData(next);
+    setEditingIndex(null);
+  };
+
+  const handleAdd = () => {
+    const newRow = columns.reduce((acc, col) => ({ ...acc, [col.key]: "" }), {});
+    setData([...data, newRow]);
+    setEditingIndex(data.length);
+    setEditRow(newRow);
+  };
+
+  const handleDelete = (index) => {
+    const next = data.filter((_, rowIndex) => rowIndex !== index);
+    setData(next);
+    if (editingIndex === index) setEditingIndex(null);
+  };
+
+  return (
+    <div className={cn("w-full", className)}>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</h3>
+        <button
+          onClick={handleAdd}
+          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+        >
+          <Plus size={12} /> {addLabel}
+        </button>
+      </div>
+
+      <div className="overflow-x-auto border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
+        <table className="w-full border-collapse text-[11px] whitespace-nowrap">
+          <thead>
+            <tr className="bg-white dark:bg-slate-900">
+              {columns.map((col) => (
+                <th
+                  key={col.key}
+                  className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-800 dark:text-slate-200"
+                >
+                  {col.label}
+                </th>
+              ))}
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-800 dark:text-slate-200">
+                Action
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={columns.length + 1}
+                  className="border border-slate-300 dark:border-slate-700 px-2 py-3 text-center text-slate-400"
+                >
+                  No rows yet. Add a row to begin.
+                </td>
+              </tr>
+            ) : (
+              data.map((row, index) => {
+                const isEditing = editingIndex === index;
+                return (
+                  <tr key={index} className="bg-white dark:bg-slate-900">
+                    {columns.map((col) => (
+                      <td key={col.key} className="border border-slate-300 dark:border-slate-700 p-0">
+                        {isEditing ? (
+                          <input
+                            type={col.type || "text"}
+                            value={editRow[col.key] || ""}
+                            onChange={(e) => setEditRow({ ...editRow, [col.key]: e.target.value })}
+                            className={cn(
+                              "w-full h-7 px-2 text-[11px] outline-none bg-transparent text-slate-800 dark:text-slate-200",
+                              col.type === "number" ? "text-right" : ""
+                            )}
+                          />
+                        ) : (
+                          <div
+                            className={cn(
+                              "h-7 px-2 flex items-center text-[11px] text-slate-700 dark:text-slate-300",
+                              col.type === "number" ? "justify-end font-mono" : ""
+                            )}
+                          >
+                            {row[col.key] || "-"}
+                          </div>
+                        )}
+                      </td>
+                    ))}
+                    <td className="border border-slate-300 dark:border-slate-700 px-1 py-0">
+                      {isEditing ? (
+                        <div className="flex items-center justify-center gap-1 h-7">
+                          <button
+                            onClick={() => handleSave(index)}
+                            className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded"
+                          >
+                            <Check size={12} />
+                          </button>
+                          <button
+                            onClick={() => setEditingIndex(null)}
+                            className="p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-1 h-7">
+                          <button
+                            onClick={() => handleEdit(index, row)}
+                            className="p-1 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(index)}
+                            className="p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // --- Main Modal Component ---
 
 export default function CostInputModal({ isOpen, onClose }) {
@@ -835,37 +1352,15 @@ export default function CostInputModal({ isOpen, onClose }) {
                     data={plfEffect}
                     setData={setPlfEffect}
                   />
-                  <EditableTable
-                    title="APU Usage"
+                  <ApuUsageTable
                     className="mb-0"
                     data={apuUsage}
                     setData={setApuUsage}
-                    columns={[
-                      { label: "Arr Stn", key: "arrStn" },
-                      { label: "From date", key: "fromDate", type: "date" },
-                      { label: "To date", key: "toDate", type: "date" },
-                      { label: "Variant", key: "variant" },
-                      { label: "ACFT Regn", key: "acftRegn" },
-                      { label: "GT Min", key: "apuHours", type: "number" },
-                      { label: "GT Max", key: "gtMax", type: "number" },
-                      { label: "Addln mins", key: "addlnMins", type: "number" },
-                      { label: "Consumption/APUHr", key: "consumptionPerApuHour", type: "number" },
-                      { label: "CCY", key: "ccy" },
-                    ]}
                   />
-                  <EditableTable
-                    title="CCY"
+                  <FuelPriceTable
                     className="mb-0 xl:col-start-1"
                     data={ccyFuel}
                     setData={setCcyFuel}
-                    columns={[
-                      { label: "CCY", key: "ccy" },
-                      { label: "Into plane", key: "station" },
-                      { label: "Month", key: "month" },
-                      { label: "Price/Other Stn", key: "intoPlaneRate", type: "number" },
-                      { label: "Kg/Ltr", key: "kgPerLtr", type: "number" },
-                      { label: "RCCY", key: "costRCCY", type: "number" },
-                    ]}
                   />
                 </div>
               </section>
@@ -974,9 +1469,10 @@ export default function CostInputModal({ isOpen, onClose }) {
               {/* === SECTION: NAVIGATION === */}
               <section>
                 <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4">Navigation</h2>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                  <EditableTable
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
+                  <CompactEditableTable
                     title="Enroute (ENR)"
+                    className="max-w-full"
                     data={navEnr}
                     setData={setNavEnr}
                     columns={[
@@ -987,8 +1483,9 @@ export default function CostInputModal({ isOpen, onClose }) {
                       { label: "CCY", key: "ccy" },
                     ]}
                   />
-                  <EditableTable
+                  <CompactEditableTable
                     title="Terminal"
+                    className="max-w-full"
                     data={navTerm}
                     setData={setNavTerm}
                     columns={[
