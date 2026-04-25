@@ -19,6 +19,55 @@ const APU_FUEL_BASIS_OPTIONS = [
   { label: "BH", value: "BH" },
   { label: "FH", value: "FH" },
 ];
+const DEFAULT_NAV_MTOW_TIERS = ["73000", "77000", "78000", "79000"];
+
+function normalizeNavMtowTiers(value, fallback = DEFAULT_NAV_MTOW_TIERS) {
+  const source = Array.isArray(value) && value.length > 0 ? value : fallback;
+  const next = source
+    .map((tier, index) => {
+      const trimmed = String(tier ?? "").trim();
+      return trimmed || String(fallback[index] ?? "");
+    })
+    .filter(Boolean);
+
+  return next.length > 0 ? next : [...fallback];
+}
+
+function remapNavigationRows(rows, previousTiers, nextTiers) {
+  const prev = Array.isArray(previousTiers) ? previousTiers : [];
+  const next = Array.isArray(nextTiers) ? nextTiers : [];
+
+  return (Array.isArray(rows) ? rows : []).map((row) => {
+    const updated = { ...row };
+    const tierRates = { ...(row?.tierRates || {}) };
+
+    prev.forEach((oldTier, index) => {
+      const oldKey = String(oldTier ?? "").trim();
+      const newKey = String(next[index] ?? "").trim();
+      if (!oldKey || !newKey || oldKey === newKey) return;
+
+      if (updated[oldKey] !== undefined) {
+        if (updated[newKey] === undefined || updated[newKey] === "") {
+          updated[newKey] = updated[oldKey];
+        }
+        delete updated[oldKey];
+      }
+
+      if (tierRates[oldKey] !== undefined) {
+        if (tierRates[newKey] === undefined || tierRates[newKey] === "") {
+          tierRates[newKey] = tierRates[oldKey];
+        }
+        delete tierRates[oldKey];
+      }
+    });
+
+    if (Object.keys(tierRates).length > 0) {
+      updated.tierRates = tierRates;
+    }
+
+    return updated;
+  });
+}
 
 function normalizeAllocationBasis(value) {
   const raw = String(value || "").trim().toUpperCase();
@@ -1277,6 +1326,8 @@ export default function CostInputModal({ isOpen, onClose }) {
   // === NAVIGATION & AIRPORT STATE ===
   const [navEnr, setNavEnr] = useState([]);
   const [navTerm, setNavTerm] = useState([]);
+  const [navMtowTiers, setNavMtowTiers] = useState(DEFAULT_NAV_MTOW_TIERS);
+  const [navMtowTierDraft, setNavMtowTierDraft] = useState(DEFAULT_NAV_MTOW_TIERS);
   const [airportLanding, setAirportLanding] = useState([]);
   const [airportDom, setAirportDom] = useState([]);
   const [airportIntl, setAirportIntl] = useState([]);
@@ -1306,6 +1357,9 @@ export default function CostInputModal({ isOpen, onClose }) {
 
             setNavEnr(d.navEnr || []);
             setNavTerm(d.navTerm || []);
+            const loadedNavTiers = normalizeNavMtowTiers(d.navMtowTiers);
+            setNavMtowTiers(loadedNavTiers);
+            setNavMtowTierDraft(loadedNavTiers);
             setAirportLanding(d.airportLanding || []);
             setAirportDom(d.airportDom || []);
             setAirportIntl(d.airportIntl || []);
@@ -1324,7 +1378,7 @@ export default function CostInputModal({ isOpen, onClose }) {
         allocationTable,
         fuelConsum, fuelConsumIndex, apuUsage, plfEffect, ccyFuel,
         leasedReserve, schMxEvents, transitMx, otherMx, rotableChanges,
-        navEnr, navTerm, airportLanding, airportDom, airportIntl, airportAvsec,
+        navMtowTiers, navEnr, navTerm, airportLanding, airportDom, airportIntl, airportAvsec,
         otherDoc
       };
 
@@ -1346,6 +1400,14 @@ export default function CostInputModal({ isOpen, onClose }) {
   const apuAllocationBasis = apuAllocationRowIndex >= 0
     ? normalizeAllocationBasis(allocationTable[apuAllocationRowIndex]?.basis)
     : "DEPARTURES";
+
+  const applyNavMtowTiers = () => {
+    const nextTiers = normalizeNavMtowTiers(navMtowTierDraft, navMtowTiers);
+    setNavEnr((prev) => remapNavigationRows(prev, navMtowTiers, nextTiers));
+    setNavTerm((prev) => remapNavigationRows(prev, navMtowTiers, nextTiers));
+    setNavMtowTiers(nextTiers);
+    setNavMtowTierDraft(nextTiers);
+  };
 
   const updateApuAllocationBasis = (basis) => {
     setAllocationTable((prev) => {
@@ -1559,6 +1621,38 @@ export default function CostInputModal({ isOpen, onClose }) {
               {/* === SECTION: NAVIGATION === */}
               <section>
                 <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4">Navigation</h2>
+                <div className="mb-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/40 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">MTOW tiers</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Edit the MTOW labels used by the ENR and Terminal tables, then apply the change.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={applyNavMtowTiers}
+                      className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+                    >
+                      Apply tiers
+                    </button>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {navMtowTierDraft.map((tier, index) => (
+                      <Input
+                        key={`${index}-${tier}`}
+                        value={tier}
+                        onChange={(e) => {
+                          const next = [...navMtowTierDraft];
+                          next[index] = e.target.value;
+                          setNavMtowTierDraft(next);
+                        }}
+                        type="number"
+                        placeholder={`Tier ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
                   <CompactEditableTable
                     title="Enroute (ENR)"
@@ -1566,24 +1660,20 @@ export default function CostInputModal({ isOpen, onClose }) {
                     data={navEnr}
                     setData={setNavEnr}
                     columns={[
-                      { label: "Sector", key: "sector" },
-                      { label: "Variant", key: "variant" },
-                      { label: "Month", key: "month" },
-                      { label: "Cost", key: "cost", type: "number" },
                       { label: "CCY", key: "ccy" },
+                      { label: "ENR", key: "sector" },
+                      ...navMtowTiers.map((tier) => ({ label: String(tier), key: String(tier), type: "number" })),
                     ]}
                   />
                   <CompactEditableTable
-                    title="Terminal"
+                    title="Terminal @ Arr Stn"
                     className="max-w-full"
                     data={navTerm}
                     setData={setNavTerm}
                     columns={[
-                      { label: "Arr Stn", key: "arrStn" },
-                      { label: "Variant", key: "variant" },
-                      { label: "Month", key: "month" },
-                      { label: "Cost", key: "cost", type: "number" },
                       { label: "CCY", key: "ccy" },
+                      { label: "Terminal @ Arr Stn", key: "arrStn" },
+                      ...navMtowTiers.map((tier) => ({ label: String(tier), key: String(tier), type: "number" })),
                     ]}
                   />
                 </div>
@@ -1595,10 +1685,12 @@ export default function CostInputModal({ isOpen, onClose }) {
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                   <EditableTable
                     title="Landing"
+                    titleNote="Landing rows match by Arr Stn, MTOW, and date range on the flight."
                     data={airportLanding}
                     setData={setAirportLanding}
                     columns={[
                       { label: "Arr Stn", key: "arrStn" },
+                      { label: "MTOW", key: "mtow", type: "number" },
                       { label: "Variant", key: "variant" },
                       { label: "Month", key: "month" },
                       { label: "Cost", key: "cost", type: "number" },
@@ -1619,10 +1711,12 @@ export default function CostInputModal({ isOpen, onClose }) {
                   />
                   <EditableTable
                     title="Dom flight handling"
+                    titleNote="Handling rows match by Arr Stn, MTOW, and date range on the flight."
                     data={airportDom}
                     setData={setAirportDom}
                     columns={[
                       { label: "Arr Stn", key: "arrStn" },
+                      { label: "MTOW", key: "mtow", type: "number" },
                       { label: "Variant", key: "variant" },
                       { label: "Month", key: "month" },
                       { label: "Cost", key: "cost", type: "number" },
@@ -1635,6 +1729,7 @@ export default function CostInputModal({ isOpen, onClose }) {
                     setData={setAirportIntl}
                     columns={[
                       { label: "Arr Stn", key: "arrStn" },
+                      { label: "MTOW", key: "mtow", type: "number" },
                       { label: "Variant", key: "variant" },
                       { label: "Month", key: "month" },
                       { label: "Cost", key: "cost", type: "number" },
