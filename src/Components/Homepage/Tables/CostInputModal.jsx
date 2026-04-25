@@ -548,6 +548,12 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
 }
 
 function ApuUsageTable({ data, setData, className }) {
+  const blankIfInvalidNumber = (value) => {
+    if (value === "" || value === null || value === undefined) return "";
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? value : "";
+  };
+
   const normalizeRow = (row) => {
     const addlnUse = (row.addlnUse || "N").toString().toUpperCase() === "Y" ? "Y" : "N";
     return {
@@ -555,13 +561,20 @@ function ApuUsageTable({ data, setData, className }) {
       addlnUse,
       arrStn: addlnUse === "Y" ? "" : (row.arrStn || ""),
       toDate: addlnUse === "Y" ? (row.fromDate || row.toDate || "") : (row.toDate || ""),
+      apuHours: blankIfInvalidNumber(row.apuHours),
+      consumptionPerApuHour: blankIfInvalidNumber(row.consumptionPerApuHour),
     };
   };
 
   const updateRow = (index, key, value) => {
     setData(data.map((row, rowIndex) => {
       if (rowIndex !== index) return row;
-      const next = { ...row, [key]: value };
+      const next = {
+        ...row,
+        [key]: key === "apuHours" || key === "consumptionPerApuHour"
+          ? blankIfInvalidNumber(value)
+          : value,
+      };
       if (key === "addlnUse") {
         next.addlnUse = value === "Y" ? "Y" : "N";
         if (next.addlnUse === "Y") {
