@@ -1298,6 +1298,7 @@ export default function CostInputModal({ isOpen, onClose }) {
       };
 
       await api.post("/cost-config", payload);
+      await api.post("/apu-fuel-costs/rebuild");
       toast.success("Cost logic configurations saved successfully!");
       onClose();
     } catch (err) {
