@@ -13,6 +13,21 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
+const APU_FUEL_ALLOCATION_CODE = "APUFUELCOST";
+const APU_FUEL_BASIS_OPTIONS = [
+  { label: "Departure", value: "DEPARTURES" },
+  { label: "BH", value: "BH" },
+  { label: "FH", value: "FH" },
+];
+
+function normalizeAllocationBasis(value) {
+  const raw = String(value || "").trim().toUpperCase();
+  if (["DEPARTURE", "DEPARTURES", "CYCLE", "CYCLES"].includes(raw)) return "DEPARTURES";
+  if (["BH", "BLOCKHOURS", "BLOCK HOURS"].includes(raw)) return "BH";
+  if (["FH", "FLIGHTHOURS", "FLIGHT HOURS"].includes(raw)) return "FH";
+  return "DEPARTURES";
+}
+
 function Input({ value, onChange, placeholder, type = "text", className, ...rest }) {
   return (
     <input
@@ -1250,6 +1265,7 @@ export default function CostInputModal({ isOpen, onClose }) {
   const [apuUsage, setApuUsage] = useState([]);
   const [plfEffect, setPlfEffect] = useState([]);
   const [ccyFuel, setCcyFuel] = useState([]);
+  const [allocationTable, setAllocationTable] = useState([]);
 
   // === MAINTENANCE STATE ===
   const [leasedReserve, setLeasedReserve] = useState([]);
@@ -1280,6 +1296,7 @@ export default function CostInputModal({ isOpen, onClose }) {
             setApuUsage(d.apuUsage || []);
             setPlfEffect(d.plfEffect || []);
             setCcyFuel(d.ccyFuel || []);
+            setAllocationTable(d.allocationTable || []);
 
             setLeasedReserve(d.leasedReserve || []);
             setSchMxEvents(d.schMxEvents || []);
@@ -1304,6 +1321,7 @@ export default function CostInputModal({ isOpen, onClose }) {
   const handleSave = async () => {
     try {
       const payload = {
+        allocationTable,
         fuelConsum, fuelConsumIndex, apuUsage, plfEffect, ccyFuel,
         leasedReserve, schMxEvents, transitMx, otherMx, rotableChanges,
         navEnr, navTerm, airportLanding, airportDom, airportIntl, airportAvsec,
@@ -1320,14 +1338,35 @@ export default function CostInputModal({ isOpen, onClose }) {
     }
   };
 
-  // Default basis of allocation (read-only presentation)
-  const basisOfAllocation = [
-    { cost: "APU fuel cost", basis: "The month, each month" },
-    { cost: "Maintenance reserve cont", basis: "The specific SN in the month, each month" },
-    { cost: "Remaining in Schedule Mx", basis: "The specific SN in the period of time from start date of Master table..." },
-    { cost: "Other maintenance expen", basis: "The specific SN in the month, each month" },
-    { cost: "Cost of rotables changes", basis: "The specific ACFT Regn in the month, each month" },
-  ];
+  // Allocation basis for APU fuel cost.
+  const apuAllocationRowIndex = allocationTable.findIndex((row) => {
+    const code = String(row?.costCode || row?.cost || row?.label || "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
+    return code === APU_FUEL_ALLOCATION_CODE;
+  });
+  const apuAllocationBasis = apuAllocationRowIndex >= 0
+    ? normalizeAllocationBasis(allocationTable[apuAllocationRowIndex]?.basis)
+    : "DEPARTURES";
+
+  const updateApuAllocationBasis = (basis) => {
+    setAllocationTable((prev) => {
+      const next = Array.isArray(prev) ? [...prev] : [];
+      if (apuAllocationRowIndex >= 0) {
+        next[apuAllocationRowIndex] = {
+          ...next[apuAllocationRowIndex],
+          costCode: APU_FUEL_ALLOCATION_CODE,
+          basis,
+        };
+        return next;
+      }
+      return [
+        ...next,
+        {
+          costCode: APU_FUEL_ALLOCATION_CODE,
+          basis,
+        },
+      ];
+    });
+  };
 
   if (!isOpen) return null;
 
@@ -1629,8 +1668,11 @@ export default function CostInputModal({ isOpen, onClose }) {
                   ]}
                 />
 
-                {/* <div className="mt-8 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-4">Basis of cost allocation</h3>
+                <div className="mt-8 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">Basis of cost allocation</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                    This controls how APU fuel cost is spread across flights when the table is rebuilt.
+                  </p>
                   <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900">
                     <table className="w-full text-left text-sm whitespace-nowrap">
                       <thead className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
@@ -1640,16 +1682,26 @@ export default function CostInputModal({ isOpen, onClose }) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-600 dark:text-slate-300">
-                        {basisOfAllocation.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                            <td className="px-4 py-2 font-medium">{item.cost}</td>
-                            <td className="px-4 py-2">{item.basis}</td>
-                          </tr>
-                        ))}
+                        <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                          <td className="px-4 py-2 font-medium">APU fuel cost</td>
+                          <td className="px-4 py-2">
+                            <select
+                              value={apuAllocationBasis}
+                              onChange={(e) => updateApuAllocationBasis(e.target.value)}
+                              className="w-full max-w-xs px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            >
+                              {APU_FUEL_BASIS_OPTIONS.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
-                </div> */}
+                </div>
               </section>
 
             </div>
