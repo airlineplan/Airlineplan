@@ -267,13 +267,15 @@ const PooTable = () => {
     return records.filter((row) => {
       if (!query) return true;
       return [
+        row.al,
         row.poo,
         row.od,
         row.sector,
         row.flightNumber,
-        row.connectedFlightNumber,
+        row.variant,
         row.identifier,
         row.odDI,
+        row.legDI,
       ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query));
@@ -438,6 +440,14 @@ const PooTable = () => {
                 <input value={transitDraft.fareProrateRatioL1L2} onChange={(e) => setTransitDraft((prev) => ({ ...prev, fareProrateRatioL1L2: e.target.value }))} placeholder="Fare prorate" className={inputBaseClass()} />
                 <input value={transitDraft.rateProrateRatioL1L2} onChange={(e) => setTransitDraft((prev) => ({ ...prev, rateProrateRatioL1L2: e.target.value }))} placeholder="Rate prorate" className={inputBaseClass()} />
               </div>
+              <div className="mt-3 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={Boolean(transitDraft.applySSPricing)}
+                  onChange={(e) => setTransitDraft((prev) => ({ ...prev, applySSPricing: e.target.checked }))}
+                />
+                <span>Apply SS pricing</span>
+              </div>
             </div>
           </div>
 
@@ -526,43 +536,52 @@ const PooTable = () => {
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-[3200px] border-collapse">
+              <table className="min-w-[4600px] border-collapse">
                 <thead>
                   <tr className="bg-white/70 dark:bg-slate-950/40">
                     {[
                       "S.No",
+                      "AL",
                       "POO",
                       "OD",
                       "OD D/I",
                       "Stops",
                       "Identifier",
                       "Sector",
-                      "Flight #",
-                      "Connected",
+                      "Leg D/I",
                       "Date",
                       "Day",
-                      "Time incl LyOv",
+                      "Flight #",
+                      "Variant",
                       "Max Pax",
                       "Max Cargo T",
                       "Pax",
                       "Cargo T",
                       "Sector GCD",
-                      "OD/Total GCD",
-                      "OD Fare",
-                      "OD Rate",
-                      "Fare Prorate",
-                      "Rate Prorate",
+                      "ODvia GCD",
                       "Leg Fare",
                       "Leg Rate",
-                      "Leg Rev",
-                      "OD Rev",
-                      "Fnl RCCY Total",
+                      "OD Fare",
+                      "OD Rate",
+                      "Fare prorate ratio L1/L2",
+                      "Rate prorate ratio L1/L2",
+                      "Leg Pax Rev",
+                      "Leg Cargo Rev",
+                      "Leg Total Rev",
+                      "OD Pax Rev",
+                      "OD Cargo Rev",
+                      "OD Total Rev",
                       "POO CCY",
-                      "FX",
-                      "Reporting CCY",
-                      "Apply SS",
-                      "Interline",
-                      "Codeshare",
+                      "POO CCY / RCCY",
+                      "RCCY Leg Pax Rev",
+                      "RCCY Leg Cargo Rev",
+                      "RCCY Leg Total Rev",
+                      "RCCY OD Pax Rev",
+                      "RCCY OD Cargo Rev",
+                      "RCCY OD Total Rev",
+                      "Fnl RCCY Pax Rev",
+                      "Fnl RCCY Cargo Rev",
+                      "Fnl RCCY Total Rev",
                     ].map((label) => (
                       <th key={label} className="border-b border-r border-slate-200 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400">
                         {label}
@@ -577,6 +596,7 @@ const PooTable = () => {
                     return (
                       <tr key={row._id} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/20">
                         <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.sNo}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:text-slate-200">{row.al || "--"}</td>
                         <td className="border-r border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:text-slate-200">{row.poo}</td>
                         <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-200">{row.od}</td>
                         <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.odDI}</td>
@@ -587,11 +607,11 @@ const PooTable = () => {
                           </span>
                         </td>
                         <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.sector}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.flightNumber}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.connectedFlightNumber || "--"}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.legDI || "--"}</td>
                         <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatDate(row.date)}</td>
                         <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.day || "--"}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.timeInclLayover || "--"}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.flightNumber}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.variant || "--"}</td>
                         <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.maxPax, 0)}</td>
                         <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.maxCargoT)}</td>
                         <td className="border-r border-slate-200 px-3 py-2">
@@ -617,24 +637,100 @@ const PooTable = () => {
                           />
                         </td>
                         <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.sectorGcd, 0)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.totalGcd || row.odViaGcd, 0)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2"><input type="number" step="0.01" value={row.odFare ?? ""} onChange={(e) => updateField(row._id, "odFare", e.target.value)} className={cn("w-24", inputBaseClass())} /></td>
-                        <td className="border-r border-slate-200 px-3 py-2"><input type="number" step="0.01" value={row.odRate ?? ""} onChange={(e) => updateField(row._id, "odRate", e.target.value)} className={cn("w-24", inputBaseClass())} /></td>
-                        <td className="border-r border-slate-200 px-3 py-2"><input type="number" step="0.01" value={row.fareProrateRatioL1L2 ?? ""} onChange={(e) => updateField(row._id, "fareProrateRatioL1L2", e.target.value)} className={cn("w-24", inputBaseClass())} /></td>
-                        <td className="border-r border-slate-200 px-3 py-2"><input type="number" step="0.01" value={row.rateProrateRatioL1L2 ?? ""} onChange={(e) => updateField(row._id, "rateProrateRatioL1L2", e.target.value)} className={cn("w-24", inputBaseClass())} /></td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legFare)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legRate)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legTotalRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odTotalRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm font-semibold text-slate-700 dark:border-slate-800 dark:text-slate-200">{formatNumber(row.fnlRccyTotalRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.pooCcy || "--"}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.pooCcyToRccy, 4)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.reportingCurrency || "--"}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-center dark:border-slate-800">
-                          <input type="checkbox" checked={Boolean(row.applySSPricing)} onChange={(e) => updateField(row._id, "applySSPricing", e.target.checked)} />
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odViaGcd, 0)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.legFare ?? ""}
+                            onChange={(e) => updateField(row._id, "legFare", e.target.value)}
+                            className={cn("w-24", inputBaseClass())}
+                          />
                         </td>
-                        <td className="border-r border-slate-200 px-3 py-2"><input type="text" value={row.interline ?? ""} onChange={(e) => updateField(row._id, "interline", e.target.value)} className={cn("w-24", inputBaseClass({ align: "left" }))} /></td>
-                        <td className="px-3 py-2"><input type="text" value={row.codeshare ?? ""} onChange={(e) => updateField(row._id, "codeshare", e.target.value)} className={cn("w-24", inputBaseClass({ align: "left" }))} /></td>
+                        <td className="border-r border-slate-200 px-3 py-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.legRate ?? ""}
+                            onChange={(e) => updateField(row._id, "legRate", e.target.value)}
+                            className={cn("w-24", inputBaseClass())}
+                          />
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.odFare ?? ""}
+                            onChange={(e) => updateField(row._id, "odFare", e.target.value)}
+                            className={cn("w-24", inputBaseClass())}
+                          />
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.odRate ?? ""}
+                            onChange={(e) => updateField(row._id, "odRate", e.target.value)}
+                            className={cn("w-24", inputBaseClass())}
+                          />
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.fareProrateRatioL1L2 ?? ""}
+                            onChange={(e) => updateField(row._id, "fareProrateRatioL1L2", e.target.value)}
+                            className={cn("w-28", inputBaseClass())}
+                          />
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.rateProrateRatioL1L2 ?? ""}
+                            onChange={(e) => updateField(row._id, "rateProrateRatioL1L2", e.target.value)}
+                            className={cn("w-28", inputBaseClass())}
+                          />
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legPaxRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legCargoRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legTotalRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odPaxRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odCargoRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odTotalRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
+                          <input
+                            type="text"
+                            value={row.pooCcy ?? ""}
+                            onChange={(e) => updateField(row._id, "pooCcy", e.target.value)}
+                            className={cn("w-20", inputBaseClass({ align: "left" }))}
+                          />
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-2">
+                          <input
+                            type="number"
+                            step="0.0001"
+                            min="0"
+                            value={row.pooCcyToRccy ?? ""}
+                            onChange={(e) => updateField(row._id, "pooCcyToRccy", e.target.value)}
+                            className={cn("w-24", inputBaseClass())}
+                          />
+                        </td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyLegPaxRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyLegCargoRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyLegTotalRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyOdPaxRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyOdCargoRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyOdTotalRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.fnlRccyPaxRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.fnlRccyCargoRev)}</td>
+                        <td className="px-3 py-2 text-right text-sm font-semibold text-slate-700 dark:text-slate-200">{formatNumber(row.fnlRccyTotalRev)}</td>
                       </tr>
                     );
                   })}

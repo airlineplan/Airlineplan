@@ -624,7 +624,7 @@ const MaintenanceDashboard = () => {
         }
     };
 
-    const renderHeader = (label, key, minWidth = "min-w-[100px]") => (
+    const renderHeader = (label, key, minWidth = "min-w-[140px]") => (
         <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 align-top bg-slate-100 dark:bg-slate-800/90">
             <div className={`flex flex-col gap-1 ${minWidth}`}>
                 <div
@@ -693,7 +693,6 @@ const MaintenanceDashboard = () => {
 
             {/* TABLE 1: Maintenance Status */}
             <div className="flex flex-col gap-2">
-                {/* ... (Table 1 Code Remains Exactly the Same) ... */}
                 <div className="flex justify-between items-end">
                     <div className="flex items-center gap-3">
                         <span className="text-xs font-semibold text-slate-700 dark:text-slate-300"></span>
@@ -716,18 +715,18 @@ const MaintenanceDashboard = () => {
                                 {renderHeader("SN/BN", "sn")}
                                 {renderHeader("Titled/Spare", "titled")}
                                 <th colSpan={9} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Maintenance status</th>
-                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-100 dark:bg-slate-800/90">Action</th>
+                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-100 dark:bg-slate-800/90 min-w-[100px]">Action</th>
                             </tr>
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSO/TSRtrtr</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSO/CSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSO/DSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSO/TSRtrtr</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSO/CSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSO/DSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSRplmt</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
@@ -764,7 +763,6 @@ const MaintenanceDashboard = () => {
 
             {/* TABLE 2: Target Maintenance Status */}
             <div className="flex flex-col gap-2 pt-4">
-                {/* ... (Table 2 Code Remains Exactly the Same) ... */}
                 <div className="flex justify-between items-end">
                     <span className="text-[10px] text-slate-500 italic">Label is not user enterable on this page</span>
                     <button className="flex items-center gap-1 px-3 py-1 border border-slate-300 dark:border-slate-600 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
@@ -775,31 +773,31 @@ const MaintenanceDashboard = () => {
                     <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
                         <thead>
                             <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300">
-                                {renderHeader("Label", "targetLabel", "min-w-[80px]")}
-                                {renderHeader("MSN/ESN", "targetMsn")}
-                                {renderHeader("PN", "targetPn")}
-                                {renderHeader("SN/BN", "targetSn")}
-                                {renderHeader("Category", "category")}
-                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-semibold align-bottom">Date</th>
+                                {renderHeader("Label", "targetLabel", "min-w-[140px]")}
+                                {renderHeader("MSN/ESN", "targetMsn", "min-w-[140px]")}
+                                {renderHeader("PN", "targetPn", "min-w-[140px]")}
+                                {renderHeader("SN/BN", "targetSn", "min-w-[140px]")}
+                                {renderHeader("Category", "category", "min-w-[140px]")}
+                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-semibold align-bottom min-w-[120px]">Date</th>
                                 <th colSpan={9} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Target maintenance status</th>
                                 <th colSpan={6} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-[#f4e6fa] dark:bg-fuchsia-900/30">Target value-forecasted value on target date</th>
                             </tr>
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSO/TSRtrtr</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSO/CSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSO/DSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSO/TSRtrtr</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSO/CSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSO/DSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSO/TSRtrtr</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSO/CSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSO/DSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSO/TSRtrtr</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSO/CSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSO/DSRtrt</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
@@ -842,7 +840,6 @@ const MaintenanceDashboard = () => {
 
             {/* TABLE 3: Calendar Inputs */}
             <div className="flex flex-col gap-2 pt-4">
-                {/* ... (Table 3 Code Remains Exactly the Same) ... */}
                 <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">
                     Calendar inputs, down time and post event maintenance status
                 </h3>
@@ -852,12 +849,12 @@ const MaintenanceDashboard = () => {
                     <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
                         <thead>
                             <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300">
-                                {renderHeader("Label", "calLabel", "min-w-[80px]")}
-                                {renderHeader("Line/Base/Shop", "lineBase")}
-                                {renderHeader("MSN/ESN", "calMsn")}
-                                {renderHeader("Sch.Mx.Event", "schEvent")}
-                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 align-top">
-                                    <div className="flex flex-col gap-1 min-w-[100px]">
+                                {renderHeader("Label", "calLabel", "min-w-[140px]")}
+                                {renderHeader("Line/Base/Shop", "lineBase", "min-w-[140px]")}
+                                {renderHeader("MSN/ESN", "calMsn", "min-w-[140px]")}
+                                {renderHeader("Sch.Mx.Event", "schEvent", "min-w-[140px]")}
+                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 align-top min-w-[140px]">
+                                    <div className="flex flex-col gap-1 w-full">
                                         <div className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-semibold group" onClick={() => handleSort('calPn')}>
                                             PN
                                             {sortConfig.key === 'calPn' ? (
@@ -870,28 +867,35 @@ const MaintenanceDashboard = () => {
                                         <span className="text-[9px] font-normal text-slate-500 mt-1">Checkbox (apply to all SN)</span>
                                     </div>
                                 </th>
-                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-semibold align-bottom">SN/BN</th>
+                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-semibold align-bottom min-w-[140px]">
+                                    <div className="flex flex-col gap-1 w-full">
+                                        <div className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-semibold group" onClick={() => handleSort('snBn')}>
+                                            SN/BN
+                                        </div>
+                                        <TableInput name="snBn" value={filters.snBn} onChange={handleFilterChange} placeholder="Filter..." />
+                                    </div>
+                                </th>
                                 <th colSpan={9} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-green-100/50 dark:bg-green-900/20">Earliest of, every</th>
                                 <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center">Date</th>
                                 <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Next occurrence</th>
                                 <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-[#f4e6fa] dark:bg-fuchsia-900/30">Beyond next occurrence</th>
                             </tr>
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSO/TSRtrtr</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSO/CSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSO/DSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">TSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">CSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">DSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">Last occurre</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">Next estima</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">Down days</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">Avg Downda</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">Occurrence</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700">SO/TSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSN</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSO/TSRtrtr</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSO/CSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSO/DSRtrt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSRplmt</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[120px]">Last occurre</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[120px]">Next estima</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">Down days</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">Avg Downda</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">Occurrence</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">SO/TSRtrt</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
@@ -1073,7 +1077,7 @@ const MaintenanceDashboard = () => {
                                 <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
                                     <thead>
                                         <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 font-semibold text-center">
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 font-semibold text-center min-w-[140px]">
                                                 <div className="flex flex-col gap-1">
                                                     <div
                                                         className="flex items-center justify-center gap-1 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors group"
@@ -1089,7 +1093,7 @@ const MaintenanceDashboard = () => {
                                                     <TableInput name="msnEsn" value={modalFilters.msnEsn} onChange={handleModalFilterChange} placeholder="Filter..." />
                                                 </div>
                                             </th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 font-semibold text-center">
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 font-semibold text-center min-w-[140px]">
                                                 <div className="flex flex-col gap-1">
                                                     <div
                                                         className="flex items-center justify-center gap-1 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors group"
@@ -1105,7 +1109,7 @@ const MaintenanceDashboard = () => {
                                                     <TableInput name="pn" value={modalFilters.pn} onChange={handleModalFilterChange} placeholder="Filter..." />
                                                 </div>
                                             </th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 font-semibold text-center">
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 font-semibold text-center min-w-[140px]">
                                                 <div className="flex flex-col gap-1">
                                                     <div
                                                         className="flex items-center justify-center gap-1 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors group"
@@ -1124,7 +1128,7 @@ const MaintenanceDashboard = () => {
                                             <th colSpan="9" className="p-2 border-r border-slate-200 dark:border-slate-700 font-bold text-center border-b">
                                                 Maintenance status
                                             </th>
-                                            <th rowSpan="2" className="p-2 font-semibold align-bottom text-center">
+                                            <th rowSpan="2" className="p-2 font-semibold align-bottom text-center min-w-[110px]">
                                                 Appl time metric
                                             </th>
                                         </tr>
@@ -1132,15 +1136,15 @@ const MaintenanceDashboard = () => {
                                             <th className="border-r border-slate-200 dark:border-slate-700"></th>
                                             <th className="border-r border-slate-200 dark:border-slate-700"></th>
                                             <th className="border-r border-slate-200 dark:border-slate-700"></th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">TSN</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">CSN</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">DSN</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">TSO/TSRtrtr</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">CSO/CSRtrt</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">DSO/DSRtrt</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">TSRplmt</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">CSRplmt</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold">DSRplmt</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">TSN</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">CSN</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">DSN</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">TSO/TSRtrtr</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">CSO/CSRtrt</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">DSO/DSRtrt</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">TSRplmt</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">CSRplmt</th>
+                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">DSRplmt</th>
                                         </tr>
                                     </thead>
                                     <tbody className="text-slate-800 dark:text-slate-200 bg-[#dcfce7] dark:bg-green-900/20">
@@ -1248,49 +1252,49 @@ const MaintenanceDashboard = () => {
                                 <table className="w-full text-left border-collapse min-w-max">
                                     <thead>
                                         <tr className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('label')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('label')}>
                                                 <div className="flex justify-between items-center group">
                                                     Label {rotablesSortConfig.key === 'label' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="label" value={rotablesFilters.label} onChange={handleRotablesFilterChange} placeholder="Filter Label..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('date')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('date')}>
                                                 <div className="flex justify-between items-center group">
                                                     Date (EoD) {rotablesSortConfig.key === 'date' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="date" value={rotablesFilters.date} onChange={handleRotablesFilterChange} placeholder="Filter Date..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('pn')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('pn')}>
                                                 <div className="flex justify-between items-center group">
                                                     PN {rotablesSortConfig.key === 'pn' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="pn" value={rotablesFilters.pn} onChange={handleRotablesFilterChange} placeholder="Filter PN..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('msn')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('msn')}>
                                                 <div className="flex justify-between items-center group">
                                                     MSN {rotablesSortConfig.key === 'msn' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="msn" value={rotablesFilters.msn} onChange={handleRotablesFilterChange} placeholder="Filter MSN..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('acftRegn')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('acftRegn')}>
                                                 <div className="flex justify-between items-center group">
                                                     ACFT Regn {rotablesSortConfig.key === 'acftRegn' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="acftRegn" value={rotablesFilters.acftRegn} onChange={handleRotablesFilterChange} placeholder="Filter Regn..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('position')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('position')}>
                                                 <div className="flex justify-between items-center group">
                                                     Position (for PN) {rotablesSortConfig.key === 'position' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="position" value={rotablesFilters.position} onChange={handleRotablesFilterChange} placeholder="Filter Pos..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-32 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleRotablesSort('removedSN')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('removedSN')}>
                                                 <div className="flex justify-between items-center group">
                                                     Removed SN {rotablesSortConfig.key === 'removedSN' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="removedSN" value={rotablesFilters.removedSN} onChange={handleRotablesFilterChange} placeholder="Filter Rem SN..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors w-32" onClick={() => handleRotablesSort('installedSN')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('installedSN')}>
                                                 <div className="flex justify-between items-center group">
                                                     Installed SN {rotablesSortConfig.key === 'installedSN' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
@@ -1386,51 +1390,51 @@ const MaintenanceDashboard = () => {
                                             <th colSpan="3" className="p-1">Remaining to Replacement</th>
                                         </tr>
                                         <tr className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-24 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleTargetsSort('label')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('label')}>
                                                 <div className="flex justify-between items-center group">
                                                     Label {targetsSortConfig.key === 'label' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="label" value={targetsFilters.label} onChange={handleTargetsFilterChange} placeholder="Filter Label..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-24 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleTargetsSort('msnEsn')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('msnEsn')}>
                                                 <div className="flex justify-between items-center group">
                                                     MSN/ESN {targetsSortConfig.key === 'msnEsn' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="msnEsn" value={targetsFilters.msnEsn} onChange={handleTargetsFilterChange} placeholder="Filter MSN/ESN..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-24 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleTargetsSort('pn')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('pn')}>
                                                 <div className="flex justify-between items-center group">
                                                     PN {targetsSortConfig.key === 'pn' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="pn" value={targetsFilters.pn} onChange={handleTargetsFilterChange} placeholder="Filter PN..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-24 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleTargetsSort('snBn')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('snBn')}>
                                                 <div className="flex justify-between items-center group">
                                                     SN/BN {targetsSortConfig.key === 'snBn' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="snBn" value={targetsFilters.snBn} onChange={handleTargetsFilterChange} placeholder="Filter SN/BN..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-24 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleTargetsSort('category')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('category')}>
                                                 <div className="flex justify-between items-center group">
                                                     Category {targetsSortConfig.key === 'category' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="category" value={targetsFilters.category} onChange={handleTargetsFilterChange} placeholder="Filter Cat..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 w-28 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" onClick={() => handleTargetsSort('date')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('date')}>
                                                 <div className="flex justify-between items-center group">
                                                     Date {targetsSortConfig.key === 'date' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="date" value={targetsFilters.date} onChange={handleTargetsFilterChange} placeholder="Filter Date..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">TSN</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">CSN</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">DSN</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">TSO/TSRtr</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">CSO/CSRtr</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">DSO/DSRtr</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">TSRplmt</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center w-20">CSRplmt</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] text-center w-20">DSRplmt</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">TSN</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">CSN</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">DSN</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">TSO/TSRtr</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">CSO/CSRtr</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">DSO/DSRtr</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">TSRplmt</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">CSRplmt</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] text-center min-w-[110px]">DSRplmt</th>
                                         </tr>
                                     </thead>
                                     <tbody className="text-[12px] text-slate-700 dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-800">
