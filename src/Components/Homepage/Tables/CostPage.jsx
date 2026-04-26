@@ -287,14 +287,12 @@ const CostPage = () => {
         const lockedValues = new Set([
             "engineFuelCostRCCY",
             "apuFuelCostRCCY",
-            "transitMaintenanceRCCY",
             "navigationRCCY",
             "airportRCCY",
             "crewAllowancesRCCY",
             "layoverCostRCCY",
             "crewPositioningCostRCCY",
-            "otherDocRCCY",
-            "rotableChangesRCCY"
+            "otherDocRCCY"
         ]);
         return COST_TYPE_OPTIONS.map((option) => ({
             ...option,
