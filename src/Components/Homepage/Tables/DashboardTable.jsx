@@ -774,6 +774,7 @@ const FxRateModal = ({
   setCurrencyCodes,
   reportingCurrency,
   setReportingCurrency,
+  setExposureCurrency,
   fxRows,
   setFxRows,
   fxRowRefs,
@@ -800,16 +801,21 @@ const FxRateModal = ({
     [currencyCodes, reportingCurrency]
   );
 
-  const visibleFxRows = useMemo(() => {
+  const selectedFxRowIndex = useMemo(() => {
     const selectedKey = normalizeDateKey(selectedFxDate);
-    if (!selectedKey) return fxRows;
-    return fxRows.filter((row) => normalizeDateKey(row.dateKey) === selectedKey);
+    if (!selectedKey) return -1;
+    return fxRows.findIndex((row) => normalizeDateKey(row.dateKey) === selectedKey);
   }, [fxRows, selectedFxDate]);
 
   useEffect(() => {
     if (!open) return;
     setFxRows(createFxRows(periodColumns, generatedPairs, savedFxRates));
   }, [open, generatedPairs, periodColumns, savedFxRates, setFxRows]);
+
+  useEffect(() => {
+    if (!open || selectedFxRowIndex < 0) return;
+    fxRowRefs.current[selectedFxRowIndex]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [fxRowRefs, open, selectedFxRowIndex]);
 
   const addCurrency = () => {
     const code = normalizeCurrencyCode(currencyInput);
@@ -833,7 +839,7 @@ const FxRateModal = ({
     if (code === reportingCurrency) {
       const fallback = currencyCodes.find((item) => item !== code) || "";
       setReportingCurrency(fallback);
-      setExposureCurrency(fallback);
+      setExposureCurrency?.(fallback);
       setSavedFxRates([]);
       setFxRows(createFxRows(periodColumns, buildCurrencyPairs(currencyCodes.filter((item) => item !== code), fallback), []));
     }
@@ -843,7 +849,7 @@ const FxRateModal = ({
     const normalized = normalizeCurrencyCode(nextReportingCurrency);
     if (!normalized) return;
     setReportingCurrency(normalized);
-    setExposureCurrency(normalized);
+    setExposureCurrency?.(normalized);
     const nextPairs = buildCurrencyPairs(currencyCodes, normalized);
     const resetRows = createFxRows(periodColumns, nextPairs, []);
     setSavedFxRates(
@@ -898,6 +904,13 @@ const FxRateModal = ({
     } finally {
       setSaving(false);
     }
+  };
+
+  const getFxDateLabel = (row, rowIndex) => {
+    if (fxRows.length > 0 && rowIndex === 0) return "First / earliest date";
+    if (fxRows.length > 1 && rowIndex === fxRows.length - 1) return "Last / latest date";
+    if (rowIndex === selectedFxRowIndex) return "Centre row";
+    return row.dateLabel;
   };
 
   if (!open) return null;
@@ -1032,21 +1045,31 @@ const FxRateModal = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {visibleFxRows.map((row, rowIndex) => (
+                      {fxRows.map((row, rowIndex) => (
                         <tr
                           key={row.key}
                           ref={(node) => {
                             fxRowRefs.current[rowIndex] = node;
                           }}
-                          className="hover:bg-cyan-50/40 dark:hover:bg-cyan-500/5"
+                          className={cn(
+                            "hover:bg-cyan-50/40 dark:hover:bg-cyan-500/5",
+                            rowIndex === selectedFxRowIndex && "bg-cyan-50/60 dark:bg-cyan-500/10"
+                          )}
                         >
                           <td className="sticky left-0 z-10 border-b border-r border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200">
-                            {row.dateLabel}
+                            <div className="flex flex-col gap-0.5">
+                              <span>{getFxDateLabel(row, rowIndex)}</span>
+                              {getFxDateLabel(row, rowIndex) !== row.dateLabel && (
+                                <span className="text-[11px] font-normal text-slate-400 dark:text-slate-500">{row.dateLabel}</span>
+                              )}
+                            </div>
                           </td>
                           {generatedPairs.map((pair) => (
                             <td key={`${row.key}-${pair}`} className="border-b border-slate-200 px-2 py-2 dark:border-slate-800">
                               <input
                                 type="text"
+                                inputMode="decimal"
+                                aria-label={`${row.dateLabel} ${pair}`}
                                 value={row.pairs[pair] ?? "1.00"}
                                 onChange={(e) => {
                                   const next = [...fxRows];
@@ -1083,9 +1106,9 @@ const FxRateModal = ({
                 </div>
               </div>
 
-              {visibleFxRows.length === 0 && (
+              {fxRows.length === 0 && (
                 <div className="border-b border-slate-200 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-                  No FX row matches the selected date.
+                  No FX rows available for the master date range.
                 </div>
               )}
 
@@ -2017,6 +2040,7 @@ const DashboardTable = () => {
         setCurrencyCodes={setCurrencyCodes}
         reportingCurrency={reportingCurrency}
         setReportingCurrency={setReportingCurrency}
+        setExposureCurrency={setExposureCurrency}
         fxBasis={fxBasis}
         setFxBasis={setFxBasis}
         fxRows={fxRows}
