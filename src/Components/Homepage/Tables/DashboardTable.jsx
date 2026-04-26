@@ -432,8 +432,6 @@ const FINANCE_SECTIONS = [
 
 function buildFinancePeriods({
   periodColumns = [],
-  revenueRows = [],
-  costFlights = [],
   apuFuelRows = [],
   periodicity,
   reportingCurrency,
@@ -442,78 +440,70 @@ function buildFinancePeriods({
 }) {
   const exposureCode = normalizeCurrencyCode(exposureCurrency || reportingCurrency);
   const reportingCode = normalizeCurrencyCode(reportingCurrency);
-  const costFlightIds = new Set(
-    (Array.isArray(costFlights) ? costFlights : [])
-      .map((flight) => String(flight?._id || flight?.id || flight?.flightId || "").trim())
-      .filter(Boolean)
-  );
-  const apuRows = (Array.isArray(apuFuelRows) ? apuFuelRows : []).filter((row) => {
-    const sourceFlightId = String(row?.sourceFlightId || "").trim();
-    if (sourceFlightId && costFlightIds.size > 0) {
-      return costFlightIds.has(sourceFlightId);
-    }
-    return true;
-  });
+  const apuRows = Array.isArray(apuFuelRows) ? apuFuelRows : [];
 
   return periodColumns.map((period) => {
+    const periodData = period?.data || {};
     const startDate = getPeriodStartDate(period.endDate, periodicity);
     const endDate = parseDateSafe(period.endDate);
     const dateKey = normalizeDateKey(period.endDate || period.dateKey || "");
-    const revenueInPeriod = revenueRows.filter((row) => isDateInPeriod(row?.date, startDate, endDate));
-    const costsInPeriod = costFlights.filter((row) => isDateInPeriod(row?.date, startDate, endDate));
     const apuInPeriod = apuRows.filter((row) => isDateInPeriod(row?.date, startDate, endDate));
     const fxRate = getCarriedForwardFxRate(fxRates, `${exposureCode}/${reportingCode}`, dateKey);
 
-    const fnlRccyPaxRev = sumBy(revenueInPeriod, (row) => row?.fnlRccyPaxRev);
-    const fnlRccyCargoRev = sumBy(revenueInPeriod, (row) => row?.fnlRccyCargoRev);
-    const fnlRccyTotalRev = sumBy(revenueInPeriod, (row) => row?.fnlRccyTotalRev);
+    const fnlRccyPaxRev = toNumberLike(periodData.fnlRccyPaxRev);
+    const fnlRccyCargoRev = toNumberLike(periodData.fnlRccyCargoRev);
+    const fnlRccyTotalRev = toNumberLike(periodData.fnlRccyTotalRev || fnlRccyPaxRev + fnlRccyCargoRev);
 
-    const engineFuelConsumption = sumBy(costsInPeriod, (row) => row?.engineFuelConsumption);
+    const engineFuelConsumption = toNumberLike(periodData.engineFuelConsumption);
     const apuFuelConsumption = sumBy(apuInPeriod, (row) => row?.consumptionKg);
     const totalFuelConsumption = engineFuelConsumption + apuFuelConsumption;
 
-    const engineFuelCostRCCY = sumBy(costsInPeriod, (row) => row?.engineFuelCostRCCY);
-    const apuFuelCostRCCY = sumBy(costsInPeriod, (row) => row?.apuFuelCostRCCY);
-    const totalFuelCostRCCY = engineFuelCostRCCY + apuFuelCostRCCY;
+    const engineFuelCostRCCY = toNumberLike(periodData.engineFuelCostRCCY);
+    const apuFuelCostRCCY = toNumberLike(periodData.apuFuelCostRCCY);
+    const totalFuelCostRCCY = toNumberLike(periodData.totalFuelCostRCCY || engineFuelCostRCCY + apuFuelCostRCCY);
 
-    const maintenanceReserveContributionRCCY = sumBy(costsInPeriod, (row) => row?.maintenanceReserveContributionRCCY ?? row?.mrContributionRCCY);
-    const mrMonthlyRCCY = sumBy(costsInPeriod, (row) => row?.mrMonthlyRCCY);
-    const totalMrContributionRCCY = maintenanceReserveContributionRCCY + mrMonthlyRCCY;
+    const maintenanceReserveContributionRCCY = toNumberLike(periodData.maintenanceReserveContributionRCCY ?? periodData.mrContributionRCCY);
+    const mrMonthlyRCCY = toNumberLike(periodData.mrMonthlyRCCY);
+    const totalMrContributionRCCY = toNumberLike(periodData.totalMrContributionRCCY || maintenanceReserveContributionRCCY + mrMonthlyRCCY);
 
-    const qualifyingSchMxEventsRCCY = sumBy(costsInPeriod, (row) => row?.qualifyingSchMxEventsRCCY);
-    const schMxEvent1Detail1RCCY = 0;
-    const schMxEvent1Detail2RCCY = 0;
-    const schMxEvent2Detail1RCCY = 0;
+    const qualifyingSchMxEventsRCCY = toNumberLike(periodData.qualifyingSchMxEventsRCCY);
+    const schMxEvent1Detail1RCCY = toNumberLike(periodData.schMxEvent1Detail1RCCY);
+    const schMxEvent1Detail2RCCY = toNumberLike(periodData.schMxEvent1Detail2RCCY);
+    const schMxEvent2Detail1RCCY = toNumberLike(periodData.schMxEvent2Detail1RCCY);
 
-    const transitMaintenanceRCCY = sumBy(costsInPeriod, (row) => row?.transitMaintenanceRCCY);
-    const otherMaintenanceRCCY = sumBy(costsInPeriod, (row) => row?.otherMaintenanceRCCY);
-    const otherMaintenanceUtilisationRCCY = sumBy(costsInPeriod, (row) => (row?.otherMaintenance1 || 0) + (row?.otherMaintenance2 || 0));
-    const otherMaintenanceCalendarRCCY = sumBy(costsInPeriod, (row) => row?.otherMaintenance3);
-    const rotableChangesRCCY = sumBy(costsInPeriod, (row) => row?.rotableChangesRCCY);
+    const transitMaintenanceRCCY = toNumberLike(periodData.transitMaintenanceRCCY);
+    const otherMaintenanceRCCY = toNumberLike(periodData.otherMaintenanceRCCY);
+    const otherMaintenanceUtilisationRCCY = toNumberLike(periodData.otherMaintenanceUtilisationRCCY ?? (toNumberLike(periodData.otherMaintenance1) + toNumberLike(periodData.otherMaintenance2)));
+    const otherMaintenanceCalendarRCCY = toNumberLike(periodData.otherMaintenanceCalendarRCCY ?? periodData.otherMaintenance3);
+    const rotableChangesRCCY = toNumberLike(periodData.rotableChangesRCCY);
 
-    const crewAllowancesRCCY = sumBy(costsInPeriod, (row) => row?.crewAllowancesRCCY);
-    const layoverCostRCCY = sumBy(costsInPeriod, (row) => row?.layoverCostRCCY);
-    const crewPositioningCostRCCY = sumBy(costsInPeriod, (row) => row?.crewPositioningCostRCCY);
-    const crewTotalDirectCostRCCY = crewAllowancesRCCY + layoverCostRCCY + crewPositioningCostRCCY;
+    const crewAllowancesRCCY = toNumberLike(periodData.crewAllowancesRCCY);
+    const layoverCostRCCY = toNumberLike(periodData.layoverCostRCCY);
+    const crewPositioningCostRCCY = toNumberLike(periodData.crewPositioningCostRCCY);
+    const crewTotalDirectCostRCCY = toNumberLike(periodData.crewTotalDirectCostRCCY || crewAllowancesRCCY + layoverCostRCCY + crewPositioningCostRCCY);
 
-    const airportRCCY = sumBy(costsInPeriod, (row) => row?.airportRCCY);
-    const navigationRCCY = sumBy(costsInPeriod, (row) => row?.navigationRCCY);
-    const otherDocRCCY = sumBy(costsInPeriod, (row) => row?.otherDocRCCY);
+    const airportRCCY = toNumberLike(periodData.airportRCCY);
+    const navigationRCCY = toNumberLike(periodData.navigationRCCY);
+    const otherDocRCCY = toNumberLike(periodData.otherDocRCCY);
 
     const totalMaintenanceCostRCCY =
-      totalMrContributionRCCY +
-      qualifyingSchMxEventsRCCY +
-      transitMaintenanceRCCY +
-      otherMaintenanceRCCY +
-      rotableChangesRCCY;
+      toNumberLike(periodData.totalMaintenanceCostRCCY || (
+        totalMrContributionRCCY +
+        qualifyingSchMxEventsRCCY +
+        transitMaintenanceRCCY +
+        otherMaintenanceRCCY +
+        rotableChangesRCCY
+      ));
 
     const totalDocRCCY =
-      totalFuelCostRCCY +
-      totalMaintenanceCostRCCY +
-      crewTotalDirectCostRCCY +
-      airportRCCY +
-      navigationRCCY +
-      otherDocRCCY;
+      toNumberLike(periodData.totalDocRCCY || (
+        totalFuelCostRCCY +
+        totalMaintenanceCostRCCY +
+        crewTotalDirectCostRCCY +
+        airportRCCY +
+        navigationRCCY +
+        otherDocRCCY
+      ));
 
     const grossProfitLossRCCY = fnlRccyTotalRev - totalDocRCCY;
 
@@ -1363,8 +1353,6 @@ const DashboardTable = () => {
   const [creatingConnections, setCreatingConnections] = useState(false);
   const [exposureCurrency, setExposureCurrency] = useState("");
   const [financeSourceData, setFinanceSourceData] = useState({
-    revenueRows: [],
-    costFlights: [],
     apuFuelRows: [],
   });
   const [financePeriods, setFinancePeriods] = useState([]);
@@ -1548,8 +1536,6 @@ const DashboardTable = () => {
     if (!periodColumns.length) {
       setFinancePeriods([]);
       setFinanceSourceData({
-        revenueRows: [],
-        costFlights: [],
         apuFuelRows: [],
       });
       return;
@@ -1560,53 +1546,11 @@ const DashboardTable = () => {
     const loadFinanceData = async () => {
       try {
         setFinanceLoading(true);
-        const firstPeriod = periodColumns[0];
-        const lastPeriod = periodColumns[periodColumns.length - 1];
-        const fromDate = firstPeriod?.startDate || firstPeriod?.endDate || "";
-        const toDate = lastPeriod?.endDate || lastPeriod?.startDate || "";
-
-        const commonQuery = {
-          label: selectedValues.label,
-          fromDate,
-          toDate,
-          from: filters.from.map((item) => item.value).join(","),
-          to: filters.to.map((item) => item.value).join(","),
-          sector: filters.sector.map((item) => item.value).join(","),
-          variant: filters.variant.map((item) => item.value).join(","),
-          flight: filters.flight.map((item) => item.value).join(","),
-          userTag1: filters.userTag1.map((item) => item.value).join(","),
-          userTag2: filters.userTag2.map((item) => item.value).join(","),
-        };
-
-        const [revenueResponse, costResponse, apuResponse] = await Promise.all([
-          api.get("/revenue", {
-            params: {
-              mode: "detail",
-              ...commonQuery,
-            },
-          }),
-          api.post("/cost-page-data", {
-            label: { value: selectedValues.label },
-            from: filters.from,
-            to: filters.to,
-            sector: filters.sector,
-            variant: filters.variant,
-            sn: [],
-            flight: filters.flight,
-            userTag1: filters.userTag1,
-            userTag2: filters.userTag2,
-          }),
-          api.get("/apu-fuel-costs"),
-        ]);
-
-        const revenueRows = Array.isArray(revenueResponse.data?.rows) ? revenueResponse.data.rows : [];
-        const costFlights = Array.isArray(costResponse.data?.flights) ? costResponse.data.flights : [];
+        const apuResponse = await api.get("/apu-fuel-costs");
         const apuFuelRows = Array.isArray(apuResponse.data?.data) ? apuResponse.data.data : [];
 
         if (!cancelled) {
           setFinanceSourceData({
-            revenueRows,
-            costFlights,
             apuFuelRows,
           });
         }
@@ -1614,8 +1558,6 @@ const DashboardTable = () => {
         console.error("Error loading finance data:", error);
         if (!cancelled) {
           setFinanceSourceData({
-            revenueRows: [],
-            costFlights: [],
             apuFuelRows: [],
           });
         }
@@ -1641,8 +1583,6 @@ const DashboardTable = () => {
 
     const nextFinancePeriods = buildFinancePeriods({
       periodColumns,
-      revenueRows: financeSourceData.revenueRows,
-      costFlights: financeSourceData.costFlights,
       apuFuelRows: financeSourceData.apuFuelRows,
       periodicity: selectedValues.periodicity,
       reportingCurrency,
