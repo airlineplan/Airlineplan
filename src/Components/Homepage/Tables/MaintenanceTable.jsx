@@ -26,6 +26,9 @@ const TableInput = ({ name, value, onChange, placeholder }) => (
     </div>
 );
 
+const modalEditableInputClass = "w-full min-w-[96px] h-9 px-2.5 py-1.5 text-sm leading-5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-slate-800 dark:text-slate-100";
+const modalEditableSelectClass = `${modalEditableInputClass} appearance-none cursor-pointer`;
+
 const MaintenanceDashboard = () => {
     const [selectedDate, setSelectedDate] = useState("2025-10-12");
     const [selectedMsn, setSelectedMsn] = useState("");
@@ -1021,7 +1024,7 @@ const MaintenanceDashboard = () => {
                                             <select
                                                 value={resetAssetSN}
                                                 onChange={(e) => setResetAssetSN(e.target.value)}
-                                                className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 rounded w-full outline-none focus:ring-1 focus:ring-blue-500 text-[11px]"
+                                                className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-2 rounded w-full outline-none focus:ring-1 focus:ring-blue-500 text-sm leading-5 text-slate-800 dark:text-slate-100"
                                             >
                                                 <option value="">Select ASN</option>
                                                 {assetSnOptions.length > 0 ? (
@@ -1048,7 +1051,7 @@ const MaintenanceDashboard = () => {
                                             type="date"
                                             value={resetDate}
                                             onChange={(e) => setResetDate(e.target.value)}
-                                            className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1.5 rounded w-36 outline-none focus:ring-1 focus:ring-blue-500"
+                                            className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-2 rounded w-36 outline-none focus:ring-1 focus:ring-blue-500 text-sm leading-5 text-slate-800 dark:text-slate-100"
                                         />
                                     </div>
 
@@ -1154,47 +1157,47 @@ const MaintenanceDashboard = () => {
                                             filteredModalTableData.map(row => (
                                                 <tr key={`reset-${row.id}`}>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50 font-medium">
-                                                        {isEditingModal || row.isNew ? <input type="text" value={row.msnEsn || ""} onChange={(e) => handleModalFieldChange(row.id, 'msnEsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.msnEsn}
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.msnEsn || ""} onChange={(e) => handleModalFieldChange(row.id, 'msnEsn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.msnEsn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingModal || row.isNew ? <input type="text" value={row.pn || ""} onChange={(e) => handleModalFieldChange(row.id, 'pn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.pn}
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.pn || ""} onChange={(e) => handleModalFieldChange(row.id, 'pn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.pn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingModal || row.isNew ? <input type="text" value={row.snBn || ""} onChange={(e) => handleModalFieldChange(row.id, 'snBn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.snBn}
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.snBn || ""} onChange={(e) => handleModalFieldChange(row.id, 'snBn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.snBn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingModal || row.isNew ? <input type="text" value={row.tsn || ""} onChange={(e) => handleModalFieldChange(row.id, 'tsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.tsn}
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.tsn || ""} onChange={(e) => handleModalFieldChange(row.id, 'tsn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.tsn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingModal || row.isNew ? <input type="text" value={row.csn || ""} onChange={(e) => handleModalFieldChange(row.id, 'csn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.csn}
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.csn || ""} onChange={(e) => handleModalFieldChange(row.id, 'csn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.csn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingModal || row.isNew ? <input type="text" value={row.dsn || ""} onChange={(e) => handleModalFieldChange(row.id, 'dsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.dsn}
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.dsn || ""} onChange={(e) => handleModalFieldChange(row.id, 'dsn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.dsn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingModal || row.isNew ? <input type="text" value={row.tso || ""} onChange={(e) => handleModalFieldChange(row.id, 'tso', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.tso}
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.tso || ""} onChange={(e) => handleModalFieldChange(row.id, 'tso', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.tso}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingModal || row.isNew ? <input type="text" value={row.cso || ""} onChange={(e) => handleModalFieldChange(row.id, 'cso', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.cso}
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.cso || ""} onChange={(e) => handleModalFieldChange(row.id, 'cso', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.cso}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingModal || row.isNew ? <input type="text" value={row.dso || ""} onChange={(e) => handleModalFieldChange(row.id, 'dso', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.dso}
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.dso || ""} onChange={(e) => handleModalFieldChange(row.id, 'dso', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.dso}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingModal || row.isNew ? <input type="text" value={row.tsr || ""} onChange={(e) => handleModalFieldChange(row.id, 'tsr', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.tsr}
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.tsr || ""} onChange={(e) => handleModalFieldChange(row.id, 'tsr', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.tsr}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingModal || row.isNew ? <input type="text" value={row.csr || ""} onChange={(e) => handleModalFieldChange(row.id, 'csr', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.csr}
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.csr || ""} onChange={(e) => handleModalFieldChange(row.id, 'csr', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.csr}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingModal || row.isNew ? <input type="text" value={row.dsr || ""} onChange={(e) => handleModalFieldChange(row.id, 'dsr', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.dsr}
+                                                        {isEditingModal || row.isNew ? <input type="text" value={row.dsr || ""} onChange={(e) => handleModalFieldChange(row.id, 'dsr', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.dsr}
                                                     </td>
                                                     <td className="p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
                                                         <select
                                                             value={row.metric || "BH"}
                                                             onChange={(e) => handleModalFieldChange(row.id, 'metric', e.target.value)}
                                                             disabled={!isEditingModal && !row.isNew}
-                                                            className="w-full text-center border border-slate-300 dark:border-slate-600 rounded outline-none py-0.5 bg-white dark:bg-slate-800 text-[10px] appearance-none cursor-pointer disabled:bg-slate-50 dark:disabled:bg-slate-900/50"
+                                                            className={`${modalEditableSelectClass} text-center disabled:bg-slate-50 dark:disabled:bg-slate-900/50`}
                                                         >
                                                             <option value="BH">BH</option>
                                                             <option value="FH">FH</option>
@@ -1307,28 +1310,28 @@ const MaintenanceDashboard = () => {
                                             filteredRotablesData.map((row, index) => (
                                                 <tr key={row.id || index} className="hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors">
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.label || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'label', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.label}
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.label || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'label', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.label}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingRotables || row.isNew ? <input type="date" value={row.date || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'date', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.date}
+                                                        {isEditingRotables || row.isNew ? <input type="date" value={row.date || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'date', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.date}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.pn || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'pn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.pn}
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.pn || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'pn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.pn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.msn || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'msn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.msn}
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.msn || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'msn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.msn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.acftRegn || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'acftRegn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.acftRegn}
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.acftRegn || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'acftRegn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.acftRegn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.position || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'position', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.position}
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.position || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'position', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.position}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.removedSN || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'removedSN', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.removedSN}
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.removedSN || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'removedSN', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.removedSN}
                                                     </td>
                                                     <td className="p-2 text-center">
-                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.installedSN || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'installedSN', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.installedSN}
+                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.installedSN || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'installedSN', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.installedSN}
                                                     </td>
                                                 </tr>
                                             ))
@@ -1442,49 +1445,49 @@ const MaintenanceDashboard = () => {
                                             filteredTargetsData.map((row, index) => (
                                                 <tr key={row.id || index} className="hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors">
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.label || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'label', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.label}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.label || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'label', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.label}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.msnEsn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'msnEsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.msnEsn}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.msnEsn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'msnEsn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.msnEsn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.pn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'pn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.pn}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.pn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'pn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.pn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.snBn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'snBn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.snBn}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.snBn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'snBn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.snBn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.category || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'category', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.category}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.category || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'category', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.category}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="date" value={row.date || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'date', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.date}
+                                                        {isEditingTargets || row.isNew ? <input type="date" value={row.date || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'date', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.date}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.tsn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'tsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.tsn}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.tsn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'tsn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.tsn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.csn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'csn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.csn}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.csn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'csn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.csn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.dsn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'dsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.dsn}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.dsn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'dsn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.dsn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.tso || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'tso', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.tso}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.tso || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'tso', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.tso}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.cso || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'cso', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.cso}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.cso || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'cso', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.cso}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.dso || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'dso', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.dso}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.dso || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'dso', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.dso}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.tsRplmt || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'tsRplmt', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.tsRplmt}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.tsRplmt || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'tsRplmt', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.tsRplmt}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.csRplmt || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'csRplmt', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.csRplmt}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.csRplmt || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'csRplmt', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.csRplmt}
                                                     </td>
                                                     <td className="p-2 text-center">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.dsRplmt || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'dsRplmt', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.dsRplmt}
+                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.dsRplmt || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'dsRplmt', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.dsRplmt}
                                                     </td>
                                                 </tr>
                                             ))
