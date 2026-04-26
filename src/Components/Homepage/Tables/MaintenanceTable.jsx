@@ -815,7 +815,7 @@ const MaintenanceDashboard = () => {
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 font-mono">{row.targetPn}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.targetSn}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.category}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.date}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.displayDate || row.date}</td>
 
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("tsn")}`}>{row.tsn}</td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("csn")}`}>{row.csn}</td>
