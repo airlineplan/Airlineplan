@@ -267,6 +267,58 @@ function cnTableValue(row, period) {
   }
 }
 
+const FINANCE_BASIS_DENOMINATOR_KEYS = {
+  "absolute": null,
+  "% of total revenue": "fnlRccyTotalRev",
+  "per ASK": "sumOfask",
+  "per RPK": "sumOfrsk",
+  "per ATK": "sumOfcargoAtk",
+  "per RTK": "sumOfcargoRtk",
+  "per BH": "bh",
+  "per FH": "fh",
+  "per Departure": "departures",
+  "per Seat": "seats",
+  "per Pax": "pax",
+  "per Cargo capacity T": "cargoCapT",
+  "per Cargo T": "cargoT",
+};
+
+function getFinanceNodeValue(node, finance = {}) {
+  if (node?.getValue) return toNumberLike(node.getValue(finance));
+  return toNumberLike(finance?.[node?.key]);
+}
+
+function getFinanceBasisDenominator(periodData = {}, basis = "absolute") {
+  const normalizedBasis = String(basis || "absolute").trim();
+  if (normalizedBasis === "absolute") return 1;
+
+  const denominatorKey = FINANCE_BASIS_DENOMINATOR_KEYS[normalizedBasis];
+  if (!denominatorKey) return 1;
+
+  const denominator = toNumberLike(periodData?.[denominatorKey]);
+  return denominator > 0 ? denominator : 0;
+}
+
+function formatFinanceDisplayValue(value, periodData = {}, basis = "absolute") {
+  const raw = toNumberLike(value);
+  const normalizedBasis = String(basis || "absolute").trim();
+
+  if (normalizedBasis === "absolute") {
+    return formatNumber(raw, Number.isInteger(raw) ? 0 : 2);
+  }
+
+  const denominator = getFinanceBasisDenominator(periodData, normalizedBasis);
+  if (!denominator) {
+    return normalizedBasis === "% of total revenue" ? "0.00%" : "0.00";
+  }
+
+  if (normalizedBasis === "% of total revenue") {
+    return `${((raw / denominator) * 100).toFixed(2)}%`;
+  }
+
+  return formatNumber(raw / denominator, 2);
+}
+
 const OPERATIONAL_SECTIONS = [
   {
     title: "Traffic",
@@ -773,6 +825,7 @@ const FxRateModal = ({
   savedFxRates,
   setSavedFxRates,
   periodColumns,
+  fxBasis,
 }) => {
   const [currencyInput, setCurrencyInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -993,7 +1046,9 @@ const FxRateModal = ({
 
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/60">
-              <div className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">per ASK</div>
+              <div className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+                {FX_BASIS_OPTIONS.find((option) => option.value === fxBasis)?.label || "Absolute"}
+              </div>
               <div className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">{reportingCurrency}</div>
               <button type="button" className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500">
                 FX rate setting
@@ -1344,7 +1399,7 @@ const DashboardTable = () => {
   const [showRiskModal, setShowRiskModal] = useState(false);
   const [currencyCodes, setCurrencyCodes] = useState([]);
   const [reportingCurrency, setReportingCurrency] = useState("");
-  const [fxBasis, setFxBasis] = useState("per ASK");
+  const [fxBasis, setFxBasis] = useState("absolute");
   const [fxRows, setFxRows] = useState([]);
   const [fxDateColumns, setFxDateColumns] = useState([]);
   const [savedFxRates, setSavedFxRates] = useState([]);
@@ -1635,7 +1690,7 @@ const DashboardTable = () => {
           `${indent}${row.label}`,
           periodColumns.map((period, index) => {
             const finance = financePeriods[index]?.finance || {};
-            return cnTableValue(row, finance);
+            return formatFinanceDisplayValue(getFinanceNodeValue(row, finance), period.data, fxBasis);
           })
         );
       });
@@ -1686,7 +1741,11 @@ const DashboardTable = () => {
               )}
             >
               <span className={cn(node.emphasize && "font-semibold text-slate-900 dark:text-slate-50")}>
-                {cnTableValue(node, financePeriods[index]?.finance || {})}
+                {formatFinanceDisplayValue(
+                  getFinanceNodeValue(node, financePeriods[index]?.finance || {}),
+                  period.data,
+                  fxBasis
+                )}
               </span>
             </td>
           ))}
