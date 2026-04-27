@@ -1,4 +1,3 @@
-import React from "react";
 import { Routes, Route } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -11,6 +10,8 @@ import ResetPassword from "./Pages/ResetPassword";
 import Contact from "./Pages/Contact";
 import AircraftRoute from "./Pages/AircraftRoute";
 
+const SHOW_PRIVATE_PAGES = false;
+
 const App = () => {
   return (
     <>
@@ -21,7 +22,7 @@ const App = () => {
         <Route path="/forget" element={<ForgatePassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/contact" element={<Contact />} />
-        <Route path="/aircraft-route-economic" element={<AircraftRoute />} />
+        {SHOW_PRIVATE_PAGES && <Route path="/aircraft-route-economic" element={<AircraftRoute />} />}
       </Routes>
       <ToastContainer position="bottom-right" theme="colored" limit={1} />
     </>

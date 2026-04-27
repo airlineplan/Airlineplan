@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../apiConfig";
 import { motion, AnimatePresence } from "framer-motion";
+import PropTypes from "prop-types";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
@@ -60,6 +61,9 @@ const TABS = [
 
 ];
 
+const HIDDEN_TAB_IDS = new Set([8, 16]);
+const VISIBLE_TABS = TABS.filter((tab) => !HIDDEN_TAB_IDS.has(tab.id));
+
 // --- COMPONENTS ---
 
 // NavItem removed since we are using a dropdown list now
@@ -74,13 +78,17 @@ const LogoutButton = ({ onClick }) => (
   </button>
 );
 
+LogoutButton.propTypes = {
+  onClick: PropTypes.func.isRequired,
+};
+
 // --- MAIN PAGE ---
 
 const MainPage = () => {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
   const [flightsData, setFlightsData] = useState(null);
-  const [totalFlights, setTotalFlights] = useState(0);
+  const [, setTotalFlights] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -182,7 +190,7 @@ const MainPage = () => {
                   )}
                 >
                   <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
-                    {TABS.map((tab) => (
+                    {VISIBLE_TABS.map((tab) => (
                       <button
                         key={tab.id}
                         onClick={() => {
