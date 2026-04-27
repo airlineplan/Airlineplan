@@ -9,12 +9,12 @@ const STATUSES = ["Active", "Available", "Assigned", "Maintenance", "Retired"];
 const METRIC_OPTIONS = [
     { label: "FH", value: "fh" },
     { label: "BH", value: "bh" },
-    { label: "Dept", value: "dep" }
+    { label: "Dep", value: "dep" }
 ];
 const SUMMARY_ROWS = [
     { label: "Total BH", metricKey: "bh" },
     { label: "Total FH", metricKey: "fh" },
-    { label: "Total Dept", metricKey: "dep" }
+    { label: "Total Dep", metricKey: "dep" }
 ];
 const DATE_LABEL_COL_CLASS = "w-24 flex-shrink-0";
 const METRICS_CACHE_KEY_PREFIX = "fleet:metrics:";

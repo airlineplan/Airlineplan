@@ -206,14 +206,7 @@ const AssignmentTable = () => {
                 {/* Sub Header Information Panel */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
                     <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
-                        <p className="font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                            <Upload size={16} className="text-indigo-500" /> Accepted Format:
-                        </p>
-                        <p className="pl-6 border-l-2 border-slate-200 dark:border-slate-700 ml-2">
-                            Excel/CSV format <br />
-                            <span className="font-mono text-xs bg-slate-100 dark:bg-slate-900 px-1 py-0.5 rounded">Date | Flight # | ACFT</span> <br />
-                            <span className="text-xs text-slate-500 dark:text-slate-400">ACFT must be the aircraft registration, for example VT-AAB.</span>
-                        </p>
+
                     </div>
 
                     <div className="flex flex-col justify-center">
