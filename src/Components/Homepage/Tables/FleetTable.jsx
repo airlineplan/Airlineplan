@@ -29,7 +29,7 @@ const getStatusColor = (status, category) => {
     const s = status?.toLowerCase() || "";
 
     if (s.includes("maintenance") || s.includes("check") || s.includes("ground")) {
-        return "bg-stone-500 dark:bg-stone-700 text-white border-stone-600 font-medium text-[10px]";
+        return "bg-stone-500 dark:bg-stone-700 text-white border-stone-600 font-medium text-sm";
     }
 
     if (category === "Aircraft" && s === "aircraft-assigned") {
@@ -390,7 +390,7 @@ const FleetTable = () => {
                     </div>
                     <div className="flex gap-3">
 
-                        <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all disabled:opacity-70">
+                        <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-base font-medium text-white bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all disabled:opacity-70">
                             <Save size={18} /> {isSaving ? "Saving..." : "Save Fleet Data"}
                         </button>
                     </div>
@@ -401,21 +401,21 @@ const FleetTable = () => {
                         <div className="flex flex-col md:flex-row gap-4 md:items-end">
                             <div className="flex gap-3 items-end">
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Metric</span>
+                                    <span className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Metric</span>
                                     <select
                                         value={selectedMetric}
                                         onChange={(e) => setSelectedMetric(e.target.value)}
-                                        className="px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none dark:text-white font-medium cursor-pointer"
+                                        className="px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-base focus:ring-2 focus:ring-emerald-500 outline-none dark:text-white font-medium cursor-pointer"
                                     >
                                         {METRIC_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                                     </select>
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Month Ending</span>
+                                    <span className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Month Ending</span>
                                     <select
                                         value={selectedMonth}
                                         onChange={(e) => setSelectedMonth(e.target.value)}
-                                        className="px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none dark:text-white font-medium cursor-pointer"
+                                        className="px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-base focus:ring-2 focus:ring-emerald-500 outline-none dark:text-white font-medium cursor-pointer"
                                     >
                                         {months.map(m => <option key={m} value={m}>{m}</option>)}
                                     </select>
@@ -428,12 +428,12 @@ const FleetTable = () => {
                                     placeholder="Search Regn, SN, Type..."
                                     value={searchTerm}
                                     onChange={e => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none dark:text-white"
+                                    className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border rounded-lg text-base focus:ring-2 focus:ring-emerald-500 outline-none dark:text-white"
                                 />
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-4 text-xs font-medium text-slate-600 dark:text-slate-300">
+                        <div className="flex items-center gap-4 text-sm font-medium text-slate-600 dark:text-slate-300">
                             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-700 border-amber-900 border inline-block"></span> Available</div>
                             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#8de08d] border-green-500 border inline-block"></span> Assigned</div>
                             <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-stone-500 border-stone-600 border inline-block"></span> Maintenance</div>
@@ -455,7 +455,7 @@ const FleetTable = () => {
                     <div className="flex-shrink-0 sticky left-0 z-20 bg-white dark:bg-slate-800 border-r-2 border-slate-400 shadow-xl">
 
                         {/* Frozen Header — height matches right-pane totals + date header */}
-                        <div className="flex h-[140px] font-semibold text-slate-700 dark:text-slate-200 text-[11px] uppercase tracking-wider bg-[#f4e6fa] dark:bg-fuchsia-900/30 border-b border-slate-200">
+                        <div className="flex h-[140px] font-semibold text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wider bg-[#f4e6fa] dark:bg-fuchsia-900/30 border-b border-slate-200">
                             <div className="w-10 flex items-center justify-center border-r">S.No</div>
                             <div className="w-28 flex items-center p-2 border-r">Asset Category</div>
                             <div className="w-24 flex items-center p-2 border-r">Asset Type</div>
@@ -466,7 +466,7 @@ const FleetTable = () => {
                         {/* Frozen Data Rows */}
                         <div className="divide-y divide-slate-100 dark:divide-slate-700">
                             {filteredAssets.map((asset, index) => (
-                                <div key={asset.id} className="flex h-8 text-xs text-slate-800 dark:text-slate-200 bg-[#fbf5fd] dark:bg-fuchsia-900/10 hover:bg-white transition-colors">
+                                <div key={asset.id} className="flex h-8 text-sm text-slate-800 dark:text-slate-200 bg-[#fbf5fd] dark:bg-fuchsia-900/10 hover:bg-white transition-colors">
                                     <div className="w-10 border-r flex items-center justify-center font-medium text-slate-500">{index + 1}</div>
                                     <div className="w-28 p-1 border-r">
                                         <select value={asset.category} onChange={e => handleInputChange(asset.id, "category", e.target.value)} className="w-full h-full bg-transparent outline-none cursor-pointer">
@@ -488,7 +488,7 @@ const FleetTable = () => {
 
                         {/* Add Row Button */}
                         <div className="p-2 border-t border-slate-200 bg-slate-50 dark:bg-slate-800">
-                            <button onClick={handleAddRow} className="flex items-center gap-1 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors px-2 py-1">
+                            <button onClick={handleAddRow} className="flex items-center gap-1 text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors px-2 py-1">
                                 <Plus size={14} /> Add Asset Row
                             </button>
                         </div>
@@ -504,7 +504,7 @@ const FleetTable = () => {
                         {/* ── Header: regular columns (purple) + date 2-row header (orange) ── */}
                         <div className="flex h-[140px] border-b border-slate-200">
                             {/* Regular column headers */}
-                            <div className="flex font-semibold text-slate-700 dark:text-slate-200 text-[11px] uppercase tracking-wider bg-[#f4e6fa] dark:bg-fuchsia-900/30 border-r border-slate-300">
+                            <div className="flex font-semibold text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wider bg-[#f4e6fa] dark:bg-fuchsia-900/30 border-r border-slate-300">
                                 <div className="w-24 h-full flex items-center p-2 border-r">Asset Regn</div>
                                 <div className="w-28 h-full flex items-center p-2 border-r">Fleet Entry</div>
                                 <div className="w-28 h-full flex items-center p-2 border-r">Fleet Exit</div>
@@ -519,7 +519,7 @@ const FleetTable = () => {
                                 {SUMMARY_ROWS.map((summaryRow) => (
                                     <div
                                         key={`header-${summaryRow.metricKey}`}
-                                        className="flex h-7 items-center text-[10px] font-semibold border-b border-orange-200/60"
+                                        className="flex h-7 items-center text-sm font-semibold border-b border-orange-200/60"
                                     >
                                         <div className={`${DATE_LABEL_COL_CLASS} px-2 border-r border-slate-300 text-slate-700 dark:text-slate-200 flex items-center`}>
                                             {summaryRow.label}
@@ -536,7 +536,7 @@ const FleetTable = () => {
                                     </div>
                                 ))}
                                 {/* Row 4 – Day of week */}
-                                <div className="flex h-7 items-center text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest border-b border-orange-200/60 pt-0.5">
+                                <div className="flex h-7 items-center text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest border-b border-orange-200/60 pt-0.5">
                                     <div className={`${DATE_LABEL_COL_CLASS} border-r border-slate-300`} />
                                     {scheduleDates.map((date, i) => (
                                         <div
@@ -548,7 +548,7 @@ const FleetTable = () => {
                                     ))}
                                 </div>
                                 {/* Row 5 – Calendar date */}
-                                <div className="flex h-7 items-center text-xs font-semibold text-slate-800 dark:text-slate-100 pb-0.5">
+                                <div className="flex h-7 items-center text-sm font-semibold text-slate-800 dark:text-slate-100 pb-0.5">
                                     <div className={`${DATE_LABEL_COL_CLASS} border-r border-slate-300`} />
                                     {scheduleDates.map((date, i) => (
                                         <div
@@ -565,17 +565,17 @@ const FleetTable = () => {
                         {/* ── Data Rows: regular cells + date cells in ONE flex row each ── */}
                         <div className="divide-y divide-slate-200 dark:divide-slate-700">
                             {filteredAssets.map((asset) => (
-                                <div key={`sched-${asset.id}`} className="flex h-8 text-xs text-slate-800 dark:text-slate-200 bg-[#fbf5fd] dark:bg-fuchsia-900/10 hover:bg-white transition-colors">
+                                <div key={`sched-${asset.id}`} className="flex h-8 text-sm text-slate-800 dark:text-slate-200 bg-[#fbf5fd] dark:bg-fuchsia-900/10 hover:bg-white transition-colors">
 
                                     {/* Regular column cells (Regn → Delete) */}
                                     <div className="w-24 p-1 border-r">
                                         <input type="text" value={asset.regn} onChange={e => handleInputChange(asset.id, "regn", e.target.value.toUpperCase())} className="w-full h-full bg-transparent outline-none px-1 uppercase font-semibold" placeholder="VT-XXX" />
                                     </div>
                                     <div className="w-28 p-1 border-r">
-                                        <input type="date" value={asset.entry} onChange={e => handleInputChange(asset.id, "entry", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 text-[11px] cursor-text" />
+                                        <input type="date" value={asset.entry} onChange={e => handleInputChange(asset.id, "entry", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 text-sm cursor-text" />
                                     </div>
                                     <div className="w-28 p-1 border-r">
-                                        <input type="date" value={asset.exit} onChange={e => handleInputChange(asset.id, "exit", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 text-[11px] cursor-text" />
+                                        <input type="date" value={asset.exit} onChange={e => handleInputChange(asset.id, "exit", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 text-sm cursor-text" />
                                     </div>
                                     <div className="w-24 p-1 border-r">
                                         <input
@@ -621,7 +621,7 @@ const FleetTable = () => {
                                                     ? "bg-[#8de08d] text-green-900"
                                                     : "bg-amber-700 text-white";
                                             return (
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${badgeColor}`}>
+                                                <span className={`px-2 py-0.5 rounded text-sm font-semibold ${badgeColor}`}>
                                                     {todayStatus}
                                                 </span>
                                             );
@@ -672,7 +672,7 @@ const FleetTable = () => {
                                                 className={`w-20 flex-shrink-0 border-r ${classes} transition-all`}
                                                 title={cellTitle}
                                             >
-                                                <div className="flex h-full w-full items-center justify-center px-1 text-center text-[10px]">
+                                                <div className="flex h-full w-full items-center justify-center px-1 text-center text-sm">
                                                     {dayData.label || "-"}
                                                 </div>
                                             </div>

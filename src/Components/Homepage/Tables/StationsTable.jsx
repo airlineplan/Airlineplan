@@ -25,14 +25,14 @@ const StyledInput = ({ value, onChange, error, placeholder, type = "text", ...pr
       onChange={onChange}
       placeholder={placeholder}
       className={twMerge(cn(
-        "w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900/50 border rounded focus:outline-none focus:ring-2 transition-all",
+        "w-full px-2.5 py-1 text-sm bg-slate-50 dark:bg-slate-900/50 border rounded focus:outline-none focus:ring-2 transition-all",
         error
           ? "border-red-400 focus:ring-red-400 bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-300"
           : "border-slate-300 dark:border-slate-700 focus:border-indigo-500 focus:ring-indigo-500 text-slate-700 dark:text-slate-200"
       ))}
       {...props}
     />
-    {error && <span className="text-[10px] text-red-500 mt-0.5 leading-tight">{error}</span>}
+    {error && <span className="text-sm text-red-500 mt-0.5 leading-tight">{error}</span>}
   </div>
 );
 
@@ -41,7 +41,7 @@ const StyledSelect = ({ value, onChange, options }) => (
     <select
       value={value || ""}
       onChange={onChange}
-      className="w-full px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 dark:text-slate-200 cursor-pointer appearance-none pr-6"
+      className="w-full px-2.5 py-1 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 dark:text-slate-200 cursor-pointer appearance-none pr-6"
     >
       {options.map((opt) => (
         <option key={opt} value={opt}>{opt}</option>
@@ -144,7 +144,7 @@ const StationsTable = () => {
       {/* --- HEADER --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-1">
         <div className="flex items-center gap-3 bg-white/70 dark:bg-slate-900/60 backdrop-blur-sm px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+          <div className="flex items-center gap-2 text-base font-medium text-slate-700 dark:text-slate-300">
             <Clock size={16} className="text-indigo-500" />
             Home Timezone
           </div>
@@ -152,7 +152,7 @@ const StationsTable = () => {
             <select
               value={selectedHomeTimeZone}
               onChange={handleTimeZoneChange}
-              className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 py-1.5 pl-3 pr-8 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 py-1.5 pl-3 pr-8 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
               {TIMEZONES.map((tz) => (
                 <option key={tz} value={tz}>{tz}</option>
@@ -174,46 +174,46 @@ const StationsTable = () => {
             <thead className="bg-slate-100/95 dark:bg-slate-800/95 sticky top-0 z-30 backdrop-blur-md shadow-sm">
               <tr>
                 {/* FIX 3: Made # and Station headers sticky to the left so they stay visible when horizontally scrolling */}
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[40px] text-xs font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-40 bg-slate-100/95 dark:bg-slate-800/95">#</th>
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[120px] text-xs font-bold text-slate-500 dark:text-slate-400 sticky left-[40px] z-40 bg-slate-100/95 dark:bg-slate-800/95 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)]">Station</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[40px] text-sm font-bold text-slate-500 dark:text-slate-400 sticky left-0 z-40 bg-slate-100/95 dark:bg-slate-800/95">#</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[120px] text-sm font-bold text-slate-500 dark:text-slate-400 sticky left-[40px] z-40 bg-slate-100/95 dark:bg-slate-800/95 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)]">Station</th>
 
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[100px] text-xs font-bold text-slate-500 dark:text-slate-400">Avg Taxi-Out</th>
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[100px] text-xs font-bold text-slate-500 dark:text-slate-400">Avg Taxi-In</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[100px] text-sm font-bold text-slate-500 dark:text-slate-400">Avg Taxi-Out</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[100px] text-sm font-bold text-slate-500 dark:text-slate-400">Avg Taxi-In</th>
 
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[120px] text-xs font-bold text-slate-500 dark:text-slate-400">STD TZ</th>
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[120px] text-xs font-bold text-slate-500 dark:text-slate-400">DST TZ</th>
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[80px] text-xs font-bold text-slate-500 dark:text-slate-400">CCY</th>
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[140px] text-xs font-bold text-slate-500 dark:text-slate-400">Next DST Start</th>
-                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[140px] text-xs font-bold text-slate-500 dark:text-slate-400">Next DST End</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[120px] text-sm font-bold text-slate-500 dark:text-slate-400">STD TZ</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[120px] text-sm font-bold text-slate-500 dark:text-slate-400">DST TZ</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[80px] text-sm font-bold text-slate-500 dark:text-slate-400">CCY</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[140px] text-sm font-bold text-slate-500 dark:text-slate-400">Next DST Start</th>
+                <th rowSpan={2} className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[140px] text-sm font-bold text-slate-500 dark:text-slate-400">Next DST End</th>
 
-                <th colSpan={2} className="p-1 border-r border-b border-slate-200 dark:border-slate-700 text-center text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/10">Dom - Dom</th>
-                <th colSpan={2} className="p-1 border-r border-b border-slate-200 dark:border-slate-700 text-center text-xs font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-50/50 dark:bg-cyan-900/10">Dom - INTL</th>
-                <th colSpan={2} className="p-1 border-r border-b border-slate-200 dark:border-slate-700 text-center text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10">INTL - Dom</th>
-                <th colSpan={2} className="p-1 border-b border-slate-200 dark:border-slate-700 text-center text-xs font-bold text-purple-600 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-900/10">INTL - INTL</th>
+                <th colSpan={2} className="p-1 border-r border-b border-slate-200 dark:border-slate-700 text-center text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/10">Dom - Dom</th>
+                <th colSpan={2} className="p-1 border-r border-b border-slate-200 dark:border-slate-700 text-center text-sm font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-50/50 dark:bg-cyan-900/10">Dom - INTL</th>
+                <th colSpan={2} className="p-1 border-r border-b border-slate-200 dark:border-slate-700 text-center text-sm font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10">INTL - Dom</th>
+                <th colSpan={2} className="p-1 border-b border-slate-200 dark:border-slate-700 text-center text-sm font-bold text-purple-600 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-900/10">INTL - INTL</th>
               </tr>
               <tr>
                 {/* Min Widths added to sub-headers to prevent input crushing */}
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-indigo-50/30">Min CT</th>
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-indigo-50/30">Max CT</th>
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-cyan-50/30">Min CT</th>
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-cyan-50/30">Max CT</th>
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-emerald-50/30">Min CT</th>
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-emerald-50/30">Max CT</th>
-                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-purple-50/30">Min CT</th>
-                <th className="p-2 border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-[10px] text-slate-500 font-semibold bg-purple-50/30">Max CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-sm text-slate-500 font-semibold bg-indigo-50/30">Min CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-sm text-slate-500 font-semibold bg-indigo-50/30">Max CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-sm text-slate-500 font-semibold bg-cyan-50/30">Min CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-sm text-slate-500 font-semibold bg-cyan-50/30">Max CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-sm text-slate-500 font-semibold bg-emerald-50/30">Min CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-sm text-slate-500 font-semibold bg-emerald-50/30">Max CT</th>
+                <th className="p-2 border-r border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-sm text-slate-500 font-semibold bg-purple-50/30">Min CT</th>
+                <th className="p-2 border-b border-slate-200 dark:border-slate-700 text-center min-w-[90px] text-sm text-slate-500 font-semibold bg-purple-50/30">Max CT</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
               {isFetching ? (
                 <tr>
-                  <td colSpan={17} className="p-10 text-center text-slate-500 text-sm">Loading station data...</td>
+                  <td colSpan={17} className="p-10 text-center text-slate-500 text-base">Loading station data...</td>
                 </tr>
               ) : (
                 data.map((row, index) => (
                   <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                    <td className="p-2 text-center text-xs font-medium text-slate-500 border-r border-slate-100 dark:border-slate-800 sticky left-0 z-20 bg-white/95 dark:bg-slate-900/95 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50">{index + 1}</td>
-                    <td className="p-2 text-center text-xs font-medium text-slate-800 dark:text-slate-200 border-r border-slate-100 dark:border-slate-800 sticky left-[40px] z-20 bg-white/95 dark:bg-slate-900/95 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.02)]">{row.stationName}</td>
+                    <td className="p-2 text-center text-sm font-medium text-slate-500 border-r border-slate-100 dark:border-slate-800 sticky left-0 z-20 bg-white/95 dark:bg-slate-900/95 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50">{index + 1}</td>
+                    <td className="p-2 text-center text-sm font-medium text-slate-800 dark:text-slate-200 border-r border-slate-100 dark:border-slate-800 sticky left-[40px] z-20 bg-white/95 dark:bg-slate-900/95 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.02)]">{row.stationName}</td>
 
                     <td className="p-1 border-r border-slate-100 dark:border-slate-800 bg-orange-50/10">
                       <StyledInput
@@ -301,7 +301,7 @@ const StationsTable = () => {
           <button
             onClick={saveStation}
             disabled={isLoading}
-            className="inline-flex items-center justify-center px-6 py-2.5 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center px-6 py-2.5 rounded-lg text-base font-medium text-white bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isLoading ? (
               <>

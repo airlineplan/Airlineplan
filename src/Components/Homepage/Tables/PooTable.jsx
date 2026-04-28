@@ -61,7 +61,7 @@ function formatDate(value) {
 
 function inputBaseClass({ align = "right", invalid = false, readOnly = false } = {}) {
   return cn(
-    "rounded-md border px-2 py-1.5 text-sm outline-none transition focus:ring-2 focus:ring-indigo-500/20",
+    "rounded-md border px-2 py-1.5 text-base outline-none transition focus:ring-2 focus:ring-indigo-500/20",
     align === "right" ? "text-right" : "text-left",
     invalid
       ? "border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-700 dark:bg-rose-950/30 dark:text-rose-100"
@@ -319,11 +319,11 @@ const PooTable = () => {
           <div className="space-y-4">
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">POO</label>
+                <label className="text-sm font-semibold uppercase tracking-wide text-slate-500">POO</label>
                 <select
                   value={poo}
                   onChange={(e) => setPoo(e.target.value.toUpperCase())}
-                  className="w-28 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                  className="w-28 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-base font-medium text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 >
                   {stationOptions.length === 0 ? (
                     <option value="">No stations</option>
@@ -337,39 +337,39 @@ const PooTable = () => {
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Date</label>
+                <label className="text-sm font-semibold uppercase tracking-wide text-slate-500">Date</label>
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                  className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-base text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Search</label>
+                <label className="text-sm font-semibold uppercase tracking-wide text-slate-500">Search</label>
                 <div className="flex items-center gap-2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
                   <Search size={16} className="text-slate-400" />
                   <input
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="OD, flight, sector..."
-                    className="w-56 bg-transparent text-sm text-slate-900 outline-none dark:text-slate-100"
+                    className="w-56 bg-transparent text-base text-slate-900 outline-none dark:text-slate-100"
                   />
                 </div>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Apply To Dates</label>
+                <label className="text-sm font-semibold uppercase tracking-wide text-slate-500">Apply To Dates</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="date"
                     value={pendingApplyDate}
                     onChange={(e) => setPendingApplyDate(e.target.value)}
-                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                    className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-base text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   />
                   <button
                     type="button"
                     onClick={addApplyDate}
-                    className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200"
+                    className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-base font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200"
                   >
                     <CalendarPlus2 size={16} />
                     Add
@@ -385,7 +385,7 @@ const PooTable = () => {
                     key={item}
                     type="button"
                     onClick={() => removeApplyDate(item)}
-                    className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                    className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                   >
                     {item}
                     <X size={12} />
@@ -396,19 +396,19 @@ const PooTable = () => {
 
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/50">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">POO Currency</div>
+                <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">POO Currency</div>
                 <div className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{meta.stationCurrency || "--"}</div>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/50">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Reporting Currency</div>
+                <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">Reporting Currency</div>
                 <div className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{meta.reportingCurrency || "--"}</div>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/50">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pax Total</div>
+                <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">Pax Total</div>
                 <div className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{formatNumber(summary.pax, 0)}</div>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/50">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Final RCCY Total</div>
+                <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">Final RCCY Total</div>
                 <div className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">{formatNumber(summary.fnlRccyTotalRev)}</div>
               </div>
             </div>
@@ -416,15 +416,15 @@ const PooTable = () => {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
               <div className="mb-3 flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">Create Transit OD</div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                  <div className="text-base font-semibold text-slate-800 dark:text-slate-100">Create Transit OD</div>
+                  <div className="text-sm text-slate-500 dark:text-slate-400">
                     User-defined same-aircraft transit setup. Balancing and deletion are handled server-side.
                   </div>
                 </div>
                 <button
                   onClick={handleCreateTransit}
                   disabled={saving || loading}
-                  className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-base font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <PlusCircle size={16} />
                   Add Transit
@@ -440,7 +440,7 @@ const PooTable = () => {
                 <input value={transitDraft.fareProrateRatioL1L2} onChange={(e) => setTransitDraft((prev) => ({ ...prev, fareProrateRatioL1L2: e.target.value }))} placeholder="Fare prorate" className={inputBaseClass()} />
                 <input value={transitDraft.rateProrateRatioL1L2} onChange={(e) => setTransitDraft((prev) => ({ ...prev, rateProrateRatioL1L2: e.target.value }))} placeholder="Rate prorate" className={inputBaseClass()} />
               </div>
-              <div className="mt-3 flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+              <div className="mt-3 flex items-center gap-2 text-base text-slate-600 dark:text-slate-300">
                 <input
                   type="checkbox"
                   checked={Boolean(transitDraft.applySSPricing)}
@@ -452,28 +452,28 @@ const PooTable = () => {
           </div>
 
           <div className="flex flex-col gap-3">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
               <div className="font-semibold text-slate-800 dark:text-slate-100">Global Validation</div>
-              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 Any breached OD or balancing bucket rejects the whole save. Errors are shown below and highlighted in the sheet.
               </div>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-              <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Selected POO Overview</div>
-              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              <div className="text-base font-semibold text-slate-700 dark:text-slate-200">Selected POO Overview</div>
+              <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 Leg rows first, OD rows below, with transits and interline rows grouped after that.
               </div>
               <div className="mt-4 grid grid-cols-3 gap-3">
                 <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900/60">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Leg</div>
+                  <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">Leg</div>
                   <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{legCount}</div>
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900/60">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">OD</div>
+                  <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">OD</div>
                   <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{odCount}</div>
                 </div>
                 <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900/60">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Transit</div>
+                  <div className="text-sm font-semibold uppercase tracking-wide text-slate-500">Transit</div>
                   <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{transitCount}</div>
                 </div>
               </div>
@@ -481,8 +481,8 @@ const PooTable = () => {
 
             {validationErrors.length > 0 && (
               <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-900 dark:bg-rose-950/20">
-                <div className="text-sm font-semibold text-rose-700 dark:text-rose-200">Validation errors</div>
-                <div className="mt-2 space-y-1 text-xs text-rose-700 dark:text-rose-300">
+                <div className="text-base font-semibold text-rose-700 dark:text-rose-200">Validation errors</div>
+                <div className="mt-2 space-y-1 text-sm text-rose-700 dark:text-rose-300">
                   {validationErrors.map((issue, index) => (
                     <div key={`${issue.rowId}-${issue.field}-${index}`}>{issue.message}</div>
                   ))}
@@ -491,13 +491,13 @@ const PooTable = () => {
             )}
 
             <div className="flex flex-wrap items-center gap-3">
-              <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+              <div className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                 {totalDirtyRows} pending change{totalDirtyRows === 1 ? "" : "s"}
               </div>
               <button
                 onClick={refreshAllocation}
                 disabled={loading || saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-base font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <RefreshCw size={16} className={cn(loading && "animate-spin")} />
                 {loading ? "Refreshing..." : "Refresh Allocation"}
@@ -505,7 +505,7 @@ const PooTable = () => {
               <button
                 onClick={handleSave}
                 disabled={loading || saving || totalDirtyRows === 0}
-                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-base font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Save size={16} />
                 {saving ? "Saving..." : "Save Changes"}
@@ -520,7 +520,7 @@ const PooTable = () => {
           <div className="flex h-full min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-center dark:border-slate-700 dark:bg-slate-900/20">
             <div className="space-y-2 px-6">
               <div className="text-lg font-semibold text-slate-700 dark:text-slate-200">No POO traffic rows</div>
-              <div className="text-sm text-slate-500 dark:text-slate-400">
+              <div className="text-base text-slate-500 dark:text-slate-400">
                 Choose a station and date, refresh allocation, or adjust your search.
               </div>
             </div>
@@ -530,8 +530,8 @@ const PooTable = () => {
         {sections.filter((section) => section.rows.length > 0).map((section) => (
           <div key={section.title} className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/40">
             <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/60">
-              <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">{section.title}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">
+              <div className="text-base font-semibold text-slate-800 dark:text-slate-100">{section.title}</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400">
                 {section.subtitle} · {section.rows.length} row(s)
               </div>
             </div>
@@ -583,7 +583,7 @@ const PooTable = () => {
                       "Fnl RCCY Cargo Rev",
                       "Fnl RCCY Total Rev",
                     ].map((label) => (
-                      <th key={label} className="border-b border-r border-slate-200 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400">
+                      <th key={label} className="border-b border-r border-slate-200 px-3 py-2 text-left text-sm font-semibold uppercase tracking-wide text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400">
                         {label}
                       </th>
                     ))}
@@ -595,25 +595,25 @@ const PooTable = () => {
                     const cargoError = renderCellError(row._id, "cargoT");
                     return (
                       <tr key={row._id} className="border-b border-slate-200 last:border-b-0 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/20">
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.sNo}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:text-slate-200">{row.al || "--"}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-800 dark:text-slate-200">{row.poo}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-700 dark:border-slate-800 dark:text-slate-200">{row.od}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.odDI}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.stops}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.sNo}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-base font-medium text-slate-700 dark:border-slate-800 dark:text-slate-200">{row.al || "--"}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-base font-medium text-slate-700 dark:border-slate-800 dark:text-slate-200">{row.poo}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-base text-slate-700 dark:border-slate-800 dark:text-slate-200">{row.od}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.odDI}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.stops}</td>
                         <td className="border-r border-slate-200 px-3 py-2 dark:border-slate-800">
-                          <span className={cn("inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold", TYPE_STYLES[row.displayType] || "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200")}>
+                          <span className={cn("inline-flex rounded-full px-2.5 py-1 text-sm font-semibold", TYPE_STYLES[row.displayType] || "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200")}>
                             {row.displayType}
                           </span>
                         </td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.sector}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.legDI || "--"}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatDate(row.date)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.day || "--"}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.flightNumber}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.variant || "--"}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.maxPax, 0)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.maxCargoT)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.sector}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.legDI || "--"}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatDate(row.date)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.day || "--"}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.flightNumber}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{row.variant || "--"}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.maxPax, 0)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.maxCargoT)}</td>
                         <td className="border-r border-slate-200 px-3 py-2">
                           <input
                             type="number"
@@ -636,8 +636,8 @@ const PooTable = () => {
                             className={cn("w-24", inputBaseClass({ invalid: Boolean(cargoError) }))}
                           />
                         </td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.sectorGcd, 0)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odViaGcd, 0)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.sectorGcd, 0)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odViaGcd, 0)}</td>
                         <td className="border-r border-slate-200 px-3 py-2">
                           <input
                             type="number"
@@ -698,13 +698,13 @@ const PooTable = () => {
                             className={cn("w-28", inputBaseClass())}
                           />
                         </td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legPaxRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legCargoRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legTotalRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odPaxRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odCargoRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odTotalRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legPaxRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legCargoRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.legTotalRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odPaxRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odCargoRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.odTotalRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">
                           <input
                             type="text"
                             value={row.pooCcy ?? ""}
@@ -722,15 +722,15 @@ const PooTable = () => {
                             className={cn("w-24", inputBaseClass())}
                           />
                         </td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyLegPaxRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyLegCargoRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyLegTotalRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyOdPaxRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyOdCargoRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyOdTotalRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.fnlRccyPaxRev)}</td>
-                        <td className="border-r border-slate-200 px-3 py-2 text-right text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.fnlRccyCargoRev)}</td>
-                        <td className="px-3 py-2 text-right text-sm font-semibold text-slate-700 dark:text-slate-200">{formatNumber(row.fnlRccyTotalRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyLegPaxRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyLegCargoRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyLegTotalRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyOdPaxRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyOdCargoRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.rccyOdTotalRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.fnlRccyPaxRev)}</td>
+                        <td className="border-r border-slate-200 px-3 py-2 text-right text-base text-slate-600 dark:border-slate-800 dark:text-slate-300">{formatNumber(row.fnlRccyCargoRev)}</td>
+                        <td className="px-3 py-2 text-right text-base font-semibold text-slate-700 dark:text-slate-200">{formatNumber(row.fnlRccyTotalRev)}</td>
                       </tr>
                     );
                   })}

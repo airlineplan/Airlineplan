@@ -195,7 +195,7 @@ const AssignmentTable = () => {
                         <button
                             onClick={handleUploadClick}
                             disabled={isUploading}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                             {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} />}
                             {isUploading ? "Uploading..." : "Upload Assignment"}
@@ -205,18 +205,18 @@ const AssignmentTable = () => {
 
                 {/* Sub Header Information Panel */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-                    <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
+                    <div className="space-y-1 text-base text-slate-600 dark:text-slate-300">
 
                     </div>
 
                     <div className="flex flex-col justify-center">
-                        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <label className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
                             <Calendar size={14} /> Week ending (Sunday dates)
                         </label>
                         <select
                             value={selectedWeekEnding}
                             onChange={(e) => setSelectedWeekEnding(e.target.value)}
-                            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
+                            className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 text-base rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"
                         >
                             {availableWeeks.length === 0 ? (
                                 <option disabled value="">No flights found</option>
@@ -243,21 +243,21 @@ const AssignmentTable = () => {
                     {/* Table Header */}
                     <div className="sticky top-0 z-10">
                         <div className="grid grid-cols-8 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-                            <div className="p-3 font-semibold text-slate-600 dark:text-slate-300 text-sm flex items-center justify-center border-r border-slate-200 dark:border-slate-700">
+                            <div className="p-3 font-semibold text-slate-600 dark:text-slate-300 text-base flex items-center justify-center border-r border-slate-200 dark:border-slate-700">
                                 Week Day
                             </div>
                             {DAYS.map(day => (
-                                <div key={day.key} className="p-3 text-center font-bold text-slate-700 dark:text-slate-200 text-sm border-r last:border-0 border-slate-200 dark:border-slate-700">
+                                <div key={day.key} className="p-3 text-center font-bold text-slate-700 dark:text-slate-200 text-base border-r last:border-0 border-slate-200 dark:border-slate-700">
                                     {day.label}
                                 </div>
                             ))}
                         </div>
                         <div className="grid grid-cols-8 bg-white dark:bg-slate-800 border-b-2 border-slate-300 dark:border-slate-600">
-                            <div className="p-3 font-semibold text-slate-800 dark:text-slate-100 text-sm border-r border-slate-200 dark:border-slate-700">
+                            <div className="p-3 font-semibold text-slate-800 dark:text-slate-100 text-base border-r border-slate-200 dark:border-slate-700">
                                 Rotation #
                             </div>
                             {DAYS.map(day => (
-                                <div key={`date-${day.key}`} className="p-2 text-center text-xs text-slate-500 dark:text-slate-400 border-r last:border-0 border-slate-200 dark:border-slate-700">
+                                <div key={`date-${day.key}`} className="p-2 text-center text-sm text-slate-500 dark:text-slate-400 border-r last:border-0 border-slate-200 dark:border-slate-700">
                                     {weekDates[day.key]}
                                 </div>
                             ))}
@@ -274,25 +274,25 @@ const AssignmentTable = () => {
                             assignmentsData.map((rotationGroup) => (
                                 <div key={rotationGroup.rotationId} className="group transition-colors">
                                     <div className="grid grid-cols-8 bg-slate-50 dark:bg-slate-800/50">
-                                        <div className="p-2 font-bold text-indigo-700 dark:text-indigo-400 text-sm border-r border-slate-200 dark:border-slate-700">
+                                        <div className="p-2 font-bold text-indigo-700 dark:text-indigo-400 text-base border-r border-slate-200 dark:border-slate-700">
                                             {rotationGroup.rotationId !== "Unassigned" ? `Rotation ${rotationGroup.rotationId.replace('RT-', '')}` : "Unassigned Flights"}
                                         </div>
-                                        <div className="col-span-7 flex items-center px-4 text-xs text-slate-400"></div>
+                                        <div className="col-span-7 flex items-center px-4 text-sm text-slate-400"></div>
                                     </div>
 
                                     {rotationGroup.flights.map((flight) => (
                                         <div key={`${rotationGroup.rotationId}-${flight.flightNo}`} className="grid grid-cols-8 hover:bg-indigo-50 dark:hover:bg-slate-800/80 transition-colors">
-                                            <div className="p-3 pl-6 text-sm font-medium text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-700 flex items-center">
+                                            <div className="p-3 pl-6 text-base font-medium text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-700 flex items-center">
                                                 {flight.flightNo}
                                             </div>
                                             {DAYS.map(day => (
                                                 <div key={`${flight.flightNo}-${day.key}`} className="p-3 text-center border-r last:border-0 border-slate-200 dark:border-slate-700">
                                                     {flight.acft[day.key] ? (
-                                                        <span className="inline-flex items-center px-2 py-1 rounded bg-slate-100 dark:bg-slate-700 text-xs font-mono text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600">
+                                                        <span className="inline-flex items-center px-2 py-1 rounded bg-slate-100 dark:bg-slate-700 text-sm font-mono text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600">
                                                             {flight.acft[day.key]}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-slate-300 dark:text-slate-600 text-xs">-</span>
+                                                        <span className="text-slate-300 dark:text-slate-600 text-sm">-</span>
                                                     )}
                                                 </div>
                                             ))}

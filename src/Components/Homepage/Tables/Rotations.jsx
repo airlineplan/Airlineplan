@@ -534,29 +534,29 @@ const Rotations = () => {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {rotationDevelopmentTableData.map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="p-2 text-center text-xs text-slate-500">{idx + 1}</td>
-                    <td className="p-2 text-center text-xs font-medium text-slate-800 dark:text-white">{row.flightNumber}</td>
-                    <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300">{row.depStn}</td>
-                    <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300">{row.std}</td>
-                    <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300 font-mono">{row.bt}</td>
-                    <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300">{row.sta}</td>
-                    <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300">{row.arrStn}</td>
-                    <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300">{row.domIntl}</td>
-                    <td className="p-2 text-center text-xs text-slate-600 dark:text-slate-300 font-mono">{row.gt}</td>
+                    <td className="p-2 text-center text-sm text-slate-500">{idx + 1}</td>
+                    <td className="p-2 text-center text-sm font-medium text-slate-800 dark:text-white">{row.flightNumber}</td>
+                    <td className="p-2 text-center text-sm text-slate-600 dark:text-slate-300">{row.depStn}</td>
+                    <td className="p-2 text-center text-sm text-slate-600 dark:text-slate-300">{row.std}</td>
+                    <td className="p-2 text-center text-sm text-slate-600 dark:text-slate-300 font-mono">{row.bt}</td>
+                    <td className="p-2 text-center text-sm text-slate-600 dark:text-slate-300">{row.sta}</td>
+                    <td className="p-2 text-center text-sm text-slate-600 dark:text-slate-300">{row.arrStn}</td>
+                    <td className="p-2 text-center text-sm text-slate-600 dark:text-slate-300">{row.domIntl}</td>
+                    <td className="p-2 text-center text-sm text-slate-600 dark:text-slate-300 font-mono">{row.gt}</td>
                   </tr>
                 ))}
                 {/* Input Row */}
                 {selectedRotation && (
                   <tr className="bg-indigo-50/30 dark:bg-indigo-900/10">
-                    <td className="p-2 text-center text-xs font-bold text-indigo-600">{rotationDevelopmentTableData.length + 1}</td>
-                    <td className="p-1"><StyledInput ref={flightInputRef} value={flight} onChange={e => setFlight(e.target.value)} placeholder="Flight#" className="h-7 text-xs text-center" /></td>
-                    <td className="p-1"><StyledInput value={depStn} onChange={e => setDepStn(e.target.value)} placeholder="Dep" className="h-7 text-xs text-center" /></td>
-                    <td className="p-1"><StyledInput type="time" value={std} onChange={e => setStd(e.target.value)} className="h-7 text-xs text-center" /></td>
-                    <td className="p-1"><StyledInput type="time" value={bt} onChange={e => setBt(e.target.value)} className="h-7 text-xs text-center" /></td>
-                    <td className="p-1"><StyledInput type="time" value={sta} onChange={e => setSta(e.target.value)} className="h-7 text-xs text-center" /></td>
-                    <td className="p-1"><StyledInput value={arrStn} onChange={e => setArrStn(e.target.value)} placeholder="Arr" className="h-7 text-xs text-center" /></td>
-                    <td className="p-1"><StyledInput value={domIntl} onChange={e => setDomIntl(e.target.value)} placeholder="D/I" className="h-7 text-xs text-center" /></td>
-                    <td className="p-1"><StyledInput type="time" value={gt} onChange={e => setGt(e.target.value)} className="h-7 text-xs text-center" /></td>
+                    <td className="p-2 text-center text-sm font-bold text-indigo-600">{rotationDevelopmentTableData.length + 1}</td>
+                    <td className="p-1"><StyledInput ref={flightInputRef} value={flight} onChange={e => setFlight(e.target.value)} placeholder="Flight#" className="h-8 text-sm text-center" /></td>
+                    <td className="p-1"><StyledInput value={depStn} onChange={e => setDepStn(e.target.value)} placeholder="Dep" className="h-8 text-sm text-center" /></td>
+                    <td className="p-1"><StyledInput type="time" value={std} onChange={e => setStd(e.target.value)} className="h-8 text-sm text-center" /></td>
+                    <td className="p-1"><StyledInput type="time" value={bt} onChange={e => setBt(e.target.value)} className="h-8 text-sm text-center" /></td>
+                    <td className="p-1"><StyledInput type="time" value={sta} onChange={e => setSta(e.target.value)} className="h-8 text-sm text-center" /></td>
+                    <td className="p-1"><StyledInput value={arrStn} onChange={e => setArrStn(e.target.value)} placeholder="Arr" className="h-8 text-sm text-center" /></td>
+                    <td className="p-1"><StyledInput value={domIntl} onChange={e => setDomIntl(e.target.value)} placeholder="D/I" className="h-8 text-sm text-center" /></td>
+                    <td className="p-1"><StyledInput type="time" value={gt} onChange={e => setGt(e.target.value)} className="h-8 text-sm text-center" /></td>
                   </tr>
                 )}
               </tbody>
@@ -599,16 +599,16 @@ const Rotations = () => {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {paginatedData?.map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="p-2 text-center text-xs text-slate-500">{(currentPage - 1) * RowsPerPage + idx + 1}</td>
-                    <td className="p-2 text-center text-xs whitespace-nowrap">{moment(row.date).format("DD-MMM-YY")}</td>
-                    <td className="p-2 text-center text-xs">{row.day}</td>
-                    <td className="p-2 text-center text-xs font-medium">{row.flight}</td>
-                    <td className="p-2 text-center text-xs">{row.depStn}</td>
-                    <td className="p-2 text-center text-xs">{row.std}</td>
-                    <td className="p-2 text-center text-xs font-mono">{row.bt}</td>
-                    <td className="p-2 text-center text-xs">{row.sta}</td>
-                    <td className="p-2 text-center text-xs">{row.arrStn}</td>
-                    <td className="p-2 text-center text-xs">{row.variant}</td>
+                    <td className="p-2 text-center text-sm text-slate-500">{(currentPage - 1) * RowsPerPage + idx + 1}</td>
+                    <td className="p-2 text-center text-sm whitespace-nowrap">{moment(row.date).format("DD-MMM-YY")}</td>
+                    <td className="p-2 text-center text-sm">{row.day}</td>
+                    <td className="p-2 text-center text-sm font-medium">{row.flight}</td>
+                    <td className="p-2 text-center text-sm">{row.depStn}</td>
+                    <td className="p-2 text-center text-sm">{row.std}</td>
+                    <td className="p-2 text-center text-sm font-mono">{row.bt}</td>
+                    <td className="p-2 text-center text-sm">{row.sta}</td>
+                    <td className="p-2 text-center text-sm">{row.arrStn}</td>
+                    <td className="p-2 text-center text-sm">{row.variant}</td>
                   </tr>
                 ))}
               </tbody>

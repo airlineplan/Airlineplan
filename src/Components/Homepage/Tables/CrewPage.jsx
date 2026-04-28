@@ -13,13 +13,13 @@ function cn(...inputs) {
 // --- REUSABLE COMPONENTS ---
 const InputTime = ({ label, placeholder = "HH:MM", value, onChange, className }) => (
     <div className={cn("flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-1.5", className)}>
-        <label className="text-sm text-slate-700 dark:text-slate-300 font-medium flex-1 pr-4">{label}</label>
+        <label className="text-base text-slate-700 dark:text-slate-300 font-medium flex-1 pr-4">{label}</label>
         <input
             type="text"
             placeholder={placeholder}
             value={value}
             onChange={onChange}
-            className="w-24 px-3 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-sm"
+            className="w-24 px-3 py-1.5 text-base rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-sm"
         />
     </div>
 );
@@ -35,20 +35,20 @@ const CheckboxSetting = ({ label, checked, onChange, timeValue, onTimeChange, ti
                     className="w-4 h-4 cursor-pointer mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:focus:ring-offset-slate-900"
                 />
             </div>
-            <label className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed cursor-pointer" onClick={() => onChange({ target: { checked: !checked } })}>
+            <label className="text-base text-slate-700 dark:text-slate-300 leading-relaxed cursor-pointer" onClick={() => onChange({ target: { checked: !checked } })}>
                 {label}
             </label>
         </div>
         {(timeValue !== undefined || timeSuffix) && (
             <div className="flex items-center gap-2 pl-7 sm:pl-0 mt-2 sm:mt-0">
-                {timeSuffix && <span className="text-xs text-slate-500 whitespace-nowrap">{timeSuffix}</span>}
+                {timeSuffix && <span className="text-sm text-slate-500 whitespace-nowrap">{timeSuffix}</span>}
                 {timeValue !== undefined && (
                     <input
                         type="text"
                         placeholder={timePlaceholder}
                         value={timeValue}
                         onChange={onTimeChange}
-                        className="w-20 px-2 py-1 text-sm rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        className="w-20 px-2 py-1 text-base rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                     />
                 )}
             </div>
@@ -74,11 +74,11 @@ const UploadLink = ({ label }) => (
             <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/30 flex items-center justify-center transition-colors">
                 <UploadCloud size={16} className="text-slate-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400" />
             </div>
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors">
+            <span className="text-base font-medium text-slate-700 dark:text-slate-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors">
                 {label}
             </span>
         </div>
-        <span className="text-xs font-semibold text-slate-400 group-hover:text-indigo-500 uppercase tracking-wider">Upload</span>
+        <span className="text-sm font-semibold text-slate-400 group-hover:text-indigo-500 uppercase tracking-wider">Upload</span>
     </button>
 );
 
@@ -128,10 +128,10 @@ const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-4xl" }) => 
                             {children}
                         </div>
                         <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-end gap-3">
-                            <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                            <button onClick={onClose} className="px-4 py-2 text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
                                 Cancel
                             </button>
-                            <button onClick={onClose} className="px-5 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm shadow-indigo-500/20 transition-colors">
+                            <button onClick={onClose} className="px-5 py-2 text-base font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm shadow-indigo-500/20 transition-colors">
                                 Update
                             </button>
                         </div>
@@ -170,7 +170,7 @@ const CrewPage = () => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Crew Settings</h2>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage crew parameters, settings, and KPIs</p>
+                    <p className="text-base text-slate-500 dark:text-slate-400 mt-1">Manage crew parameters, settings, and KPIs</p>
                 </div>
                 <div className="w-full sm:w-auto">
                     <ActionButton label="Update Plan" icon={Check} variant="emerald" />
@@ -218,23 +218,23 @@ const CrewPage = () => {
                                 className="pl-7 pb-2 border-b border-slate-100 dark:border-slate-800/60 flex flex-col gap-2 overflow-hidden"
                             >
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-2">
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">Time taken for Positioning, if flight not available within schedule</span>
+                                    <span className="text-base text-slate-600 dark:text-slate-400">Time taken for Positioning, if flight not available within schedule</span>
                                     <input
                                         type="text"
                                         value={crewSettings.timeTakenPositioning}
                                         onChange={(e) => updateSetting('timeTakenPositioning', e.target.value)}
                                         placeholder="HH:MM"
-                                        className="w-20 px-2 py-1 text-sm rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium tabular-nums"
+                                        className="w-20 px-2 py-1 text-base rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium tabular-nums"
                                     />
                                 </div>
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                    <span className="text-sm text-slate-600 dark:text-slate-400">DT to be considered for Transfer from Hotac to Airport for flight to Position crew</span>
+                                    <span className="text-base text-slate-600 dark:text-slate-400">DT to be considered for Transfer from Hotac to Airport for flight to Position crew</span>
                                     <input
                                         type="text"
                                         value={crewSettings.dtForTransferValue}
                                         onChange={(e) => updateSetting('dtForTransferValue', e.target.value)}
                                         placeholder="HH:MM"
-                                        className="w-20 px-2 py-1 text-sm rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium tabular-nums"
+                                        className="w-20 px-2 py-1 text-base rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium tabular-nums"
                                     />
                                 </div>
                             </motion.div>
@@ -269,25 +269,25 @@ const CrewPage = () => {
             {/* --- CREW KPIs SECTION --- */}
             <SectionCard title="Crew KPIs" icon={Activity} className="mt-4">
                 <div className="mb-4 grid grid-cols-2 lg:grid-cols-5 gap-3 bg-slate-50/50 w-full dark:bg-slate-800/30 p-3 rounded-xl border border-slate-200 dark:border-slate-700/50">
-                    <select className="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
+                    <select className="w-full text-base rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
                         <option>Periodicity</option>
                     </select>
-                    <select className="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
+                    <select className="w-full text-base rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
                         <option>Rate (Multi)</option>
                     </select>
-                    <select className="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
+                    <select className="w-full text-base rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
                         <option>Base (Multi)</option>
                     </select>
-                    <select className="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
+                    <select className="w-full text-base rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
                         <option>Category (Multi)</option>
                     </select>
-                    <select className="w-full text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
+                    <select className="w-full text-base rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
                         <option>Subcategory (Multi)</option>
                     </select>
                 </div>
 
                 <div className="overflow-x-auto w-full custom-scrollbar rounded-xl border border-slate-200 dark:border-slate-700">
-                    <table className="w-full text-sm text-left whitespace-nowrap">
+                    <table className="w-full text-base text-left whitespace-nowrap">
                         <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300">
                             <tr>
                                 <th className="p-3 font-semibold w-[250px] sticky left-0 bg-slate-100 dark:bg-slate-800/90 z-10 border-r border-slate-200 dark:border-slate-700">Metric</th>
@@ -327,7 +327,7 @@ const CrewPage = () => {
 
             {/* Utilisation Target Modal */}
             <Modal isOpen={modals.utilisation} onClose={() => toggleModal('utilisation')} title="Utilisation Target" maxWidth="max-w-3xl">
-                <table className="w-full text-sm text-left border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                <table className="w-full text-base text-left border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
                     <thead className="bg-slate-50 dark:bg-slate-800">
                         <tr>
                             <th className="p-3 font-semibold border-b border-slate-200 dark:border-slate-700">Role</th>
@@ -339,7 +339,7 @@ const CrewPage = () => {
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         <tr className="bg-indigo-50/50 dark:bg-indigo-900/10">
                             <td className="p-3 text-indigo-600 dark:text-indigo-400 font-semibold flex items-center gap-2">
-                                Autopopulate <select className="ml-2 bg-white dark:bg-slate-900 border rounded px-2 py-1 text-xs"><option>All Roles</option></select>
+                                Autopopulate <select className="ml-2 bg-white dark:bg-slate-900 border rounded px-2 py-1 text-sm"><option>All Roles</option></select>
                             </td>
                             <td className="p-2"><input type="text" placeholder="HH:MM" className="w-full px-2 py-1 border rounded text-center dark:bg-slate-900 dark:border-slate-700" /></td>
                             <td className="p-2"><input type="text" placeholder="HH:MM" className="w-full px-2 py-1 border rounded text-center dark:bg-slate-900 dark:border-slate-700" /></td>
@@ -361,8 +361,8 @@ const CrewPage = () => {
             <Modal isOpen={modals.layover} onClose={() => toggleModal('layover')} title="Layover Settings" maxWidth="max-w-4xl">
                 <div className="space-y-8">
                     <div>
-                        <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-3 ml-1 text-sm bg-slate-100 dark:bg-slate-800 inline-block px-3 py-1 rounded-md">Convenience accom/Lounges, etc. if layover exceeds</h4>
-                        <table className="w-full text-sm text-left border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                        <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-3 ml-1 text-base bg-slate-100 dark:bg-slate-800 inline-block px-3 py-1 rounded-md">Convenience accom/Lounges, etc. if layover exceeds</h4>
+                        <table className="w-full text-base text-left border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
                             <thead className="bg-slate-50 dark:bg-slate-800">
                                 <tr>
                                     <th className="p-3 font-semibold border-b border-slate-200 dark:border-slate-700">Stn</th>
@@ -374,7 +374,7 @@ const CrewPage = () => {
                             </thead>
                             <tbody>
                                 <tr className="bg-indigo-50/50 dark:bg-indigo-900/10">
-                                    <td className="p-3 whitespace-nowrap text-indigo-600 dark:text-indigo-400 font-semibold text-xs">
+                                    <td className="p-3 whitespace-nowrap text-indigo-600 dark:text-indigo-400 font-semibold text-sm">
                                         Autopopulate <select className="ml-1 bg-white dark:bg-slate-900 border rounded px-1 py-1"><option>All Stns</option></select>
                                     </td>
                                     <td className="p-2"><select className="w-full bg-white dark:bg-slate-900 border rounded px-2 py-1"><option>All Roles</option></select></td>
@@ -386,8 +386,8 @@ const CrewPage = () => {
                         </table>
                     </div>
                     <div>
-                        <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-3 ml-1 text-sm bg-slate-100 dark:bg-slate-800 inline-block px-3 py-1 rounded-md">HOTAC (+Airport transfer) if layover exceeds</h4>
-                        <table className="w-full text-sm text-left border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                        <h4 className="font-semibold text-slate-800 dark:text-slate-200 mb-3 ml-1 text-base bg-slate-100 dark:bg-slate-800 inline-block px-3 py-1 rounded-md">HOTAC (+Airport transfer) if layover exceeds</h4>
+                        <table className="w-full text-base text-left border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
                             <thead className="bg-slate-50 dark:bg-slate-800">
                                 <tr>
                                     <th className="p-3 font-semibold border-b border-slate-200 dark:border-slate-700">Stn</th>
@@ -399,7 +399,7 @@ const CrewPage = () => {
                             </thead>
                             <tbody>
                                 <tr className="bg-indigo-50/50 dark:bg-indigo-900/10">
-                                    <td className="p-3 whitespace-nowrap text-indigo-600 dark:text-indigo-400 font-semibold text-xs">
+                                    <td className="p-3 whitespace-nowrap text-indigo-600 dark:text-indigo-400 font-semibold text-sm">
                                         Autopopulate <select className="ml-1 bg-white dark:bg-slate-900 border rounded px-1 py-1"><option>All Stns</option></select>
                                     </td>
                                     <td className="p-2"><select className="w-full bg-white dark:bg-slate-900 border rounded px-2 py-1"><option>All Roles</option></select></td>
@@ -415,8 +415,8 @@ const CrewPage = () => {
 
             {/* Positioning Cost Modal */}
             <Modal isOpen={modals.positioning} onClose={() => toggleModal('positioning')} title="Positioning Cost" maxWidth="max-w-3xl">
-                <h4 className="font-medium text-slate-600 dark:text-slate-400 mb-3 text-sm italic">Same as fare unless listed below</h4>
-                <table className="w-full text-sm text-left border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                <h4 className="font-medium text-slate-600 dark:text-slate-400 mb-3 text-base italic">Same as fare unless listed below</h4>
+                <table className="w-full text-base text-left border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
                     <thead className="bg-slate-50 dark:bg-slate-800">
                         <tr>
                             <th className="p-3 font-semibold border-b border-slate-200 dark:border-slate-700">Sector</th>
@@ -427,7 +427,7 @@ const CrewPage = () => {
                     </thead>
                     <tbody>
                         <tr className="bg-indigo-50/50 dark:bg-indigo-900/10">
-                            <td className="p-3 whitespace-nowrap text-indigo-600 dark:text-indigo-400 font-semibold text-xs">
+                            <td className="p-3 whitespace-nowrap text-indigo-600 dark:text-indigo-400 font-semibold text-sm">
                                 Autopopulate <select className="ml-1 bg-white dark:bg-slate-900 border rounded px-1 py-1"><option>All Sectors</option></select>
                             </td>
                             <td className="p-2"><select className="w-full bg-white dark:bg-slate-900 border rounded px-2 py-1"><option>All Roles</option></select></td>
@@ -441,13 +441,13 @@ const CrewPage = () => {
             {/* Crew Diary Modal */}
             <Modal isOpen={modals.diary} onClose={() => toggleModal('diary')} title="Crew Diary" maxWidth="max-w-5xl">
                 <div className="flex items-center gap-4 mb-4">
-                    <input type="text" placeholder="Sort+Filter Date..." className="flex-1 px-3 py-2 text-sm border rounded-lg dark:bg-slate-900 dark:border-slate-700" />
-                    <input type="text" placeholder="Sort+Filter Crew ID..." className="flex-1 px-3 py-2 text-sm border rounded-lg dark:bg-slate-900 dark:border-slate-700" />
-                    <input type="text" placeholder="Sort+Filter Crew Name..." className="flex-1 px-3 py-2 text-sm border rounded-lg dark:bg-slate-900 dark:border-slate-700" />
-                    <input type="text" placeholder="Sort+Filter Role..." className="flex-1 px-3 py-2 text-sm border rounded-lg dark:bg-slate-900 dark:border-slate-700" />
+                    <input type="text" placeholder="Sort+Filter Date..." className="flex-1 px-3 py-2 text-base border rounded-lg dark:bg-slate-900 dark:border-slate-700" />
+                    <input type="text" placeholder="Sort+Filter Crew ID..." className="flex-1 px-3 py-2 text-base border rounded-lg dark:bg-slate-900 dark:border-slate-700" />
+                    <input type="text" placeholder="Sort+Filter Crew Name..." className="flex-1 px-3 py-2 text-base border rounded-lg dark:bg-slate-900 dark:border-slate-700" />
+                    <input type="text" placeholder="Sort+Filter Role..." className="flex-1 px-3 py-2 text-base border rounded-lg dark:bg-slate-900 dark:border-slate-700" />
                 </div>
                 <div className="overflow-x-auto w-full border border-slate-200 dark:border-slate-700 rounded-lg">
-                    <table className="w-full text-sm text-left min-w-[800px]">
+                    <table className="w-full text-base text-left min-w-[800px]">
                         <thead className="bg-slate-50 dark:bg-slate-800">
                             <tr>
                                 <th className="p-3 font-semibold border-b border-slate-200 dark:border-slate-700 w-[120px]">Crew ID</th>
@@ -464,8 +464,8 @@ const CrewPage = () => {
                                     <td className="p-3 text-slate-600 dark:text-slate-400">Captain</td>
                                     {[1, 2, 3, 4, 5, 6].map(i => (
                                         <td key={i} className="p-2 border-l border-slate-100 dark:border-slate-800 text-center">
-                                            <div className="text-xs text-slate-500 mb-1">0{i}:00</div>
-                                            <div className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded text-xs">Activity</div>
+                                            <div className="text-sm text-slate-500 mb-1">0{i}:00</div>
+                                            <div className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-2 py-1 rounded text-sm">Activity</div>
                                         </td>
                                     ))}
                                 </tr>

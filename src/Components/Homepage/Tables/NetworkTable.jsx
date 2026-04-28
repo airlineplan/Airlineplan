@@ -25,7 +25,7 @@ function cn(...inputs) {
 
 // --- UI COMPONENTS ---
 const Button = ({ children, variant = "primary", className, icon: Icon, loading, ...props }) => {
-  const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed";
 
   const variants = {
     primary: "bg-gradient-to-r from-indigo-500 to-cyan-500 text-white hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02]",
@@ -53,7 +53,7 @@ const TableInput = ({ value, onChange, placeholder }) => (
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full h-8 px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 transition-all"
+      className="w-full h-8 px-2.5 py-1 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 transition-all"
     />
     <Search size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
   </div>
@@ -405,7 +405,7 @@ export default function NetworkTable() {
                     />
                   </th>
                   {columns.map((col) => (
-                    <th key={col.id} className="p-3 min-w-[120px] font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    <th key={col.id} className="p-3 min-w-[120px] font-semibold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                       <div className="flex flex-col gap-2">
                         <div
                           className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
@@ -431,7 +431,7 @@ export default function NetworkTable() {
 
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {paginatedData.length === 0 ? (
-                  <tr><td colSpan="16" className="p-10 text-center text-slate-500 text-sm italic">No records found matching filters.</td></tr>
+                  <tr><td colSpan="16" className="p-10 text-center text-slate-500 text-base italic">No records found matching filters.</td></tr>
                 ) : (
                   <AnimatePresence>
                     {paginatedData.map((row) => (
@@ -454,21 +454,21 @@ export default function NetworkTable() {
                             />
                           </div>
                         </td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.flight}</td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.depStn}</td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.std}</td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.bt}</td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.sta}</td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.arrStn}</td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.flight}</td>
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.depStn}</td>
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.std}</td>
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.bt}</td>
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.sta}</td>
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.arrStn}</td>
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
                           <span className="px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                             {row.variant}
                           </span>
                         </td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{moment(row.effFromDt).format("DD-MMM-YY")}</td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{moment(row.effToDt).format("DD-MMM-YY")}</td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.dow}</td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{moment(row.effFromDt).format("DD-MMM-YY")}</td>
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{moment(row.effToDt).format("DD-MMM-YY")}</td>
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.dow}</td>
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
                           <span className={cn(
                             "px-2 py-0.5 rounded-full font-medium",
                             row.domINTL?.toLowerCase() === 'intl'
@@ -478,10 +478,10 @@ export default function NetworkTable() {
                             {row.domINTL}
                           </span>
                         </td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.userTag1}</td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.userTag2}</td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 max-w-[150px] truncate" title={row.remarks1}>{row.remarks1}</td>
-                        <td className="p-3 text-xs text-slate-700 dark:text-slate-300 max-w-[150px] truncate" title={row.remarks2}>{row.remarks2}</td>
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.userTag1}</td>
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{row.userTag2}</td>
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 max-w-[150px] truncate" title={row.remarks1}>{row.remarks1}</td>
+                        <td className="p-3 text-sm text-slate-700 dark:text-slate-300 max-w-[150px] truncate" title={row.remarks2}>{row.remarks2}</td>
                       </motion.tr>
                     ))}
                   </AnimatePresence>
@@ -492,7 +492,7 @@ export default function NetworkTable() {
 
           {/* STANDARDIZED Footer / Pagination */}
           <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/80 dark:bg-slate-900/80 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-xs text-slate-500 dark:text-slate-400">
+            <div className="text-sm text-slate-500 dark:text-slate-400">
               Showing {paginatedData.length > 0 ? (currentPage - 1) * RowsPerPage + 1 : 0} to {Math.min(currentPage * RowsPerPage, filteredData.length)} of {filteredData.length} entries
             </div>
 
@@ -505,7 +505,7 @@ export default function NetworkTable() {
                 <ChevronLeft size={16} />
               </button>
 
-              <span className="text-xs font-medium text-slate-700 dark:text-slate-300 px-2">
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300 px-2">
                 Page {currentPage} of {totalPages || 1}
               </span>
 

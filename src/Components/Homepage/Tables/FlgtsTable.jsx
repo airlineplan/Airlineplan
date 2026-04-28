@@ -157,7 +157,7 @@ const TableInput = ({ name, value, onChange, placeholder }) => (
       value={value || ""}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full h-7 px-2 py-1 text-[11px] bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 transition-all"
+      className="w-full h-8 px-2.5 py-1 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 transition-all"
     />
     <Search size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
   </div>
@@ -328,7 +328,7 @@ const FlgtsTable = ({ isMaster = true, showCostColumns = true }) => {
           <button
             onClick={handleDownload}
             disabled={downloading}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-70"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-base font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-lg shadow-emerald-500/20 transition-all disabled:opacity-70"
           >
             {downloading ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
             <span>{downloading ? "Downloading..." : "Download Excel"}</span>
@@ -341,13 +341,13 @@ const FlgtsTable = ({ isMaster = true, showCostColumns = true }) => {
           <table className="w-full text-left border-collapse">
             <thead className="bg-slate-100/90 dark:bg-slate-800/90 sticky top-0 z-20 backdrop-blur-sm shadow-sm">
               <tr>
-                <th className="p-3 w-16 text-center text-xs font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 sticky left-0 z-30">
+                <th className="p-3 w-16 text-center text-sm font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 sticky left-0 z-30">
                   #
                 </th>
                 {visibleColumns.map((col) => (
                   <th
                     key={col.id} // Fix: Used col.id instead of col.key to prevent React loop conflicts
-                    className="p-3 text-xs font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700"
+                    className="p-3 text-sm font-bold text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700"
                     style={{ minWidth: col.minWidth }}
                   >
                     <div className="flex flex-col gap-1">
@@ -384,13 +384,13 @@ const FlgtsTable = ({ isMaster = true, showCostColumns = true }) => {
                   <td colSpan={visibleColumns.length + 1} className="p-20 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 text-slate-500">
                       <Loader2 className="animate-spin text-indigo-500" size={32} />
-                      <span className="text-sm">Loading flights...</span>
+                      <span className="text-base">Loading flights...</span>
                     </div>
                   </td>
                 </tr>
               ) : flgtsTableData.length === 0 ? (
                 <tr>
-                  <td colSpan={visibleColumns.length + 1} className="p-10 text-center text-slate-500 text-sm italic">
+                  <td colSpan={visibleColumns.length + 1} className="p-10 text-center text-slate-500 text-base italic">
                     No flights found matching your filters.
                   </td>
                 </tr>
@@ -404,11 +404,11 @@ const FlgtsTable = ({ isMaster = true, showCostColumns = true }) => {
                       exit={{ opacity: 0 }}
                       className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                     >
-                      <td className="p-3 text-center text-xs font-medium text-slate-500 sticky left-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 border-r border-slate-100 dark:border-slate-800">
+                      <td className="p-3 text-center text-sm font-medium text-slate-500 sticky left-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 border-r border-slate-100 dark:border-slate-800">
                         {(currentPage - 1) * rowsPerPage + index + 1}
                       </td>
                       {visibleColumns.map((col) => (
-                        <td key={col.id} className="p-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                        <td key={col.id} className="p-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
                           {renderCell(row, col)}
                         </td>
                       ))}
@@ -421,7 +421,7 @@ const FlgtsTable = ({ isMaster = true, showCostColumns = true }) => {
         </div>
 
         <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/80 dark:bg-slate-900/80 flex items-center justify-between">
-          <div className="text-xs text-slate-500 dark:text-slate-400">
+          <div className="text-sm text-slate-500 dark:text-slate-400">
             Showing {(currentPage - 1) * rowsPerPage + 1} to {Math.min(currentPage * rowsPerPage, totalFlights)} of {totalFlights} flights
           </div>
 
@@ -433,7 +433,7 @@ const FlgtsTable = ({ isMaster = true, showCostColumns = true }) => {
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="text-xs font-medium text-slate-700 dark:text-slate-300 px-2">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 px-2">
               Page {currentPage} of {totalPages || 1}
             </span>
             <button

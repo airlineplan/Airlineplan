@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import api from "../../../apiConfig";
 import {
     Calculator, Settings, Download, Edit, RefreshCw, Layers,
-    Search, ArrowUp, ArrowDown, X, Plus
+    Search, ArrowUp, ArrowDown, X, Trash2
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
@@ -20,13 +20,14 @@ const TableInput = ({ name, value, onChange, placeholder }) => (
             value={value || ""}
             onChange={onChange}
             placeholder={placeholder}
-            className="w-full h-7 px-2 py-1 text-[11px] bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 transition-all font-normal"
+            className="w-full h-8 px-2.5 py-1 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 transition-all font-normal"
         />
         <Search size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
     </div>
 );
 
 const modalEditableInputClass = "w-full min-w-[96px] h-9 px-2.5 py-1.5 text-sm leading-5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-slate-800 dark:text-slate-100";
+const calendarEditableInputClass = "w-full min-w-[120px] h-8 px-2.5 py-1 text-sm leading-5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-slate-800 dark:text-slate-100";
 const modalEditableSelectClass = `${modalEditableInputClass} appearance-none cursor-pointer`;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTH_INDEX = MONTHS.reduce((acc, month, index) => {
@@ -114,6 +115,15 @@ const DateTextInput = ({ value, onChange, className = "", placeholder = "dd-mmm-
     );
 };
 
+const DatePickerInput = ({ value, onChange, className = "" }) => (
+    <input
+        type="date"
+        value={toIsoDate(value)}
+        onChange={(e) => onChange(e.target.value)}
+        className={className}
+    />
+);
+
 const MaintenanceDashboard = () => {
     const [selectedDate, setSelectedDate] = useState("2025-10-12");
     const [selectedMsn, setSelectedMsn] = useState("");
@@ -123,6 +133,11 @@ const MaintenanceDashboard = () => {
     const [targetData, setTargetData] = useState([]);
     const [calendarData, setCalendarData] = useState([]);
     const [isEditingCalendar, setIsEditingCalendar] = useState(false);
+
+    const isPersistedId = (id) => id && !String(id).startsWith("temp-");
+    const deleteIconButtonClass = "inline-flex items-center justify-center p-1 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors";
+    const actionHeaderClass = "p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-100 dark:bg-slate-800/90 min-w-[100px]";
+    const actionCellClass = "p-2 border-l border-slate-200 dark:border-slate-700 text-center bg-white dark:bg-slate-800";
 
     const fetchDashboardData = async () => {
         setMaintenanceData([]);
@@ -178,6 +193,52 @@ const MaintenanceDashboard = () => {
 
     const handleCalendarFieldChange = (id, field, value) => {
         setCalendarData(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
+    };
+
+    const handleDeleteCalendarRow = async (row) => {
+        try {
+            setCalendarData(prev => prev.filter(item => item.id !== row.id));
+            setIsEditingCalendar(true);
+            if (isPersistedId(row.id)) {
+                await api.delete(`/maintenance/calendar/${row.id}`);
+                toast.success("Calendar input deleted.");
+            }
+        } catch (error) {
+            console.error("Failed to delete calendar row", error);
+            toast.error(error.response?.data?.message || "Failed to delete calendar input.");
+            fetchCalendarData();
+        }
+    };
+
+    const handleDeleteMaintenanceRow = async (row) => {
+        try {
+            setMaintenanceData(prev => prev.filter(item => item.id !== row.id));
+            if (isPersistedId(row.id)) {
+                await api.delete(`/maintenance/reset-records/${row.id}`);
+                toast.success("Maintenance reset record deleted.");
+                fetchDashboardData();
+            }
+        } catch (error) {
+            console.error("Failed to delete maintenance status row", error);
+            toast.error(error.response?.data?.message || "Failed to delete maintenance status row.");
+            fetchDashboardData();
+        }
+    };
+
+    const handleDeleteTargetStatusRow = async (row) => {
+        try {
+            setTargetData(prev => prev.filter(item => item.id !== row.id));
+            setTargetsData(prev => prev.filter(item => item.id !== row.id));
+            if (isPersistedId(row.id)) {
+                await api.delete(`/maintenance/targets/${row.id}`);
+                toast.success("Target maintenance status deleted.");
+                fetchTargetsData();
+            }
+        } catch (error) {
+            console.error("Failed to delete target maintenance status row", error);
+            toast.error(error.response?.data?.message || "Failed to delete target maintenance status row.");
+            fetchTargetsData();
+        }
     };
 
     const handleAddCalendarRow = () => {
@@ -262,6 +323,8 @@ const MaintenanceDashboard = () => {
 
     // Filter Modal Table whenever Asset SN or Date changes (now via API)
     useEffect(() => {
+        if (!showSetResetModal) return;
+
         const fetchRecords = async () => {
             if (!resetAssetSN && !resetDate) {
                 setModalTableData([]);
@@ -293,7 +356,7 @@ const MaintenanceDashboard = () => {
         }, 300);
 
         return () => clearTimeout(timeoutId);
-    }, [resetAssetSN, resetDate]);
+    }, [showSetResetModal, resetAssetSN, resetDate]);
 
     const handleModalSort = (key) => {
         setModalSortConfig(prev => ({
@@ -379,6 +442,30 @@ const MaintenanceDashboard = () => {
 
     const handleModalFieldChange = (id, field, value) => {
         setModalTableData(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
+    };
+
+    const handleDeleteModalRow = async (row) => {
+        try {
+            setModalTableData(prev => prev.filter(item => item.id !== row.id));
+            setIsEditingModal(true);
+            if (isPersistedId(row.id)) {
+                await api.delete(`/maintenance/reset-records/${row.id}`);
+                toast.success("Maintenance reset record deleted.");
+                fetchDashboardData();
+            }
+        } catch (error) {
+            console.error("Failed to delete reset record", error);
+            toast.error(error.response?.data?.message || "Failed to delete maintenance reset record.");
+            if (resetAssetSN || resetDate) {
+                const res = await api.get('/maintenance/reset-records', {
+                    params: {
+                        date: resetDate || undefined,
+                        msnEsn: resetAssetSN || undefined
+                    }
+                });
+                if (res.data && res.data.success) setModalTableData(res.data.data);
+            }
+        }
     };
 
     const handleUpdateModal = async () => {
@@ -481,6 +568,22 @@ const MaintenanceDashboard = () => {
 
     const handleRotablesFieldChange = (id, field, value) => {
         setRotablesData(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
+    };
+
+    const handleDeleteRotablesRow = async (row) => {
+        try {
+            setRotablesData(prev => prev.filter(item => item.id !== row.id));
+            setIsEditingRotables(true);
+            if (isPersistedId(row.id)) {
+                await api.delete(`/maintenance/rotables/${row.id}`);
+                toast.success("Rotable movement deleted.");
+                fetchDashboardData();
+            }
+        } catch (error) {
+            console.error("Failed to delete rotable movement", error);
+            toast.error(error.response?.data?.message || "Failed to delete rotable movement.");
+            fetchRotablesData();
+        }
     };
 
     const handleAddRotablesRow = () => {
@@ -597,6 +700,23 @@ const MaintenanceDashboard = () => {
 
     const handleTargetsFieldChange = (id, field, value) => {
         setTargetsData(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
+    };
+
+    const handleDeleteTargetsRow = async (row) => {
+        try {
+            setTargetsData(prev => prev.filter(item => item.id !== row.id));
+            setIsEditingTargets(true);
+            if (isPersistedId(row.id)) {
+                await api.delete(`/maintenance/targets/${row.id}`);
+                toast.success("Target maintenance status deleted.");
+                fetchDashboardData();
+                fetchTargetsData();
+            }
+        } catch (error) {
+            console.error("Failed to delete target maintenance status", error);
+            toast.error(error.response?.data?.message || "Failed to delete target maintenance status.");
+            fetchTargetsModalData();
+        }
     };
 
     const handleAddTargetsRow = () => {
@@ -783,7 +903,7 @@ const MaintenanceDashboard = () => {
                                 </>
                             )}
                         </button>
-                        <div className="flex flex-row gap-3 text-xs font-medium">
+                        <div className="flex flex-row gap-3 text-base font-medium">
                             <button
                                 onClick={() => openSetResetModal({ date: selectedDate })}
                                 className="flex items-center gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded transition-colors whitespace-nowrap"
@@ -806,17 +926,17 @@ const MaintenanceDashboard = () => {
                 <div className="flex justify-between items-end">
                     <div className="flex items-center gap-3">
                         <span className="text-xs font-semibold text-slate-700 dark:text-slate-300"></span>
-                        <DateTextInput
+                        <DatePickerInput
                             value={selectedDate}
                             onChange={setSelectedDate}
-                            className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs px-2 py-1 rounded"
+                            className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-base px-2 py-1 rounded outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                         />
 
                     </div>
 
                 </div>
                 <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm">
-                    <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
+                    <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
                         <thead>
                             <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300">
                                 {renderHeader("MSN/ESN", "msn")}
@@ -824,7 +944,7 @@ const MaintenanceDashboard = () => {
                                 {renderHeader("SN/BN", "sn")}
                                 {renderHeader("Titled/Spare", "titled")}
                                 <th colSpan={9} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Maintenance status</th>
-                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-100 dark:bg-slate-800/90 min-w-[100px]">Action</th>
+                                <th rowSpan={2} className={actionHeaderClass}>Action</th>
                             </tr>
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
                                 <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSN</th>
@@ -854,14 +974,19 @@ const MaintenanceDashboard = () => {
                                     <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.tsr}</td>
                                     <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.csr}</td>
                                     <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.dsr}</td>
-                                    <td className="p-2 border-l border-slate-200 dark:border-slate-700 text-center">
+                                    <td className={actionCellClass}>
+                                        <div className="flex items-center justify-center gap-2">
                                         <button
                                             type="button"
                                             onClick={() => openSetResetModal({ msnEsn: row.msnEsn || row.msn, date: row.asOnDate || selectedDate })}
-                                            className="px-2 py-1 rounded text-[10px] font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
+                                            className="px-2 py-1 rounded text-sm font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
                                         >
                                             Set/Reset
                                         </button>
+                                        <button type="button" onClick={() => handleDeleteMaintenanceRow(row)} className={deleteIconButtonClass} title="Delete Row">
+                                            <Trash2 size={14} />
+                                        </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -873,13 +998,13 @@ const MaintenanceDashboard = () => {
             {/* TABLE 2: Target Maintenance Status */}
             <div className="flex flex-col gap-2 pt-4">
                 <div className="flex justify-between items-end">
-                    <span className="text-[10px] text-slate-500 italic"></span>
+                    <span className="text-sm text-slate-500 italic"></span>
                     <button className="flex items-center gap-1 px-3 py-1 border border-slate-300 dark:border-slate-600 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                         <Download size={12} /> Download
                     </button>
                 </div>
                 <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm">
-                    <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
+                    <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
                         <thead>
                             <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300">
                                 {renderHeader("Label", "targetLabel", "min-w-[140px]")}
@@ -890,6 +1015,7 @@ const MaintenanceDashboard = () => {
                                 <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-semibold align-bottom min-w-[120px]">Date</th>
                                 <th colSpan={9} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Target maintenance status</th>
                                 <th colSpan={6} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-[#f4e6fa] dark:bg-fuchsia-900/30">Target value-forecasted value on target date</th>
+                                <th rowSpan={2} className={actionHeaderClass}>Action</th>
                             </tr>
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
                                 <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSN</th>
@@ -939,6 +1065,11 @@ const MaintenanceDashboard = () => {
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fTso}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fCso}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fDso}</td>
+                                        <td className={actionCellClass}>
+                                            <button type="button" onClick={() => handleDeleteTargetStatusRow(row)} className={deleteIconButtonClass} title="Delete Row">
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </td>
                                     </tr>
                                 );
                             })}
@@ -952,10 +1083,10 @@ const MaintenanceDashboard = () => {
                 <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">
                     Calendar inputs, down time and post event maintenance status
                 </h3>
-                <span className="text-[10px] text-slate-500 italic mb-1"></span>
+                <span className="text-sm text-slate-500 italic mb-1"></span>
 
                 <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm">
-                    <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
+                    <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
                         <thead>
                             <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300">
                                 {renderHeader("Label", "calLabel", "min-w-[140px]")}
@@ -973,7 +1104,7 @@ const MaintenanceDashboard = () => {
                                             )}
                                         </div>
                                         <TableInput name="calPn" value={filters.calPn} onChange={handleFilterChange} placeholder="Filter..." />
-                                        <span className="text-[9px] font-normal text-slate-500 mt-1">Checkbox (apply to all SN)</span>
+                                        <span className="text-xs font-normal text-slate-500 mt-1">Checkbox (apply to all SN)</span>
                                     </div>
                                 </th>
                                 <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-semibold align-bottom min-w-[140px]">
@@ -988,6 +1119,7 @@ const MaintenanceDashboard = () => {
                                 <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center">Date</th>
                                 <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Next occurrence</th>
                                 <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-[#f4e6fa] dark:bg-fuchsia-900/30">Beyond next occurrence</th>
+                                <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center min-w-[70px]">Action</th>
                             </tr>
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
                                 <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSN</th>
@@ -1015,70 +1147,75 @@ const MaintenanceDashboard = () => {
                                 return (
                                     <tr key={`cal-${row.id}`} className="bg-green-50/50 dark:bg-green-900/10">
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-medium">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.calLabel || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'calLabel', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.calLabel}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.calLabel || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'calLabel', e.target.value)} className={`${calendarEditableInputClass} text-center`} /> : row.calLabel}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.lineBase || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'lineBase', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.lineBase}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.lineBase || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'lineBase', e.target.value)} className={`${calendarEditableInputClass} text-center`} /> : row.lineBase}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.calMsn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'calMsn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.calMsn}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.calMsn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'calMsn', e.target.value)} className={`${calendarEditableInputClass} text-center`} /> : row.calMsn}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.schEvent || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'schEvent', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.schEvent}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.schEvent || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'schEvent', e.target.value)} className={`${calendarEditableInputClass} text-center`} /> : row.schEvent}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 font-mono">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.calPn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'calPn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.calPn}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.calPn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'calPn', e.target.value)} className={`${calendarEditableInputClass} text-center`} /> : row.calPn}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.snBn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'snBn', e.target.value)} className="w-full text-center border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.snBn}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.snBn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'snBn', e.target.value)} className={`${calendarEditableInputClass} text-center`} /> : row.snBn}
                                         </td>
 
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eTsn")}`}>
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eTsn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eTsn', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eTsn}</div>}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eTsn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eTsn', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.eTsn}</div>}
                                         </td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eCsn")}`}>
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eCsn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eCsn', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eCsn}</div>}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eCsn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eCsn', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.eCsn}</div>}
                                         </td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eDsn")}`}>
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eDsn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eDsn', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eDsn}</div>}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eDsn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eDsn', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.eDsn}</div>}
                                         </td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eTso")}`}>
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eTso || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eTso', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eTso}</div>}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eTso || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eTso', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.eTso}</div>}
                                         </td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eCso")}`}>
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eCso || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eCso', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eCso}</div>}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eCso || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eCso', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.eCso}</div>}
                                         </td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eDso")}`}>
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eDso || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eDso', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eDso}</div>}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eDso || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eDso', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.eDso}</div>}
                                         </td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eTsr")}`}>
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eTsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eTsr', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eTsr}</div>}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eTsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eTsr', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.eTsr}</div>}
                                         </td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eCsr")}`}>
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eCsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eCsr', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eCsr}</div>}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eCsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eCsr', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.eCsr}</div>}
                                         </td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 ${isHighlighted("eDsr")}`}>
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eDsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eDsr', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.eDsr}</div>}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.eDsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eDsr', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.eDsr}</div>}
                                         </td>
 
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.lastOccurre || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'lastOccurre', e.target.value)} className="w-full text-left border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.lastOccurre}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.lastOccurre || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'lastOccurre', e.target.value)} className={`${calendarEditableInputClass} text-left`} /> : row.lastOccurre}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.nextEstima || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'nextEstima', e.target.value)} className="w-full text-left border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : row.nextEstima}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.nextEstima || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'nextEstima', e.target.value)} className={`${calendarEditableInputClass} text-left`} /> : row.nextEstima}
                                         </td>
 
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-bold text-emerald-600 dark:text-emerald-400">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.downDays || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'downDays', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.downDays}</div>}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.downDays || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'downDays', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.downDays}</div>}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.avgDownda || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'avgDownda', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.avgDownda}</div>}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.avgDownda || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'avgDownda', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.avgDownda}</div>}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.occurrence || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'occurrence', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.occurrence}</div>}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.occurrence || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'occurrence', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.occurrence}</div>}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.soTsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'soTsr', e.target.value)} className="w-full text-right border border-slate-300 dark:border-slate-600 rounded py-0.5 bg-white dark:bg-slate-800 text-[10px]" /> : <div className="text-right">{row.soTsr}</div>}
+                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.soTsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'soTsr', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.soTsr}</div>}
+                                        </td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-center bg-white dark:bg-slate-800">
+                                            <button type="button" onClick={() => handleDeleteCalendarRow(row)} className={deleteIconButtonClass} title="Delete Row">
+                                                <Trash2 size={14} />
+                                            </button>
                                         </td>
                                     </tr>
                                 );
@@ -1107,7 +1244,7 @@ const MaintenanceDashboard = () => {
 
                         {/* Modal Header */}
                         <div className="bg-blue-500 text-white px-5 py-3 flex justify-between items-center rounded-t-xl">
-                            <h3 className="font-bold text-sm tracking-wide">Set/Reset Maintenance status</h3>
+                            <h3 className="font-bold text-base tracking-wide">Set/Reset Maintenance status</h3>
                             <button
                                 onClick={() => setShowSetResetModal(false)}
                                 className="hover:bg-blue-600 p-1 rounded-full transition-colors"
@@ -1153,10 +1290,10 @@ const MaintenanceDashboard = () => {
                                     {/* DATE FIELD for "As on" */}
                                     <div className="flex items-center gap-3">
                                         <span className="w-16">As on</span>
-                                        <DateTextInput
+                                        <DatePickerInput
                                             value={resetDate}
                                             onChange={setResetDate}
-                                            className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-2 rounded w-36 outline-none focus:ring-1 focus:ring-blue-500 text-sm leading-5 text-slate-800 dark:text-slate-100"
+                                            className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-2 rounded w-36 outline-none focus:ring-1 focus:ring-blue-500 text-base leading-5 text-slate-800 dark:text-slate-100"
                                         />
                                     </div>
 
@@ -1169,7 +1306,7 @@ const MaintenanceDashboard = () => {
                                         </button>
                                     </div>
                                     {duplicateResetWarning ? (
-                                        <div className="max-w-md rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-800 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
+                                        <div className="max-w-md rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
                                             {duplicateResetWarning}
                                         </div>
                                     ) : null}
@@ -1188,7 +1325,7 @@ const MaintenanceDashboard = () => {
 
                             {/* Modal Dynamic Table */}
                             <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm min-h-[150px]">
-                                <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
+                                <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
                                     <thead>
                                         <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
                                             <th className="p-2 border-r border-slate-200 dark:border-slate-700 font-semibold text-center min-w-[140px]">
@@ -1244,6 +1381,9 @@ const MaintenanceDashboard = () => {
                                             </th>
                                             <th rowSpan="2" className="p-2 font-semibold align-bottom text-center min-w-[110px]">
                                                 Appl time metric
+                                            </th>
+                                            <th rowSpan="2" className="sticky right-0 z-20 p-2 font-semibold align-bottom text-center min-w-[70px] bg-slate-100 dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 shadow-[-6px_0_10px_-10px_rgba(15,23,42,0.6)]">
+                                                Action
                                             </th>
                                         </tr>
                                         <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
@@ -1314,11 +1454,16 @@ const MaintenanceDashboard = () => {
                                                             <option value="FH">FH</option>
                                                         </select>
                                                     </td>
+                                                    <td className="sticky right-0 z-10 p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 text-center shadow-[-6px_0_10px_-10px_rgba(15,23,42,0.6)]">
+                                                        <button type="button" onClick={() => handleDeleteModalRow(row)} className={deleteIconButtonClass} title="Delete Row">
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan="13" className="p-6 text-center text-slate-500 italic">No matching records found.</td>
+                                                <td colSpan="14" className="p-6 text-center text-slate-500 italic">No matching records found.</td>
                                             </tr>
                                         )}
 
@@ -1331,6 +1476,8 @@ const MaintenanceDashboard = () => {
                                             </td>
                                             <td colSpan="9" className="p-2 text-center text-slate-600 dark:text-slate-400 font-medium">
                                                 User enterable
+                                            </td>
+                                            <td className="p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
                                             </td>
                                             <td className="p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
                                             </td>
@@ -1363,60 +1510,63 @@ const MaintenanceDashboard = () => {
                         {/* Content */}
                         <div className="flex-1 overflow-auto p-4 bg-slate-50/50 dark:bg-slate-900">
                             <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-800">
-                                <table className="w-full text-left border-collapse min-w-max">
+                                <table className="w-full text-left border-collapse min-w-max text-sm">
                                     <thead>
                                         <tr className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('label')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('label')}>
                                                 <div className="flex justify-between items-center group">
                                                     Label {rotablesSortConfig.key === 'label' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="label" value={rotablesFilters.label} onChange={handleRotablesFilterChange} placeholder="Filter Label..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('date')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('date')}>
                                                 <div className="flex justify-between items-center group">
                                                     Date (EoD) {rotablesSortConfig.key === 'date' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="date" value={rotablesFilters.date} onChange={handleRotablesFilterChange} placeholder="Filter Date..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('pn')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('pn')}>
                                                 <div className="flex justify-between items-center group">
                                                     PN {rotablesSortConfig.key === 'pn' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="pn" value={rotablesFilters.pn} onChange={handleRotablesFilterChange} placeholder="Filter PN..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('msn')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('msn')}>
                                                 <div className="flex justify-between items-center group">
                                                     MSN {rotablesSortConfig.key === 'msn' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="msn" value={rotablesFilters.msn} onChange={handleRotablesFilterChange} placeholder="Filter MSN..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('acftRegn')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('acftRegn')}>
                                                 <div className="flex justify-between items-center group">
                                                     ACFT Regn {rotablesSortConfig.key === 'acftRegn' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="acftRegn" value={rotablesFilters.acftRegn} onChange={handleRotablesFilterChange} placeholder="Filter Regn..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('position')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('position')}>
                                                 <div className="flex justify-between items-center group">
                                                     Position (for PN) {rotablesSortConfig.key === 'position' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="position" value={rotablesFilters.position} onChange={handleRotablesFilterChange} placeholder="Filter Pos..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('removedSN')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('removedSN')}>
                                                 <div className="flex justify-between items-center group">
                                                     Removed SN {rotablesSortConfig.key === 'removedSN' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="removedSN" value={rotablesFilters.removedSN} onChange={handleRotablesFilterChange} placeholder="Filter Rem SN..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('installedSN')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('installedSN')}>
                                                 <div className="flex justify-between items-center group">
                                                     Installed SN {rotablesSortConfig.key === 'installedSN' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="installedSN" value={rotablesFilters.installedSN} onChange={handleRotablesFilterChange} placeholder="Filter Inst SN..." />
                                             </th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm text-center min-w-[70px]">
+                                                Action
+                                            </th>
                                         </tr>
                                     </thead>
-                                    <tbody className="text-[12px] text-slate-700 dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-800">
+                                    <tbody className="text-sm text-slate-700 dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-800">
                                         {filteredRotablesData.length > 0 ? (
                                             filteredRotablesData.map((row, index) => (
                                                 <tr key={row.id || index} className="hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors">
@@ -1444,11 +1594,16 @@ const MaintenanceDashboard = () => {
                                                     <td className="p-2 text-center">
                                                         {isEditingRotables || row.isNew ? <input type="text" value={row.installedSN || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'installedSN', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.installedSN}
                                                     </td>
+                                                    <td className="p-2 text-center bg-white dark:bg-slate-800 border-l border-slate-200/50 dark:border-slate-700/50">
+                                                        <button type="button" onClick={() => handleDeleteRotablesRow(row)} className={deleteIconButtonClass} title="Delete Row">
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan="8" className="p-6 text-center text-slate-500 italic">No matching records found.</td>
+                                                <td colSpan="9" className="p-6 text-center text-slate-500 italic">No matching records found.</td>
                                             </tr>
                                         )}
 
@@ -1459,7 +1614,7 @@ const MaintenanceDashboard = () => {
                                                     +Add
                                                 </button>
                                             </td>
-                                            <td colSpan="5"></td>
+                                            <td colSpan="6"></td>
                                             <td className="p-2 text-right">
                                                 <button onClick={downloadRotablesExcel} className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-semibold transition-colors ml-auto text-xs border border-emerald-600 px-2 py-1 rounded">
                                                     <Download size={12} /> Download
@@ -1494,62 +1649,63 @@ const MaintenanceDashboard = () => {
                         {/* Content */}
                         <div className="flex-1 overflow-auto p-4 bg-slate-50/50 dark:bg-slate-900">
                             <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-800">
-                                <table className="w-full text-left border-collapse min-w-max">
+                                <table className="w-full text-left border-collapse min-w-max text-sm">
                                     <thead>
                                         {/* Multi-tier Header */}
-                                        <tr className="bg-slate-200/50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-300 text-center">
+                                        <tr className="bg-slate-200/50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-300 text-center">
                                             <th colSpan="6" className="p-1 border-r border-slate-200 dark:border-slate-700">Target Identifiers</th>
                                             <th colSpan="9" className="p-1">Target maintenance status</th>
+                                            <th rowSpan="2" className="p-2 border-l border-slate-200 dark:border-slate-700 text-center min-w-[70px]">Action</th>
                                         </tr>
                                         <tr className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('label')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('label')}>
                                                 <div className="flex justify-between items-center group">
                                                     Label {targetsSortConfig.key === 'label' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="label" value={targetsFilters.label} onChange={handleTargetsFilterChange} placeholder="Filter Label..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('msnEsn')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('msnEsn')}>
                                                 <div className="flex justify-between items-center group">
                                                     MSN/ESN {targetsSortConfig.key === 'msnEsn' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="msnEsn" value={targetsFilters.msnEsn} onChange={handleTargetsFilterChange} placeholder="Filter MSN/ESN..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('pn')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('pn')}>
                                                 <div className="flex justify-between items-center group">
                                                     PN {targetsSortConfig.key === 'pn' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="pn" value={targetsFilters.pn} onChange={handleTargetsFilterChange} placeholder="Filter PN..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('snBn')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('snBn')}>
                                                 <div className="flex justify-between items-center group">
                                                     SN/BN {targetsSortConfig.key === 'snBn' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="snBn" value={targetsFilters.snBn} onChange={handleTargetsFilterChange} placeholder="Filter SN/BN..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('category')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('category')}>
                                                 <div className="flex justify-between items-center group">
                                                     Category {targetsSortConfig.key === 'category' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="category" value={targetsFilters.category} onChange={handleTargetsFilterChange} placeholder="Filter Cat..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('date')}>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('date')}>
                                                 <div className="flex justify-between items-center group">
                                                     Date {targetsSortConfig.key === 'date' && (targetsSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="date" value={targetsFilters.date} onChange={handleTargetsFilterChange} placeholder="Filter Date..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">TSN</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">CSN</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">DSN</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">TSO/TSRtr</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">CSO/CSRtr</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">DSO/DSRtr</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">TSRplmt</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">CSRplmt</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] text-center min-w-[110px]">DSRplmt</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">TSN</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">CSN</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">DSN</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">TSO/TSRtr</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">CSO/CSRtr</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">DSO/DSRtr</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">TSRplmt</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">CSRplmt</th>
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm text-center min-w-[110px]">DSRplmt</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="text-[12px] text-slate-700 dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-800">
+                                    <tbody className="text-sm text-slate-700 dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-800">
                                         {filteredTargetsData.length > 0 ? (
                                             filteredTargetsData.map((row, index) => (
                                                 <tr key={row.id || index} className="hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors">
@@ -1598,11 +1754,16 @@ const MaintenanceDashboard = () => {
                                                     <td className="p-2 text-center">
                                                         {isEditingTargets || row.isNew ? <input type="text" value={row.dsRplmt || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'dsRplmt', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.dsRplmt}
                                                     </td>
+                                                    <td className="p-2 text-center bg-white dark:bg-slate-800 border-l border-slate-200/50 dark:border-slate-700/50">
+                                                        <button type="button" onClick={() => handleDeleteTargetsRow(row)} className={deleteIconButtonClass} title="Delete Row">
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))
                                         ) : (
                                             <tr>
-                                                <td colSpan="15" className="p-6 text-center text-slate-500 italic">No matching records found.</td>
+                                                <td colSpan="16" className="p-6 text-center text-slate-500 italic">No matching records found.</td>
                                             </tr>
                                         )}
 
@@ -1619,6 +1780,7 @@ const MaintenanceDashboard = () => {
                                                     <Download size={12} /> Download
                                                 </button>
                                             </td>
+                                            <td></td>
                                         </tr>
                                     </tbody>
                                 </table>

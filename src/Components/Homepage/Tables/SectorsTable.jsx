@@ -23,7 +23,7 @@ function cn(...inputs) {
 
 // --- UI COMPONENTS ---
 const Button = ({ children, variant = "primary", className, icon: Icon, ...props }) => {
-  const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseStyles = "inline-flex items-center justify-center px-4 py-2 rounded-lg text-base font-medium transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed";
 
   const variants = {
     primary: "bg-gradient-to-r from-indigo-500 to-cyan-500 text-white hover:from-indigo-600 hover:to-cyan-600 shadow-lg shadow-indigo-500/20 hover:scale-[1.02]",
@@ -61,7 +61,7 @@ const TableInput = ({ value, onChange, placeholder }) => (
       value={value}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full h-8 px-2 py-1 text-xs bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 transition-all"
+      className="w-full h-8 px-2.5 py-1 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400 transition-all"
     />
     <Search size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
   </div>
@@ -293,7 +293,7 @@ const SectorsTable = () => {
                   </div>
                 </th>
                 {columns.map((col) => (
-                  <th key={col.key} className="p-3 min-w-[100px] font-semibold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  <th key={col.key} className="p-3 min-w-[100px] font-semibold text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                     <div className="flex flex-col gap-1">
                       <div
                         className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
@@ -323,13 +323,13 @@ const SectorsTable = () => {
                   <td colSpan={columns.length + 1} className="p-10 text-center">
                     <div className="flex flex-col items-center justify-center gap-3 text-slate-500">
                       <RefreshCw className="animate-spin text-indigo-500" size={24} />
-                      <span className="text-sm">Loading sectors...</span>
+                      <span className="text-base">Loading sectors...</span>
                     </div>
                   </td>
                 </tr>
               ) : paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length + 1} className="p-10 text-center text-slate-500 text-sm">
+                  <td colSpan={columns.length + 1} className="p-10 text-center text-slate-500 text-base">
                     No sectors found matching your filters.
                   </td>
                 </tr>
@@ -361,7 +361,7 @@ const SectorsTable = () => {
                       <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.gcd}</td>
                       <td className="p-3 text-sm text-slate-600 dark:text-slate-400">{row.acftType}</td>
                       <td className="p-3 text-sm text-slate-600 dark:text-slate-400">
-                        <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-xs border border-slate-200 dark:border-slate-700">
+                        <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-sm border border-slate-200 dark:border-slate-700">
                           {row.variant}
                         </span>
                       </td>
@@ -386,7 +386,7 @@ const SectorsTable = () => {
 
         {/* --- STANDARDIZED FOOTER / PAGINATION --- */}
         <div className="border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/80 dark:bg-slate-900/80 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-xs text-slate-500 dark:text-slate-400">
+          <div className="text-sm text-slate-500 dark:text-slate-400">
             Showing {paginatedData.length > 0 ? (currentPage - 1) * ROWS_PER_PAGE + 1 : 0} to {Math.min(currentPage * ROWS_PER_PAGE, processedData.length)} of {processedData.length} entries
           </div>
 
@@ -399,7 +399,7 @@ const SectorsTable = () => {
               <ChevronLeft size={16} />
             </button>
 
-            <span className="text-xs font-medium text-slate-700 dark:text-slate-300 px-2">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 px-2">
               Page {currentPage} of {totalPages || 1}
             </span>
 

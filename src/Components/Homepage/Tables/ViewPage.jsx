@@ -89,7 +89,7 @@ const TableInput = ({ name, value, onChange, placeholder }) => (
       value={value || ""}
       onChange={onChange}
       placeholder={placeholder}
-      className="w-full h-6 px-1.5 py-1 text-[10px] bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
+      className="w-full h-8 px-2.5 py-1 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
     />
     <Search size={10} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 opacity-0 group-hover:opacity-100 pointer-events-none" />
   </div>
@@ -111,7 +111,7 @@ const FlightBar = ({ flight, timelineStart, mode, timezone }) => {
 
   return (
     <div
-      className="absolute top-1/2 -translate-y-1/2 h-6 bg-[#e8a3d8] dark:bg-fuchsia-600/80 rounded-sm flex items-center justify-center text-[10px] font-bold text-slate-900 dark:text-white shadow-sm overflow-hidden whitespace-nowrap px-1 z-20"
+      className="absolute top-1/2 -translate-y-1/2 h-6 bg-[#e8a3d8] dark:bg-fuchsia-600/80 rounded-sm flex items-center justify-center text-sm font-bold text-slate-900 dark:text-white shadow-sm overflow-hidden whitespace-nowrap px-1 z-20"
       style={{ left: pos.left, width: pos.width }}
       title={`${blockLabel} | STD: ${flight.std} - BT: ${flight.bt}`}
     >
@@ -306,7 +306,7 @@ const ViewPage = () => {
           onClick={handleCreateConnections}
           disabled={creatingConnections}
           className={cn(
-            "px-3 py-1.5 text-xs font-semibold rounded-md border transition-all duration-200",
+            "px-3 py-1.5 text-sm font-semibold rounded-md border transition-all duration-200",
             creatingConnections
               ? "bg-slate-300 text-slate-600 border-slate-400 cursor-not-allowed"
               : "bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-700"
@@ -319,9 +319,9 @@ const ViewPage = () => {
       <div className="flex flex-wrap items-center gap-6 pb-4 border-b border-slate-300 dark:border-slate-700 shrink-0">
 
         <div className="flex items-center gap-2">
-          <label className="text-sm font-semibold">Mode</label>
+          <label className="text-base font-semibold">Mode</label>
           <select
-            className="appearance-none bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-sm rounded px-2 py-1 w-28 cursor-pointer"
+            className="appearance-none bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-base rounded px-2 py-1 w-28 cursor-pointer"
             value={mode}
             onChange={(e) => setMode(e.target.value)}
           >
@@ -338,17 +338,17 @@ const ViewPage = () => {
               type="text"
               value={stationCode}
               onChange={(e) => setStationCode(e.target.value.toUpperCase())}
-              className="bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-sm rounded px-2 py-1 w-20 uppercase"
+              className="bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-base rounded px-2 py-1 w-20 uppercase"
             />
           </div>
         )}
 
         <div className="flex items-center gap-2">
-          <label className="text-sm font-semibold">Timezone</label>
+          <label className="text-base font-semibold">Timezone</label>
           <select
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
-            className="appearance-none bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-sm rounded px-2 py-1 w-32 cursor-pointer"
+            className="appearance-none bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-base rounded px-2 py-1 w-32 cursor-pointer"
           >
             {TIMEZONES.map((tz) => (
               <option key={tz} value={tz}>{tz}</option>
@@ -357,11 +357,11 @@ const ViewPage = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm font-semibold">Week ending</label>
+          <label className="text-base font-semibold">Week ending</label>
           <select
             value={weekStart}
             onChange={(e) => setWeekStart(e.target.value)}
-            className="appearance-none bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-sm rounded px-2 py-1 w-28 cursor-pointer"
+            className="appearance-none bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-base rounded px-2 py-1 w-28 cursor-pointer"
             disabled={weeks.length === 0}
           >
             {weeks.length === 0 ? (
@@ -395,9 +395,9 @@ const ViewPage = () => {
               <div className="w-64 shrink-0 flex items-end border-r-2 border-slate-400 bg-slate-50 dark:bg-slate-800/90 pb-1">
                 {MODE_COLUMNS[mode].map((col) => (
                   <div key={col.key} className="flex-1 px-2 flex flex-col gap-1 border-r border-slate-300 dark:border-slate-700 last:border-0">
-                    <div className="text-[9px] text-slate-500 font-semibold mb-[-2px]">Filter + Sort</div>
+                    <div className="text-sm text-slate-500 font-semibold mb-[-2px]">Filter + Sort</div>
                     <div
-                      className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-xs font-bold uppercase"
+                      className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-sm font-bold uppercase"
                       onClick={() => handleSort(col.key)}
                     >
                       {col.label}
@@ -420,19 +420,19 @@ const ViewPage = () => {
               <div className="flex-1 flex">
                 {weekDays.length > 0 ? (
                   weekDays.map((day, idx) => (
-                    <div key={idx} className="flex-1 border-r border-slate-300 dark:border-slate-700 last:border-0 flex flex-col justify-end text-xs font-medium bg-slate-50 dark:bg-slate-800/50">
+                    <div key={idx} className="flex-1 border-r border-slate-300 dark:border-slate-700 last:border-0 flex flex-col justify-end text-sm font-medium bg-slate-50 dark:bg-slate-800/50">
                       <div className="text-center px-1 py-1 border-b border-slate-300 dark:border-slate-700 truncate">
                         {formatDateHeader(day)}
                       </div>
                       {/* Time labels below each day */}
-                      <div className="flex justify-between px-1 py-0.5 text-[9px] text-slate-500 bg-white dark:bg-slate-900">
+                      <div className="flex justify-between px-1 py-0.5 text-sm text-slate-500 bg-white dark:bg-slate-900">
                         <span>00:01</span>
                         <span>23:59</span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="flex-1 flex items-center justify-center text-xs text-slate-500">Loading timeline...</div>
+                  <div className="flex-1 flex items-center justify-center text-sm text-slate-500">Loading timeline...</div>
                 )}
               </div>
             </div>
@@ -440,7 +440,7 @@ const ViewPage = () => {
           {/* VIRTUALIZED DATA ROWS */}
           <div ref={parentRef} className="flex-1 overflow-y-auto custom-scrollbar relative">
             {processedData.length === 0 && !loading ? (
-              <div className="h-32 flex items-center justify-center text-slate-500 text-sm font-medium">
+              <div className="h-32 flex items-center justify-center text-slate-500 text-base font-medium">
                 No flights match your criteria.
               </div>
             ) : (
@@ -467,7 +467,7 @@ const ViewPage = () => {
                       className="flex border-b border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
                     >
                       {/* Left Metadata Column */}
-                      <div className="w-64 shrink-0 flex items-stretch border-r border-slate-300 dark:border-slate-700 text-xs font-medium bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 relative z-10">
+                      <div className="w-64 shrink-0 flex items-stretch border-r border-slate-300 dark:border-slate-700 text-sm font-medium bg-white dark:bg-slate-900 group-hover:bg-slate-50 dark:group-hover:bg-slate-800/50 relative z-10">
                         {MODE_COLUMNS[mode].map((col) => (
                           <div key={col.key} className="flex-1 flex items-center px-3 border-r last:border-0 border-slate-200 dark:border-slate-700/50 truncate">
                             {row.leftColumn?.[col.key] || ""}
