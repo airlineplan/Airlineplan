@@ -53,6 +53,19 @@ const MAINTENANCE_STATUS_COLUMNS = [
     STATUS_LABELS.dsr
 ];
 const FORECAST_STATUS_COLUMNS = MAINTENANCE_STATUS_COLUMNS;
+const TARGET_STATUS_FIELD_MAP = [
+    { column: STATUS_LABELS.tsn, valueKey: "tsn", highlightKey: "tsn", forecastKey: "fTsn" },
+    { column: STATUS_LABELS.csn, valueKey: "csn", highlightKey: "csn", forecastKey: "fCsn" },
+    { column: STATUS_LABELS.dsn, valueKey: "dsn", highlightKey: "dsn", forecastKey: "fDsn" },
+    { column: STATUS_LABELS.tso, valueKey: "tso", highlightKey: "tso", forecastKey: "fTso" },
+    { column: STATUS_LABELS.cso, valueKey: "cso", highlightKey: "cso", forecastKey: "fCso" },
+    { column: STATUS_LABELS.dso, valueKey: "dso", highlightKey: "dso", forecastKey: "fDso" },
+    { column: STATUS_LABELS.tsr, valueKey: "tsr", highlightKey: "tsRplmt", forecastKey: "fTsr" },
+    { column: STATUS_LABELS.csr, valueKey: "csr", highlightKey: "csRplmt", forecastKey: "fCsr" },
+    { column: STATUS_LABELS.dsr, valueKey: "dsr", highlightKey: "dsRplmt", forecastKey: "fDsr" }
+];
+const getTargetStatusValue = (row, { valueKey, highlightKey }) => row?.[valueKey] ?? row?.[highlightKey] ?? "";
+const getTargetForecastValue = (row, { forecastKey }) => row?.[forecastKey] ?? "";
 const formatStatusExportLabel = (column) => `${column.code} - ${column.description}`;
 const StatusHeaderLabel = ({ column }) => (
     <span className="flex flex-col items-center justify-center gap-0.5">
@@ -61,9 +74,10 @@ const StatusHeaderLabel = ({ column }) => (
     </span>
 );
 const statusHeaderClass = "p-2 border border-slate-200 dark:border-slate-700 min-w-[220px] whitespace-normal leading-tight";
+const targetTableStatusHeaderClass = "p-2 border border-slate-200 dark:border-slate-700 min-w-[120px] whitespace-nowrap leading-tight text-center";
 const modalStatusHeaderClass = "p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[220px] whitespace-normal leading-tight";
-const targetStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[220px] whitespace-normal leading-tight";
-const targetLastStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm text-center min-w-[220px] whitespace-normal leading-tight";
+const targetStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[120px] whitespace-nowrap leading-tight";
+const targetLastStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm text-center min-w-[120px] whitespace-nowrap leading-tight";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTH_INDEX = MONTHS.reduce((acc, month, index) => {
     acc[month.toLowerCase()] = index;
@@ -917,6 +931,39 @@ const MaintenanceDashboard = () => {
         XLSX.writeFile(workbook, "Set_Target_Maintenance_Status.xlsx");
     };
 
+    const downloadTargetStatusExcel = () => {
+        if (!targetData || targetData.length === 0) {
+            toast.warning("No target maintenance status data available to download.");
+            return;
+        }
+
+        const exportData = targetData.map(row => {
+            const exportedRow = {
+                "Label": row.targetLabel || row.label || "",
+                "MSN/ESN": row.targetMsn || row.msnEsn || "",
+                "PN": row.targetPn || row.pn || "",
+                "SN/BN": row.targetSn || row.snBn || "",
+                "Category": row.category || "",
+                "Date": formatDateForDisplay(row.displayDate || row.date)
+            };
+
+            TARGET_STATUS_FIELD_MAP.forEach((field) => {
+                exportedRow[`Target maintenance status ${field.column.code}`] = getTargetStatusValue(row, field);
+            });
+
+            TARGET_STATUS_FIELD_MAP.forEach((field) => {
+                exportedRow[`Target value-forecasted value on target date ${field.column.code}`] = getTargetForecastValue(row, field);
+            });
+
+            return exportedRow;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(exportData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Target Maintenance Status");
+        XLSX.writeFile(workbook, "Target_Maintenance_Status.xlsx");
+    };
+
     const handleDownloadModal = () => {
         if (modalTableData.length === 0) return;
         const exportData = modalTableData.map(row => ({
@@ -1144,7 +1191,7 @@ const MaintenanceDashboard = () => {
             <div className="flex flex-col gap-2 pt-4">
                 <div className="flex justify-between items-end">
                     <span className="text-sm text-slate-500 italic"></span>
-                    <button className="flex items-center gap-1 px-3 py-1 border border-slate-300 dark:border-slate-600 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                    <button onClick={downloadTargetStatusExcel} className="flex items-center gap-1 px-3 py-1 border border-slate-300 dark:border-slate-600 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                         <Download size={12} /> Download
                     </button>
                 </div>
@@ -1158,19 +1205,19 @@ const MaintenanceDashboard = () => {
                                 {renderHeader("SN/BN", "targetSn", "min-w-[140px]")}
                                 {renderHeader("Category", "category", "min-w-[140px]")}
                                 <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-semibold align-bottom min-w-[120px]">Date</th>
-                                <th colSpan={9} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Target maintenance status</th>
-                                <th colSpan={FORECAST_STATUS_COLUMNS.length} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-[#f4e6fa] dark:bg-fuchsia-900/30">Target value-forecasted value on target date</th>
+                                <th colSpan={TARGET_STATUS_FIELD_MAP.length} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Target maintenance status</th>
+                                <th colSpan={TARGET_STATUS_FIELD_MAP.length} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-[#f4e6fa] dark:bg-fuchsia-900/30">Target value-forecasted value on target date</th>
                                 <th rowSpan={2} className={actionHeaderClass}>Action</th>
                             </tr>
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
-                                {MAINTENANCE_STATUS_COLUMNS.map((column) => (
-                                    <th key={`target-${column.code}`} className={statusHeaderClass}>
-                                        <StatusHeaderLabel column={column} />
+                                {TARGET_STATUS_FIELD_MAP.map(({ column }) => (
+                                    <th key={`target-${column.code}`} className={targetTableStatusHeaderClass}>
+                                        <span className="font-semibold">{column.code}</span>
                                     </th>
                                 ))}
-                                {FORECAST_STATUS_COLUMNS.map((column) => (
-                                    <th key={`forecast-${column.code}`} className={statusHeaderClass}>
-                                        <StatusHeaderLabel column={column} />
+                                {TARGET_STATUS_FIELD_MAP.map(({ column }) => (
+                                    <th key={`forecast-${column.code}`} className={targetTableStatusHeaderClass}>
+                                        <span className="font-semibold">{column.code}</span>
                                     </th>
                                 ))}
                             </tr>
@@ -1189,25 +1236,13 @@ const MaintenanceDashboard = () => {
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.category}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">{formatDateForDisplay(row.displayDate || row.date)}</td>
 
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("tsn")}`}>{row.tsn}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("csn")}`}>{row.csn}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("dsn")}`}>{row.dsn}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("tso")}`}>{row.tso}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("cso")}`}>{row.cso}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("dso")}`}>{row.dso}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("tsr")}`}>{row.tsr}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("csr")}`}>{row.csr}</td>
-                                        <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("dsr")}`}>{row.dsr}</td>
+                                        {TARGET_STATUS_FIELD_MAP.map((field) => (
+                                            <td key={`target-value-${field.column.code}`} className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted(field.highlightKey)}`}>{getTargetStatusValue(row, field)}</td>
+                                        ))}
 
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fTsn}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fCsn}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fDsn}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fTso}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fCso}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fDso}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fTsr}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fCsr}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fDsr}</td>
+                                        {TARGET_STATUS_FIELD_MAP.map((field) => (
+                                            <td key={`target-forecast-${field.column.code}`} className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{getTargetForecastValue(row, field)}</td>
+                                        ))}
                                         <td className={actionCellClass}>
                                             <button type="button" onClick={() => handleDeleteTargetStatusRow(row)} className={deleteIconButtonClass} title="Delete Row">
                                                 <Trash2 size={14} />
@@ -1927,13 +1962,13 @@ const MaintenanceDashboard = () => {
                                                 </div>
                                                 <TableInput name="date" value={targetsFilters.date} onChange={handleTargetsFilterChange} placeholder="Filter Date..." />
                                             </th>
-                                            {MAINTENANCE_STATUS_COLUMNS.slice(0, -1).map((column) => (
+                                            {TARGET_STATUS_FIELD_MAP.slice(0, -1).map(({ column }) => (
                                                 <th key={`target-modal-${column.code}`} className={targetStatusHeaderClass}>
-                                                    <StatusHeaderLabel column={column} />
+                                                    <span className="font-semibold">{column.code}</span>
                                                 </th>
                                             ))}
                                             <th className={targetLastStatusHeaderClass}>
-                                                <StatusHeaderLabel column={STATUS_LABELS.dsr} />
+                                                <span className="font-semibold">{STATUS_LABELS.dsr.code}</span>
                                             </th>
                                         </tr>
                                     </thead>
@@ -2032,8 +2067,7 @@ const MaintenanceDashboard = () => {
                                                     +Add
                                                 </button>
                                             </td>
-                                            <td colSpan="8"></td>
-                                            <td className="p-2 text-right">
+                                            <td colSpan="9" className="p-2 text-right">
                                                 <button onClick={downloadTargetsExcel} className="flex items-center gap-1 text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-semibold transition-colors ml-auto text-xs border border-emerald-600 px-2 py-1 rounded">
                                                     <Download size={12} /> Download
                                                 </button>
