@@ -30,6 +30,40 @@ const modalEditableInputClass = "w-full min-w-[96px] h-9 px-2.5 py-1.5 text-sm l
 const calendarEditableInputClass = "w-full min-w-[120px] h-8 px-2.5 py-1 text-sm leading-5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-slate-800 dark:text-slate-100";
 const modalEditableSelectClass = `${modalEditableInputClass} appearance-none cursor-pointer`;
 const targetCategoryOptions = ["Conserve", "Run-down"];
+const STATUS_LABELS = {
+    tsn: { code: "TSN", description: "Time since new" },
+    csn: { code: "CSN", description: "Cycles since new" },
+    dsn: { code: "DSN", description: "Days since new" },
+    tso: { code: "TSO/TSRtrtn", description: "Time since Overhaul/Restoration" },
+    cso: { code: "CSO/CSRtrtn", description: "Cycles since Overhaul/Restoration" },
+    dso: { code: "DSO/DSRtrtn", description: "Days since Overhaul/Restoration" },
+    tsr: { code: "TSRpimt", description: "Time since Replacement" },
+    csr: { code: "CSRpimt", description: "Cycles since Replacement" },
+    dsr: { code: "OSRpimt", description: "Days since Replacement" }
+};
+const MAINTENANCE_STATUS_COLUMNS = [
+    STATUS_LABELS.tsn,
+    STATUS_LABELS.csn,
+    STATUS_LABELS.dsn,
+    STATUS_LABELS.tso,
+    STATUS_LABELS.cso,
+    STATUS_LABELS.dso,
+    STATUS_LABELS.tsr,
+    STATUS_LABELS.csr,
+    STATUS_LABELS.dsr
+];
+const FORECAST_STATUS_COLUMNS = MAINTENANCE_STATUS_COLUMNS.slice(0, 6);
+const formatStatusExportLabel = (column) => `${column.code} - ${column.description}`;
+const StatusHeaderLabel = ({ column }) => (
+    <span className="flex flex-col items-center justify-center gap-0.5">
+        <span className="font-semibold">{column.code}</span>
+        <span className="text-xs font-normal leading-tight text-slate-500 dark:text-slate-400">{column.description}</span>
+    </span>
+);
+const statusHeaderClass = "p-2 border border-slate-200 dark:border-slate-700 min-w-[220px] whitespace-normal leading-tight";
+const modalStatusHeaderClass = "p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[220px] whitespace-normal leading-tight";
+const targetStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[220px] whitespace-normal leading-tight";
+const targetLastStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm text-center min-w-[220px] whitespace-normal leading-tight";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTH_INDEX = MONTHS.reduce((acc, month, index) => {
     acc[month.toLowerCase()] = index;
@@ -867,15 +901,15 @@ const MaintenanceDashboard = () => {
             "SN/BN": row.snBn || "",
             "Category": row.category || "",
             "Date": formatDateForDisplay(row.date),
-            "TSN": row.tsn || "",
-            "CSN": row.csn || "",
-            "DSN": row.dsn || "",
-            "TSO/TSRtr": row.tso || "",
-            "CSO/CSRtr": row.cso || "",
-            "DSO/DSRtr": row.dso || "",
-            "TSRplmt": row.tsRplmt || "",
-            "CSRplmt": row.csRplmt || "",
-            "DSRplmt": row.dsRplmt || ""
+            [formatStatusExportLabel(STATUS_LABELS.tsn)]: row.tsn || "",
+            [formatStatusExportLabel(STATUS_LABELS.csn)]: row.csn || "",
+            [formatStatusExportLabel(STATUS_LABELS.dsn)]: row.dsn || "",
+            [formatStatusExportLabel(STATUS_LABELS.tso)]: row.tso || "",
+            [formatStatusExportLabel(STATUS_LABELS.cso)]: row.cso || "",
+            [formatStatusExportLabel(STATUS_LABELS.dso)]: row.dso || "",
+            [formatStatusExportLabel(STATUS_LABELS.tsr)]: row.tsRplmt || "",
+            [formatStatusExportLabel(STATUS_LABELS.csr)]: row.csRplmt || "",
+            [formatStatusExportLabel(STATUS_LABELS.dsr)]: row.dsRplmt || ""
         }));
         const worksheet = XLSX.utils.json_to_sheet(exportData);
         const workbook = XLSX.utils.book_new();
@@ -890,15 +924,15 @@ const MaintenanceDashboard = () => {
             "PN": row.pn,
             "SN/BN": row.snBn,
             "As on": formatDateForDisplay(row.date || resetDate || selectedDate),
-            "TSN": row.tsn,
-            "CSN": row.csn,
-            "DSN": row.dsn,
-            "TSO/TSRtrtr": row.tso,
-            "CSO/CSRtrt": row.cso,
-            "DSO/DSRtrt": row.dso,
-            "TSRplmt": row.tsr,
-            "CSRplmt": row.csr,
-            "DSRplmt": row.dsr,
+            [formatStatusExportLabel(STATUS_LABELS.tsn)]: row.tsn,
+            [formatStatusExportLabel(STATUS_LABELS.csn)]: row.csn,
+            [formatStatusExportLabel(STATUS_LABELS.dsn)]: row.dsn,
+            [formatStatusExportLabel(STATUS_LABELS.tso)]: row.tso,
+            [formatStatusExportLabel(STATUS_LABELS.cso)]: row.cso,
+            [formatStatusExportLabel(STATUS_LABELS.dso)]: row.dso,
+            [formatStatusExportLabel(STATUS_LABELS.tsr)]: row.tsr,
+            [formatStatusExportLabel(STATUS_LABELS.csr)]: row.csr,
+            [formatStatusExportLabel(STATUS_LABELS.dsr)]: row.dsr,
             "Appl time metric": row.metric
         }));
         const ws = XLSX.utils.json_to_sheet(exportData);
@@ -1062,15 +1096,11 @@ const MaintenanceDashboard = () => {
                                 <th rowSpan={2} className={actionHeaderClass}>Action</th>
                             </tr>
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSO/TSRtrtr</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSO/CSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSO/DSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSRplmt</th>
+                                {MAINTENANCE_STATUS_COLUMNS.map((column) => (
+                                    <th key={column.code} className={statusHeaderClass}>
+                                        <StatusHeaderLabel column={column} />
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
@@ -1133,21 +1163,16 @@ const MaintenanceDashboard = () => {
                                 <th rowSpan={2} className={actionHeaderClass}>Action</th>
                             </tr>
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSO/TSRtrtr</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSO/CSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSO/DSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSO/TSRtrtr</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSO/CSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSO/DSRtrt</th>
+                                {MAINTENANCE_STATUS_COLUMNS.map((column) => (
+                                    <th key={`target-${column.code}`} className={statusHeaderClass}>
+                                        <StatusHeaderLabel column={column} />
+                                    </th>
+                                ))}
+                                {FORECAST_STATUS_COLUMNS.map((column) => (
+                                    <th key={`forecast-${column.code}`} className={statusHeaderClass}>
+                                        <StatusHeaderLabel column={column} />
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
@@ -1237,15 +1262,11 @@ const MaintenanceDashboard = () => {
                                 <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center min-w-[70px]">Action</th>
                             </tr>
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSN</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSO/TSRtrtr</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSO/CSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSO/DSRtrt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">TSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">CSRplmt</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">DSRplmt</th>
+                                {MAINTENANCE_STATUS_COLUMNS.map((column) => (
+                                    <th key={`calendar-${column.code}`} className={statusHeaderClass}>
+                                        <StatusHeaderLabel column={column} />
+                                    </th>
+                                ))}
                                 <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[120px]">Last occurre</th>
                                 <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[120px]">Next estima</th>
                                 <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">Down days</th>
@@ -1505,15 +1526,11 @@ const MaintenanceDashboard = () => {
                                             <th className="border-r border-slate-200 dark:border-slate-700"></th>
                                             <th className="border-r border-slate-200 dark:border-slate-700"></th>
                                             <th className="border-r border-slate-200 dark:border-slate-700"></th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">TSN</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">CSN</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">DSN</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">TSO/TSRtrtr</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">CSO/CSRtrt</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">DSO/DSRtrt</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">TSRplmt</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">CSRplmt</th>
-                                            <th className="p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[110px]">DSRplmt</th>
+                                            {MAINTENANCE_STATUS_COLUMNS.map((column) => (
+                                                <th key={`reset-${column.code}`} className={modalStatusHeaderClass}>
+                                                    <StatusHeaderLabel column={column} />
+                                                </th>
+                                            ))}
                                         </tr>
                                     </thead>
                                     <tbody className="text-slate-800 dark:text-slate-200 bg-[#dcfce7] dark:bg-green-900/20">
@@ -1907,15 +1924,14 @@ const MaintenanceDashboard = () => {
                                                 </div>
                                                 <TableInput name="date" value={targetsFilters.date} onChange={handleTargetsFilterChange} placeholder="Filter Date..." />
                                             </th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">TSN</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">CSN</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">DSN</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">TSO/TSRtr</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">CSO/CSRtr</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">DSO/DSRtr</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">TSRplmt</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[110px]">CSRplmt</th>
-                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm text-center min-w-[110px]">DSRplmt</th>
+                                            {MAINTENANCE_STATUS_COLUMNS.slice(0, -1).map((column) => (
+                                                <th key={`target-modal-${column.code}`} className={targetStatusHeaderClass}>
+                                                    <StatusHeaderLabel column={column} />
+                                                </th>
+                                            ))}
+                                            <th className={targetLastStatusHeaderClass}>
+                                                <StatusHeaderLabel column={STATUS_LABELS.dsr} />
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="text-sm text-slate-700 dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-800">
