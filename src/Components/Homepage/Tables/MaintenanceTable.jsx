@@ -28,6 +28,91 @@ const TableInput = ({ name, value, onChange, placeholder }) => (
 
 const modalEditableInputClass = "w-full min-w-[96px] h-9 px-2.5 py-1.5 text-sm leading-5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-slate-800 dark:text-slate-100";
 const modalEditableSelectClass = `${modalEditableInputClass} appearance-none cursor-pointer`;
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_INDEX = MONTHS.reduce((acc, month, index) => {
+    acc[month.toLowerCase()] = index;
+    return acc;
+}, {});
+
+const pad2 = (value) => String(value).padStart(2, "0");
+
+const toIsoDate = (value) => {
+    if (!value) return "";
+    const text = String(value).trim();
+    const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) return text;
+
+    const displayMatch = text.match(/^(\d{1,2})[-\s/]([A-Za-z]{3})[-\s/](\d{2}|\d{4})$/);
+    if (!displayMatch) return "";
+
+    const day = Number(displayMatch[1]);
+    const month = MONTH_INDEX[displayMatch[2].toLowerCase()];
+    const yearPart = displayMatch[3];
+    const year = yearPart.length === 2 ? 2000 + Number(yearPart) : Number(yearPart);
+    const parsed = new Date(Date.UTC(year, month, day));
+
+    if (
+        month === undefined ||
+        parsed.getUTCFullYear() !== year ||
+        parsed.getUTCMonth() !== month ||
+        parsed.getUTCDate() !== day
+    ) {
+        return "";
+    }
+
+    return `${year}-${pad2(month + 1)}-${pad2(day)}`;
+};
+
+const formatDateForDisplay = (value) => {
+    const isoDate = toIsoDate(value);
+    if (!isoDate) return value || "";
+    const [, month, day] = isoDate.split("-");
+    return `${day}-${MONTHS[Number(month) - 1]}-${isoDate.slice(2, 4)}`;
+};
+
+const DateTextInput = ({ value, onChange, className = "", placeholder = "dd-mmm-yy" }) => {
+    const [displayValue, setDisplayValue] = useState(formatDateForDisplay(value));
+
+    useEffect(() => {
+        setDisplayValue(formatDateForDisplay(value));
+    }, [value]);
+
+    const commitValue = (nextValue) => {
+        if (!nextValue.trim()) {
+            onChange("");
+            setDisplayValue("");
+            return;
+        }
+
+        const isoDate = toIsoDate(nextValue);
+        if (isoDate) {
+            onChange(isoDate);
+            setDisplayValue(formatDateForDisplay(isoDate));
+        }
+    };
+
+    return (
+        <input
+            type="text"
+            value={displayValue}
+            onChange={(e) => {
+                const nextValue = e.target.value;
+                setDisplayValue(nextValue);
+                if (!nextValue.trim()) {
+                    onChange("");
+                    return;
+                }
+                const isoDate = toIsoDate(nextValue);
+                if (isoDate) {
+                    onChange(isoDate);
+                }
+            }}
+            onBlur={(e) => commitValue(e.target.value)}
+            placeholder={placeholder}
+            className={className}
+        />
+    );
+};
 
 const MaintenanceDashboard = () => {
     const [selectedDate, setSelectedDate] = useState("2025-10-12");
@@ -407,7 +492,7 @@ const MaintenanceDashboard = () => {
         }
         const exportData = rotablesData.map(row => ({
             "Label": row.label || "",
-            "Date (EoD)": row.date || "",
+            "Date (EoD)": formatDateForDisplay(row.date),
             "PN": row.pn || "",
             "MSN": row.msn || "",
             "ACFT Regn": row.acftRegn || "",
@@ -527,7 +612,7 @@ const MaintenanceDashboard = () => {
             "PN": row.pn || "",
             "SN/BN": row.snBn || "",
             "Category": row.category || "",
-            "Date": row.date || "",
+            "Date": formatDateForDisplay(row.date),
             "TSN": row.tsn || "",
             "CSN": row.csn || "",
             "DSN": row.dsn || "",
@@ -550,7 +635,7 @@ const MaintenanceDashboard = () => {
             "MSN/ESN": row.msnEsn,
             "PN": row.pn,
             "SN/BN": row.snBn,
-            "As on": row.date || resetDate || selectedDate || "",
+            "As on": formatDateForDisplay(row.date || resetDate || selectedDate),
             "TSN": row.tsn,
             "CSN": row.csn,
             "DSN": row.dsn,
@@ -699,10 +784,9 @@ const MaintenanceDashboard = () => {
                 <div className="flex justify-between items-end">
                     <div className="flex items-center gap-3">
                         <span className="text-xs font-semibold text-slate-700 dark:text-slate-300"></span>
-                        <input
-                            type="date"
+                        <DateTextInput
                             value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
+                            onChange={setSelectedDate}
                             className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs px-2 py-1 rounded"
                         />
 
@@ -815,7 +899,7 @@ const MaintenanceDashboard = () => {
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 font-mono">{row.targetPn}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.targetSn}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.category}</td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.displayDate || row.date}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">{formatDateForDisplay(row.displayDate || row.date)}</td>
 
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("tsn")}`}>{row.tsn}</td>
                                         <td className={`p-2 border-r border-slate-200 dark:border-slate-700 text-right ${isHighlighted("csn")}`}>{row.csn}</td>
@@ -1026,7 +1110,7 @@ const MaintenanceDashboard = () => {
                                                 onChange={(e) => setResetAssetSN(e.target.value)}
                                                 className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-2 rounded w-full outline-none focus:ring-1 focus:ring-blue-500 text-sm leading-5 text-slate-800 dark:text-slate-100"
                                             >
-                                                <option value="">Select ASN</option>
+                                                <option value="">Select SN</option>
                                                 {assetSnOptions.length > 0 ? (
                                                     assetSnOptions.map(opt => (
                                                         <option key={opt} value={opt}>
@@ -1047,10 +1131,9 @@ const MaintenanceDashboard = () => {
                                     {/* DATE FIELD for "As on" */}
                                     <div className="flex items-center gap-3">
                                         <span className="w-16">As on</span>
-                                        <input
-                                            type="date"
+                                        <DateTextInput
                                             value={resetDate}
-                                            onChange={(e) => setResetDate(e.target.value)}
+                                            onChange={setResetDate}
                                             className="border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-2 rounded w-36 outline-none focus:ring-1 focus:ring-blue-500 text-sm leading-5 text-slate-800 dark:text-slate-100"
                                         />
                                     </div>
@@ -1313,7 +1396,7 @@ const MaintenanceDashboard = () => {
                                                         {isEditingRotables || row.isNew ? <input type="text" value={row.label || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'label', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.label}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingRotables || row.isNew ? <input type="date" value={row.date || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'date', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.date}
+                                                        {isEditingRotables || row.isNew ? <DateTextInput value={row.date || ""} onChange={(value) => handleRotablesFieldChange(row.id, 'date', value)} className={`${modalEditableInputClass} text-center`} /> : formatDateForDisplay(row.date)}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
                                                         {isEditingRotables || row.isNew ? <input type="text" value={row.pn || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'pn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.pn}
@@ -1388,9 +1471,7 @@ const MaintenanceDashboard = () => {
                                         {/* Multi-tier Header */}
                                         <tr className="bg-slate-200/50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-300 text-center">
                                             <th colSpan="6" className="p-1 border-r border-slate-200 dark:border-slate-700">Target Identifiers</th>
-                                            <th colSpan="3" className="p-1 border-r border-slate-200 dark:border-slate-700">Flight Status Requirements</th>
-                                            <th colSpan="3" className="p-1 border-r border-slate-200 dark:border-slate-700">Target maintenance status</th>
-                                            <th colSpan="3" className="p-1">Remaining to Replacement</th>
+                                            <th colSpan="9" className="p-1">Target maintenance status</th>
                                         </tr>
                                         <tr className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
                                             <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-[11px] border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleTargetsSort('label')}>
@@ -1460,7 +1541,7 @@ const MaintenanceDashboard = () => {
                                                         {isEditingTargets || row.isNew ? <input type="text" value={row.category || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'category', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.category}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="date" value={row.date || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'date', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.date}
+                                                        {isEditingTargets || row.isNew ? <DateTextInput value={row.date || ""} onChange={(value) => handleTargetsFieldChange(row.id, 'date', value)} className={`${modalEditableInputClass} text-center`} /> : formatDateForDisplay(row.date)}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
                                                         {isEditingTargets || row.isNew ? <input type="text" value={row.tsn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'tsn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.tsn}
