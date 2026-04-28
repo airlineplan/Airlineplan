@@ -74,10 +74,10 @@ const StatusHeaderLabel = ({ column }) => (
     </span>
 );
 const statusHeaderClass = "p-2 border border-slate-200 dark:border-slate-700 min-w-[220px] whitespace-normal leading-tight";
-const targetTableStatusHeaderClass = "p-2 border border-slate-200 dark:border-slate-700 min-w-[120px] whitespace-nowrap leading-tight text-center";
+const targetTableStatusHeaderClass = "p-2 border border-slate-200 dark:border-slate-700 min-w-[220px] whitespace-normal leading-tight text-center";
 const modalStatusHeaderClass = "p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[220px] whitespace-normal leading-tight";
-const targetStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[120px] whitespace-nowrap leading-tight";
-const targetLastStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm text-center min-w-[120px] whitespace-nowrap leading-tight";
+const targetStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[220px] whitespace-normal leading-tight";
+const targetLastStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm text-center min-w-[220px] whitespace-normal leading-tight";
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTH_INDEX = MONTHS.reduce((acc, month, index) => {
     acc[month.toLowerCase()] = index;
@@ -1120,8 +1120,10 @@ const MaintenanceDashboard = () => {
             {/* TABLE 1: Maintenance Status */}
             <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-end">
-                    <div className="flex items-center gap-3">
-                        <span className="text-xs font-semibold text-slate-700 dark:text-slate-300"></span>
+                    <div className="flex items-center gap-4">
+                        <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                            View maintenance status as of
+                        </h3>
                         <DatePickerInput
                             value={selectedDate}
                             onChange={setSelectedDate}
@@ -1190,7 +1192,9 @@ const MaintenanceDashboard = () => {
             {/* TABLE 2: Target Maintenance Status */}
             <div className="flex flex-col gap-2 pt-4">
                 <div className="flex justify-between items-end">
-                    <span className="text-sm text-slate-500 italic"></span>
+                    <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                        Manage maintenance status
+                    </h3>
                     <button onClick={downloadTargetStatusExcel} className="flex items-center gap-1 px-3 py-1 border border-slate-300 dark:border-slate-600 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                         <Download size={12} /> Download
                     </button>
@@ -1212,12 +1216,12 @@ const MaintenanceDashboard = () => {
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
                                 {TARGET_STATUS_FIELD_MAP.map(({ column }) => (
                                     <th key={`target-${column.code}`} className={targetTableStatusHeaderClass}>
-                                        <span className="font-semibold">{column.code}</span>
+                                        <StatusHeaderLabel column={column} />
                                     </th>
                                 ))}
                                 {TARGET_STATUS_FIELD_MAP.map(({ column }) => (
                                     <th key={`forecast-${column.code}`} className={targetTableStatusHeaderClass}>
-                                        <span className="font-semibold">{column.code}</span>
+                                        <StatusHeaderLabel column={column} />
                                     </th>
                                 ))}
                             </tr>
@@ -1964,11 +1968,11 @@ const MaintenanceDashboard = () => {
                                             </th>
                                             {TARGET_STATUS_FIELD_MAP.slice(0, -1).map(({ column }) => (
                                                 <th key={`target-modal-${column.code}`} className={targetStatusHeaderClass}>
-                                                    <span className="font-semibold">{column.code}</span>
+                                                    <StatusHeaderLabel column={column} />
                                                 </th>
                                             ))}
                                             <th className={targetLastStatusHeaderClass}>
-                                                <span className="font-semibold">{STATUS_LABELS.dsr.code}</span>
+                                                <StatusHeaderLabel column={STATUS_LABELS.dsr} />
                                             </th>
                                         </tr>
                                     </thead>
