@@ -29,6 +29,7 @@ const TableInput = ({ name, value, onChange, placeholder }) => (
 const modalEditableInputClass = "w-full min-w-[96px] h-9 px-2.5 py-1.5 text-sm leading-5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-slate-800 dark:text-slate-100";
 const calendarEditableInputClass = "w-full min-w-[120px] h-8 px-2.5 py-1 text-sm leading-5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-slate-800 dark:text-slate-100";
 const modalEditableSelectClass = `${modalEditableInputClass} appearance-none cursor-pointer`;
+const targetCategoryOptions = ["Conserve", "Run-down"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MONTH_INDEX = MONTHS.reduce((acc, month, index) => {
     acc[month.toLowerCase()] = index;
@@ -287,39 +288,6 @@ const MaintenanceDashboard = () => {
         setResetDate(date || selectedDate || "");
         setShowSetResetModal(true);
     };
-
-    useEffect(() => {
-        if (!showSetResetModal) return;
-
-        let isActive = true;
-
-        const fetchFleetOptions = async () => {
-            try {
-                const res = await api.get("/fleet");
-                const fleetRows = Array.isArray(res.data?.data) ? res.data.data : [];
-                const uniqueSnValues = [...new Set(
-                    fleetRows
-                        .map(asset => String(asset?.sn || "").trim())
-                        .filter(Boolean)
-                )].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
-
-                if (isActive) {
-                    setAssetSnOptions(uniqueSnValues);
-                }
-            } catch (error) {
-                console.error("Failed to fetch fleet options:", error);
-                if (isActive) {
-                    setAssetSnOptions([]);
-                }
-            }
-        };
-
-        fetchFleetOptions();
-
-        return () => {
-            isActive = false;
-        };
-    }, [showSetResetModal]);
 
     // Filter Modal Table whenever Asset SN or Date changes (now via API)
     useEffect(() => {
@@ -634,6 +602,39 @@ const MaintenanceDashboard = () => {
     const [isEditingTargets, setIsEditingTargets] = useState(false);
     const [targetsSortConfig, setTargetsSortConfig] = useState({ key: null, direction: "Up" });
     const [targetsFilters, setTargetsFilters] = useState({ label: "", msnEsn: "", pn: "", snBn: "", category: "", date: "" });
+
+    useEffect(() => {
+        if (!showSetResetModal && !showTargetsModal) return;
+
+        let isActive = true;
+
+        const fetchFleetOptions = async () => {
+            try {
+                const res = await api.get("/fleet");
+                const fleetRows = Array.isArray(res.data?.data) ? res.data.data : [];
+                const uniqueSnValues = [...new Set(
+                    fleetRows
+                        .map(asset => String(asset?.sn || "").trim())
+                        .filter(Boolean)
+                )].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+
+                if (isActive) {
+                    setAssetSnOptions(uniqueSnValues);
+                }
+            } catch (error) {
+                console.error("Failed to fetch fleet options:", error);
+                if (isActive) {
+                    setAssetSnOptions([]);
+                }
+            }
+        };
+
+        fetchFleetOptions();
+
+        return () => {
+            isActive = false;
+        };
+    }, [showSetResetModal, showTargetsModal]);
 
     useEscapeKey(
         showSetResetModal || showRotablesModal || showTargetsModal,
@@ -1474,9 +1475,7 @@ const MaintenanceDashboard = () => {
                                                     +Add
                                                 </button>
                                             </td>
-                                            <td colSpan="9" className="p-2 text-center text-slate-600 dark:text-slate-400 font-medium">
-                                                User enterable
-                                            </td>
+                                            <td colSpan="9" className="p-2" />
                                             <td className="p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
                                             </td>
                                             <td className="p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
@@ -1713,7 +1712,20 @@ const MaintenanceDashboard = () => {
                                                         {isEditingTargets || row.isNew ? <input type="text" value={row.label || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'label', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.label}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.msnEsn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'msnEsn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.msnEsn}
+                                                        {isEditingTargets || row.isNew ? (
+                                                            <select
+                                                                value={row.msnEsn || ""}
+                                                                onChange={(e) => handleTargetsFieldChange(row.id, 'msnEsn', e.target.value)}
+                                                                className={`${modalEditableSelectClass} text-center`}
+                                                            >
+                                                                <option value="">Select SN</option>
+                                                                {assetSnOptions.map((opt) => (
+                                                                    <option key={opt} value={opt}>
+                                                                        {opt}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        ) : row.msnEsn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
                                                         {isEditingTargets || row.isNew ? <input type="text" value={row.pn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'pn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.pn}
@@ -1722,10 +1734,23 @@ const MaintenanceDashboard = () => {
                                                         {isEditingTargets || row.isNew ? <input type="text" value={row.snBn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'snBn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.snBn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <input type="text" value={row.category || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'category', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.category}
+                                                        {isEditingTargets || row.isNew ? (
+                                                            <select
+                                                                value={row.category || ""}
+                                                                onChange={(e) => handleTargetsFieldChange(row.id, 'category', e.target.value)}
+                                                                className={`${modalEditableSelectClass} text-center`}
+                                                            >
+                                                                <option value="">Select Category</option>
+                                                                {targetCategoryOptions.map((opt) => (
+                                                                    <option key={opt} value={opt}>
+                                                                        {opt}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        ) : row.category}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingTargets || row.isNew ? <DateTextInput value={row.date || ""} onChange={(value) => handleTargetsFieldChange(row.id, 'date', value)} className={`${modalEditableInputClass} text-center`} /> : formatDateForDisplay(row.date)}
+                                                        {isEditingTargets || row.isNew ? <DatePickerInput value={row.date || ""} onChange={(value) => handleTargetsFieldChange(row.id, 'date', value)} className={`${modalEditableInputClass} text-center`} /> : formatDateForDisplay(row.date)}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
                                                         {isEditingTargets || row.isNew ? <input type="text" value={row.tsn || ""} onChange={(e) => handleTargetsFieldChange(row.id, 'tsn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.tsn}
