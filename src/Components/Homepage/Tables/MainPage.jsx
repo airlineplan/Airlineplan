@@ -198,13 +198,13 @@ const MainPage = () => {
                           setMenuOpen(false);
                         }}
                         className={cn(
-                          "flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-xl text-sm font-medium transition-all duration-200 w-full text-center min-h-24 border",
+                          "flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-xl text-base font-medium transition-all duration-200 w-full text-center min-h-24 border",
                           activeStep === tab.id
                             ? "bg-gradient-to-br from-indigo-500/10 to-cyan-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800"
                             : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border-transparent hover:border-slate-200 dark:hover:border-slate-700"
                         )}
                       >
-                        <tab.icon size={20} className={cn(activeStep === tab.id ? "text-indigo-600 dark:text-indigo-400" : "opacity-75")} />
+                        <tab.icon size={22} className={cn(activeStep === tab.id ? "text-indigo-600 dark:text-indigo-400" : "opacity-75")} />
                         <span className="leading-tight">{tab.label}</span>
                       </button>
                     ))}
