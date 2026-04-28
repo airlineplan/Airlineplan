@@ -98,22 +98,16 @@ const formatMetricValue = (value, metricKey) => {
 
 const isSpareComponentAsset = (asset) =>
     ["Engine", "APU"].includes(asset?.category) &&
-    String(asset?.titled || "").toLowerCase().includes("spare");
+    String(asset?.titled || "").trim().toLowerCase() === "spare";
 
-const isTitledComponentAsset = (asset) =>
-    ["Engine", "APU"].includes(asset?.category) &&
-    Boolean(String(asset?.titled || "").trim());
-
-const shouldBlankOwnership = (asset) =>
-    isTitledComponentAsset(asset);
+const shouldDisableOwnership = (asset) =>
+    ["Engine", "APU"].includes(asset?.category) && !isSpareComponentAsset(asset);
 
 const getOwnershipOptions = (asset) => {
     const baseOptions = ["Owned with no lien", "Operating lease", "Finance lease"];
-    return shouldBlankOwnership(asset)
-        ? []
-        : isSpareComponentAsset(asset)
-            ? baseOptions
-            : [...baseOptions, "Wet lease"];
+    return isSpareComponentAsset(asset)
+        ? baseOptions
+        : [...baseOptions, "Wet lease"];
 };
 
 const FleetTable = () => {
@@ -312,13 +306,13 @@ const FleetTable = () => {
                 : (() => {
                     const nextAsset = { ...asset, [field]: value };
                     if (field === "titled" || field === "category") {
-                        if (shouldBlankOwnership(nextAsset)) {
+                        if (shouldDisableOwnership(nextAsset)) {
                             nextAsset.ownership = "";
                         } else if (isSpareComponentAsset(nextAsset) && asset.ownership === "Wet lease") {
                             nextAsset.ownership = "";
                         }
                     }
-                    if (field === "ownership" && shouldBlankOwnership(asset)) {
+                    if (field === "ownership" && shouldDisableOwnership(asset)) {
                         nextAsset.ownership = "";
                     }
                     return nextAsset;
@@ -584,10 +578,24 @@ const FleetTable = () => {
                                         <input type="date" value={asset.exit} onChange={e => handleInputChange(asset.id, "exit", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 text-[11px] cursor-text" />
                                     </div>
                                     <div className="w-24 p-1 border-r">
-                                        <input type="text" value={asset.titled} onChange={e => handleInputChange(asset.id, "titled", e.target.value)} className="w-full h-full bg-transparent outline-none px-1" placeholder="e.g. VT-DKU #1" />
+                                        <input
+                                            type="text"
+                                            value={asset.titled}
+                                            onChange={e => handleInputChange(asset.id, "titled", e.target.value)}
+                                            onBlur={e => {
+                                                const normalized = e.target.value.trim();
+                                                handleInputChange(
+                                                    asset.id,
+                                                    "titled",
+                                                    normalized.toLowerCase() === "spare" ? "Spare" : normalized
+                                                );
+                                            }}
+                                            className="w-full h-full bg-transparent outline-none px-1"
+                                            placeholder="e.g. VT-DKU #1"
+                                        />
                                     </div>
                                     <div className="w-32 p-1 border-r">
-                                        {shouldBlankOwnership(asset)
+                                        {shouldDisableOwnership(asset)
                                             ? <div className="w-full h-full px-1 flex items-center" />
                                             : (
                                                 <select
