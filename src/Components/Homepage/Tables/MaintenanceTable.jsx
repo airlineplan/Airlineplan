@@ -873,7 +873,7 @@ const MaintenanceDashboard = () => {
             {/* TABLE 2: Target Maintenance Status */}
             <div className="flex flex-col gap-2 pt-4">
                 <div className="flex justify-between items-end">
-                    <span className="text-[10px] text-slate-500 italic">Label is not user enterable on this page</span>
+                    <span className="text-[10px] text-slate-500 italic"></span>
                     <button className="flex items-center gap-1 px-3 py-1 border border-slate-300 dark:border-slate-600 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                         <Download size={12} /> Download
                     </button>
@@ -952,7 +952,7 @@ const MaintenanceDashboard = () => {
                 <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">
                     Calendar inputs, down time and post event maintenance status
                 </h3>
-                <span className="text-[10px] text-slate-500 italic mb-1">Label is user enterable</span>
+                <span className="text-[10px] text-slate-500 italic mb-1"></span>
 
                 <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm">
                     <table className="w-full text-left border-collapse whitespace-nowrap text-[11px]">
