@@ -499,7 +499,7 @@ const MaintenanceDashboard = () => {
             setIsUpdatingResetRecords(true);
             const rowsToSave = modalTableData.map(row => ({
                 ...row,
-                date: row.date || resetDate || selectedDate || ""
+                date: resetDate || selectedDate || row.date || ""
             }));
 
             const res = await api.post('/maintenance/reset-records', {
