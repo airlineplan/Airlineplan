@@ -592,12 +592,15 @@ const MaintenanceDashboard = () => {
 
     const handleUpdateTargets = async () => {
         try {
-            await api.post('/maintenance/targets', { targetData: targetsData });
+            const res = await api.post('/maintenance/targets', { targetData: targetsData });
+            toast.success(res.data?.message || "Target maintenance status updated successfully.");
             setIsEditingTargets(false);
             setShowTargetsModal(false);
             fetchDashboardData();
+            fetchTargetsData();
         } catch (error) {
             console.error("Failed to update targets", error);
+            toast.error(error.response?.data?.message || "Failed to update target maintenance status.");
         }
     };
 
