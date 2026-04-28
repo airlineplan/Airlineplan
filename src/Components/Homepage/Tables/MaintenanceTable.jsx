@@ -37,9 +37,9 @@ const STATUS_LABELS = {
     tso: { code: "TSO/TSRtrtn", description: "Time since Overhaul/Restoration" },
     cso: { code: "CSO/CSRtrtn", description: "Cycles since Overhaul/Restoration" },
     dso: { code: "DSO/DSRtrtn", description: "Days since Overhaul/Restoration" },
-    tsr: { code: "TSRpimt", description: "Time since Replacement" },
-    csr: { code: "CSRpimt", description: "Cycles since Replacement" },
-    dsr: { code: "OSRpimt", description: "Days since Replacement" }
+    tsr: { code: "TSRplmt", description: "Time since Replacement" },
+    csr: { code: "CSRplmt", description: "Cycles since Replacement" },
+    dsr: { code: "DSRplmt", description: "Days since Replacement" }
 };
 const MAINTENANCE_STATUS_COLUMNS = [
     STATUS_LABELS.tsn,
@@ -52,7 +52,7 @@ const MAINTENANCE_STATUS_COLUMNS = [
     STATUS_LABELS.csr,
     STATUS_LABELS.dsr
 ];
-const FORECAST_STATUS_COLUMNS = MAINTENANCE_STATUS_COLUMNS.slice(0, 6);
+const FORECAST_STATUS_COLUMNS = MAINTENANCE_STATUS_COLUMNS;
 const formatStatusExportLabel = (column) => `${column.code} - ${column.description}`;
 const StatusHeaderLabel = ({ column }) => (
     <span className="flex flex-col items-center justify-center gap-0.5">
@@ -1159,7 +1159,7 @@ const MaintenanceDashboard = () => {
                                 {renderHeader("Category", "category", "min-w-[140px]")}
                                 <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-semibold align-bottom min-w-[120px]">Date</th>
                                 <th colSpan={9} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Target maintenance status</th>
-                                <th colSpan={6} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-[#f4e6fa] dark:bg-fuchsia-900/30">Target value-forecasted value on target date</th>
+                                <th colSpan={FORECAST_STATUS_COLUMNS.length} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-[#f4e6fa] dark:bg-fuchsia-900/30">Target value-forecasted value on target date</th>
                                 <th rowSpan={2} className={actionHeaderClass}>Action</th>
                             </tr>
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
@@ -1205,6 +1205,9 @@ const MaintenanceDashboard = () => {
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fTso}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fCso}</td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fDso}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fTsr}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fCsr}</td>
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.fDsr}</td>
                                         <td className={actionCellClass}>
                                             <button type="button" onClick={() => handleDeleteTargetStatusRow(row)} className={deleteIconButtonClass} title="Delete Row">
                                                 <Trash2 size={14} />
