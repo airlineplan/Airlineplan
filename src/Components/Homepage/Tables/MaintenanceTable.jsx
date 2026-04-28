@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import api from "../../../apiConfig";
 import {
     Calculator, Settings, Download, Edit, RefreshCw, Layers,
-    Search, ArrowUp, ArrowDown, X, Trash2
+    Search, ArrowUp, ArrowDown, X, Trash2, Gauge
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
@@ -602,9 +602,14 @@ const MaintenanceDashboard = () => {
     const [isEditingTargets, setIsEditingTargets] = useState(false);
     const [targetsSortConfig, setTargetsSortConfig] = useState({ key: null, direction: "Up" });
     const [targetsFilters, setTargetsFilters] = useState({ label: "", msnEsn: "", pn: "", snBn: "", category: "", date: "" });
+    const [showUtilisationModal, setShowUtilisationModal] = useState(false);
+    const [utilisationData, setUtilisationData] = useState([]);
+    const [isEditingUtilisation, setIsEditingUtilisation] = useState(false);
+    const [utilisationSortConfig, setUtilisationSortConfig] = useState({ key: null, direction: "Up" });
+    const [utilisationFilters, setUtilisationFilters] = useState({ msn: "", fromDate: "", toDate: "", hours: "", cycles: "", avgDowndays: "" });
 
     useEffect(() => {
-        if (!showSetResetModal && !showTargetsModal) return;
+        if (!showSetResetModal && !showTargetsModal && !showUtilisationModal) return;
 
         let isActive = true;
 
@@ -634,14 +639,15 @@ const MaintenanceDashboard = () => {
         return () => {
             isActive = false;
         };
-    }, [showSetResetModal, showTargetsModal]);
+    }, [showSetResetModal, showTargetsModal, showUtilisationModal]);
 
     useEscapeKey(
-        showSetResetModal || showRotablesModal || showTargetsModal,
+        showSetResetModal || showRotablesModal || showTargetsModal || showUtilisationModal,
         () => {
             setShowSetResetModal(false);
             setShowRotablesModal(false);
             setShowTargetsModal(false);
+            setShowUtilisationModal(false);
         }
     );
 
@@ -741,6 +747,111 @@ const MaintenanceDashboard = () => {
         } catch (error) {
             console.error("Failed to update targets", error);
             toast.error(error.response?.data?.message || "Failed to update target maintenance status.");
+        }
+    };
+
+    // --- UTILISATION ASSUMPTIONS MODAL LOGIC ---
+    const fetchUtilisationData = async () => {
+        try {
+            const res = await api.get('/maintenance/utilisation-assumptions');
+            if (res.data && res.data.success) {
+                setUtilisationData(res.data.data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch utilisation assumptions:", error);
+        }
+    };
+
+    const handleUtilisationClick = () => {
+        setShowUtilisationModal(true);
+        fetchUtilisationData();
+    };
+
+    const handleUtilisationSort = (key) => {
+        setUtilisationSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === "Up" ? "Down" : "Up"
+        }));
+    };
+
+    const handleUtilisationFilterChange = (e) => {
+        const { name, value } = e.target;
+        setUtilisationFilters(prev => ({ ...prev, [name]: value }));
+    };
+
+    const filteredUtilisationData = useMemo(() => {
+        let processed = [...utilisationData];
+        Object.entries(utilisationFilters).forEach(([key, value]) => {
+            if (value !== "") {
+                processed = processed.filter(row =>
+                    row[key] !== undefined &&
+                    String(row[key]).toLowerCase().includes(String(value).toLowerCase())
+                );
+            }
+        });
+        if (utilisationSortConfig.key) {
+            processed.sort((a, b) => {
+                let valA = a[utilisationSortConfig.key] || "";
+                let valB = b[utilisationSortConfig.key] || "";
+                if (!isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB))) {
+                    valA = parseFloat(valA);
+                    valB = parseFloat(valB);
+                }
+                if (valA < valB) return utilisationSortConfig.direction === "Up" ? -1 : 1;
+                if (valA > valB) return utilisationSortConfig.direction === "Up" ? 1 : -1;
+                return 0;
+            });
+        }
+        return processed;
+    }, [utilisationData, utilisationFilters, utilisationSortConfig]);
+
+    const handleUtilisationFieldChange = (id, field, value) => {
+        setUtilisationData(prev => prev.map(row => row.id === id ? { ...row, [field]: value } : row));
+    };
+
+    const handleAddUtilisationRow = () => {
+        const newRow = {
+            id: `temp-${Date.now()}`,
+            isNew: true,
+            msn: selectedMsn || "",
+            fromDate: selectedDate || "",
+            toDate: selectedDate || "",
+            hours: "",
+            cycles: "",
+            avgDowndays: ""
+        };
+        setUtilisationData([...utilisationData, newRow]);
+        setIsEditingUtilisation(true);
+    };
+
+    const handleDeleteUtilisationRow = async (row) => {
+        try {
+            setUtilisationData(prev => prev.filter(item => item.id !== row.id));
+            setIsEditingUtilisation(true);
+            if (isPersistedId(row.id)) {
+                await api.delete(`/maintenance/utilisation-assumptions/${row.id}`);
+                toast.success("Utilisation assumption deleted.");
+                fetchDashboardData();
+                fetchTargetsData();
+            }
+        } catch (error) {
+            console.error("Failed to delete utilisation assumption", error);
+            toast.error(error.response?.data?.message || "Failed to delete utilisation assumption.");
+            fetchUtilisationData();
+        }
+    };
+
+    const handleUpdateUtilisation = async () => {
+        try {
+            const res = await api.post('/maintenance/utilisation-assumptions', { utilisationAssumptions: utilisationData });
+            toast.success(res.data?.message || "Utilisation assumptions updated successfully.");
+            setIsEditingUtilisation(false);
+            setShowUtilisationModal(false);
+            fetchDashboardData();
+            fetchTargetsData();
+        } catch (error) {
+            console.error("Failed to update utilisation assumptions", error);
+            toast.error(error.response?.data?.message || "Failed to update utilisation assumptions.");
         }
     };
 
@@ -913,6 +1024,9 @@ const MaintenanceDashboard = () => {
                             </button>
                             <button onClick={handleTargetsClick} className="flex items-center gap-2 text-green-600 hover:text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-3 py-1.5 rounded transition-colors whitespace-nowrap">
                                 <RefreshCw size={14} /> Set/Reset Target status
+                            </button>
+                            <button onClick={handleUtilisationClick} className="flex items-center gap-2 text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1.5 rounded transition-colors whitespace-nowrap">
+                                <Gauge size={14} /> Utilisation assumptions
                             </button>
                             <button onClick={handleRotablesClick} className="flex items-center gap-2 text-purple-600 hover:text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 px-3 py-1.5 rounded transition-colors whitespace-nowrap">
                                 <Layers size={14} /> Major rotables movement
@@ -1479,6 +1593,106 @@ const MaintenanceDashboard = () => {
                                             <td className="p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
                                             </td>
                                             <td className="p-1 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700">
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                , document.body)}
+
+            {/* --- UTILISATION ASSUMPTIONS MODAL --- */}
+            {showUtilisationModal && createPortal(
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
+                        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                    <Gauge className="text-cyan-500" size={20} />
+                                    Utilisation assumptions (/day)
+                                </h2>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                    This is applied on days rotations are not assigned to Aircraft.
+                                </p>
+                            </div>
+                            <div className="flex gap-2">
+                                <button onClick={() => setIsEditingUtilisation(!isEditingUtilisation)} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${isEditingUtilisation ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}>Edit</button>
+                                <button onClick={handleUpdateUtilisation} disabled={!isEditingUtilisation} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all shadow-sm">Update</button>
+                                <button onClick={() => setShowUtilisationModal(false)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><X size={20} /></button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-auto p-4 bg-slate-50/50 dark:bg-slate-900">
+                            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-800">
+                                <table className="w-full text-left border-collapse min-w-max text-sm">
+                                    <thead>
+                                        <tr className="bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
+                                            {[
+                                                ["msn", "MSN"],
+                                                ["fromDate", "From Dt"],
+                                                ["toDate", "To Dt"],
+                                                ["hours", "Hours"],
+                                                ["cycles", "Cycles"],
+                                                ["avgDowndays", "Avg Downdays"]
+                                            ].map(([key, label]) => (
+                                                <th key={key} className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleUtilisationSort(key)}>
+                                                    <div className="flex justify-between items-center group">
+                                                        {label} {utilisationSortConfig.key === key && (utilisationSortConfig.direction === "Up" ? <ArrowUp size={12} className="text-cyan-500" /> : <ArrowDown size={12} className="text-cyan-500" />)}
+                                                    </div>
+                                                    <TableInput name={key} value={utilisationFilters[key]} onChange={handleUtilisationFilterChange} placeholder="Filter..." />
+                                                </th>
+                                            ))}
+                                            <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm text-center min-w-[70px]">
+                                                Action
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-sm text-slate-700 dark:text-slate-300 divide-y divide-slate-100 dark:divide-slate-800">
+                                        {filteredUtilisationData.length > 0 ? (
+                                            filteredUtilisationData.map((row, index) => (
+                                                <tr key={row.id || index} className="hover:bg-cyan-50/30 dark:hover:bg-cyan-900/10 transition-colors">
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingUtilisation || row.isNew ? (
+                                                            <select value={row.msn || ""} onChange={(e) => handleUtilisationFieldChange(row.id, "msn", e.target.value)} className={`${modalEditableSelectClass} text-center`}>
+                                                                <option value="">Select MSN</option>
+                                                                {assetSnOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                                            </select>
+                                                        ) : row.msn}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingUtilisation || row.isNew ? <DateTextInput value={row.fromDate || ""} onChange={(value) => handleUtilisationFieldChange(row.id, "fromDate", value)} className={`${modalEditableInputClass} text-center`} /> : formatDateForDisplay(row.fromDate)}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingUtilisation || row.isNew ? <DateTextInput value={row.toDate || ""} onChange={(value) => handleUtilisationFieldChange(row.id, "toDate", value)} className={`${modalEditableInputClass} text-center`} /> : formatDateForDisplay(row.toDate)}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingUtilisation || row.isNew ? <input type="number" step="0.01" value={row.hours || ""} onChange={(e) => handleUtilisationFieldChange(row.id, "hours", e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.hours}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingUtilisation || row.isNew ? <input type="number" step="1" value={row.cycles || ""} onChange={(e) => handleUtilisationFieldChange(row.id, "cycles", e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.cycles}
+                                                    </td>
+                                                    <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
+                                                        {isEditingUtilisation || row.isNew ? <input type="number" step="0.01" value={row.avgDowndays || ""} onChange={(e) => handleUtilisationFieldChange(row.id, "avgDowndays", e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.avgDowndays}
+                                                    </td>
+                                                    <td className="p-2 text-center bg-white dark:bg-slate-800 border-l border-slate-200/50 dark:border-slate-700/50">
+                                                        <button type="button" onClick={() => handleDeleteUtilisationRow(row)} className={deleteIconButtonClass} title="Delete Row">
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="7" className="p-6 text-center text-slate-500 italic">No matching records found.</td>
+                                            </tr>
+                                        )}
+                                        <tr className="bg-slate-50 dark:bg-slate-900/50">
+                                            <td colSpan="7" className="p-2 text-center">
+                                                <button onClick={handleAddUtilisationRow} className="text-blue-600 font-semibold hover:underline">
+                                                    +Add
+                                                </button>
                                             </td>
                                         </tr>
                                     </tbody>
