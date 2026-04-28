@@ -215,6 +215,7 @@ const MaintenanceDashboard = () => {
     const [modalSortConfig, setModalSortConfig] = useState({ key: null, direction: "Up" });
     const [modalFilters, setModalFilters] = useState({ msnEsn: "", pn: "", snBn: "" });
     const [isComputing, setIsComputing] = useState(false);
+    const [isUpdatingResetRecords, setIsUpdatingResetRecords] = useState(false);
     const [assetSnOptions, setAssetSnOptions] = useState([]);
 
     const openSetResetModal = ({ msnEsn = "", date = "" } = {}) => {
@@ -367,6 +368,7 @@ const MaintenanceDashboard = () => {
     const handleAddModalRow = () => {
         const newRow = {
             id: `temp-${Date.now()}`,
+            date: resetDate || selectedDate || "",
             msnEsn: "", pn: "", snBn: "",
             tsn: "", csn: "", dsn: "", tso: "", cso: "", dso: "", tsr: "", csr: "", dsr: "", metric: "BH",
             isNew: true
@@ -386,8 +388,22 @@ const MaintenanceDashboard = () => {
                 return;
             }
 
-            // Call the correct backend endpoint for bulk update/backfill
-            await api.post('/maintenance/reset-records', { resetData: modalTableData });
+            if (!resetDate && modalTableData.some(row => !row.date)) {
+                toast.warning("Please select an As on date before saving reset records.");
+                return;
+            }
+
+            setIsUpdatingResetRecords(true);
+            const rowsToSave = modalTableData.map(row => ({
+                ...row,
+                date: row.date || resetDate || selectedDate || ""
+            }));
+
+            const res = await api.post('/maintenance/reset-records', {
+                resetData: rowsToSave,
+                resetDate: resetDate || selectedDate || ""
+            });
+            toast.success(res.data?.message || "Maintenance reset records updated successfully!");
 
             setIsEditingModal(false);
             setShowSetResetModal(false); // Close modal on success
@@ -396,6 +412,9 @@ const MaintenanceDashboard = () => {
             fetchDashboardData();
         } catch (error) {
             console.error("Failed to update records", error);
+            toast.error(error.response?.data?.message || "Failed to save maintenance reset records.");
+        } finally {
+            setIsUpdatingResetRecords(false);
         }
     };
 
@@ -1156,7 +1175,13 @@ const MaintenanceDashboard = () => {
                                     ) : null}
                                     <div className="flex gap-2">
                                         <button onClick={() => setIsEditingModal(!isEditingModal)} className={`border px-6 py-1.5 rounded text-xs transition-colors font-medium ${isEditingModal ? 'bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300' : 'border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>Edit</button>
-                                        <button onClick={handleUpdateModal} className="border border-slate-300 dark:border-slate-600 px-6 py-1.5 rounded text-xs transition-colors font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-300 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-900/50">Update</button>
+                                        <button
+                                            onClick={handleUpdateModal}
+                                            disabled={isUpdatingResetRecords}
+                                            className="border border-slate-300 dark:border-slate-600 px-6 py-1.5 rounded text-xs transition-colors font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-300 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-900/50 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-300 disabled:cursor-not-allowed"
+                                        >
+                                            {isUpdatingResetRecords ? "Updating..." : "Update"}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
