@@ -602,34 +602,34 @@ const FleetTable = () => {
                                     const selectedLabel = summaryRow.options.find((option) => option.value === selectedSummaryMetric)?.label || "";
 
                                     return (
-                                    <div
-                                        key={`header-${summaryRow.rowKey}`}
-                                        className="flex h-7 items-center text-sm font-semibold border-b border-orange-200/60"
-                                    >
-                                        <div className={`${DATE_LABEL_COL_CLASS} px-1 border-r border-slate-300 text-slate-700 dark:text-slate-200 flex items-center`}>
-                                            <select
-                                                value={selectedSummaryMetric}
-                                                onChange={(e) => handleSummaryMetricChange(summaryRow.rowKey, e.target.value)}
-                                                className="w-full bg-white/70 dark:bg-slate-900/50 border border-orange-200 dark:border-orange-800 rounded px-1 py-0.5 text-[11px] font-semibold outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
-                                                title={selectedLabel}
-                                            >
-                                                {summaryRow.options.map((option) => (
-                                                    <option key={option.value} value={option.value}>
-                                                        {option.label}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        {scheduleDates.map((date) => (
-                                            <div
-                                                key={`header-${summaryRow.rowKey}-${date}`}
-                                                className="w-20 flex-shrink-0 px-1 border-r border-slate-300 text-center text-slate-700 dark:text-slate-200"
-                                                title={selectedLabel}
-                                            >
-                                                {formatSummaryValue(getSummaryValue(date, selectedSummaryMetric), summaryRow.rowKey)}
+                                        <div
+                                            key={`header-${summaryRow.rowKey}`}
+                                            className="flex h-7 items-center text-sm font-semibold border-b border-orange-200/60"
+                                        >
+                                            <div className={`${DATE_LABEL_COL_CLASS} px-1 border-r border-slate-300 text-slate-700 dark:text-slate-200 flex items-center`}>
+                                                <select
+                                                    value={selectedSummaryMetric}
+                                                    onChange={(e) => handleSummaryMetricChange(summaryRow.rowKey, e.target.value)}
+                                                    className="w-full bg-white/70 dark:bg-slate-900/50 border border-orange-200 dark:border-orange-800 rounded px-1 py-0.5 text-[11px] font-semibold outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                                                    title={selectedLabel}
+                                                >
+                                                    {summaryRow.options.map((option) => (
+                                                        <option key={option.value} value={option.value}>
+                                                            {option.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
                                             </div>
-                                        ))}
-                                    </div>
+                                            {scheduleDates.map((date) => (
+                                                <div
+                                                    key={`header-${summaryRow.rowKey}-${date}`}
+                                                    className="w-20 flex-shrink-0 px-1 border-r border-slate-300 text-center text-slate-700 dark:text-slate-200"
+                                                    title={selectedLabel}
+                                                >
+                                                    {formatSummaryValue(getSummaryValue(date, selectedSummaryMetric), summaryRow.rowKey)}
+                                                </div>
+                                            ))}
+                                        </div>
                                     );
                                 })}
                                 {/* Row 4 – Day of week */}
