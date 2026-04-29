@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import api from "../../../apiConfig";
 import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
@@ -75,35 +76,43 @@ const Checkbox = ({ checked, onChange }) => (
 
 const Modal = ({ isOpen, onClose, title, children }) => {
   useEscapeKey(isOpen, onClose);
+  const modalRoot = typeof document !== "undefined" ? document.body : null;
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-0 m-auto z-50 w-full max-w-lg h-fit max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6"
-          >
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-semibold text-slate-800 dark:text-white">{title}</h3>
-              <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                <X size={20} className="text-slate-500" />
-              </button>
-            </div>
-            {children}
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+    modalRoot
+      ? createPortal(
+        <AnimatePresence>
+          {isOpen && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={onClose}
+                className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[1000]"
+              />
+              <div className="fixed inset-0 z-[1010] flex items-start justify-center overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 md:px-8 md:py-8">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  className="relative w-full max-w-lg max-h-[calc(100vh-2rem)] overflow-y-auto bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6"
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-white">{title}</h3>
+                    <button onClick={onClose} className="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                      <X size={20} className="text-slate-500" />
+                    </button>
+                  </div>
+                  {children}
+                </motion.div>
+              </div>
+            </>
+          )}
+        </AnimatePresence>,
+        modalRoot
+      )
+      : null
   );
 };
 
@@ -138,7 +147,11 @@ export default function NetworkTable() {
   // Close Add Menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target) &&
+        !event.target.closest("[data-network-modal='true']")
+      ) {
         setIsAddMenuOpen(false);
       }
     }

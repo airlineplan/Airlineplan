@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import api from "../../../apiConfig";
 import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
@@ -387,6 +388,8 @@ const UpdatePopUp = (props) => {
     }
   };
 
+  const modalRoot = typeof document !== "undefined" ? document.body : null;
+
   return (
     <>
       {/* TRIGGER BUTTON */}
@@ -407,24 +410,27 @@ const UpdatePopUp = (props) => {
       </Button>
 
       {/* MODAL / DIALOG */}
-      <AnimatePresence>
-        {openUpdate && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => { setOpenUpdate(false); setLoading(false); }}
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40"
-            />
+      {modalRoot &&
+        createPortal(
+          <AnimatePresence>
+            {openUpdate && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => { setOpenUpdate(false); setLoading(false); }}
+                  className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[1000]"
+                />
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              onKeyDown={handleKeyDown}
-              className="fixed inset-0 m-auto z-50 w-full max-w-5xl h-fit max-h-[90vh] overflow-y-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 custom-scrollbar"
-            >
+                <div data-network-modal="true" className="fixed inset-0 z-[1010] flex items-start justify-center overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 md:px-8 md:py-8">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    onKeyDown={handleKeyDown}
+                    className="relative w-full max-w-5xl max-h-[calc(100vh-2rem)] overflow-y-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 md:p-8 custom-scrollbar"
+                  >
 
               {/* Header */}
               <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-800">
@@ -522,10 +528,13 @@ const UpdatePopUp = (props) => {
                 </div>
 
               </form>
-            </motion.div>
-          </>
+                  </motion.div>
+                </div>
+              </>
+            )}
+          </AnimatePresence>,
+          modalRoot
         )}
-      </AnimatePresence>
     </>
   );
 };

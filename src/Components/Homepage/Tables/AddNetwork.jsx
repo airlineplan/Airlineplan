@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import api from "../../../apiConfig";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
@@ -306,6 +307,8 @@ const AddNetwork = ({ setAdd }) => {
     }
   };
 
+  const modalRoot = typeof document !== "undefined" ? document.body : null;
+
   return (
     <>
       <button onClick={handleOpen} className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-2">
@@ -313,11 +316,14 @@ const AddNetwork = ({ setAdd }) => {
         <span>Add</span>
       </button>
 
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={handleClose} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="fixed inset-0 m-auto z-[60] w-[95vw] max-w-5xl h-fit max-h-[90vh] overflow-hidden bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col">
+      {modalRoot &&
+        createPortal(
+          <AnimatePresence>
+            {isOpen && (
+              <>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={handleClose} className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[1000]" />
+                <div data-network-modal="true" className="fixed inset-0 z-[1010] flex items-start justify-center overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 md:px-8 md:py-8">
+                  <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-5xl max-h-[calc(100vh-2rem)] overflow-hidden bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col">
               <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md">
                 <div>
                   <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">New</h2>
@@ -326,7 +332,7 @@ const AddNetwork = ({ setAdd }) => {
                 <button onClick={handleClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"><X size={20} /></button>
               </div>
 
-              <div className="overflow-y-auto p-6 md:p-8 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
                 <form onSubmit={handleSubmit} id="add-network-form">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-3 pb-2 border-b border-slate-100 dark:border-slate-800 mb-2">
@@ -383,9 +389,12 @@ const AddNetwork = ({ setAdd }) => {
                 </button>
               </div>
             </motion.div>
+                </div>
           </>
+            )}
+          </AnimatePresence>,
+          modalRoot
         )}
-      </AnimatePresence>
     </>
   );
 };

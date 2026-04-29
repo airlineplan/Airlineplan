@@ -12,6 +12,7 @@ import {
 import { toast } from "react-toastify";
 
 import api from "../../../apiConfig";
+import { buildPooOdSummaryRows } from "./pooSummary";
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -104,7 +105,7 @@ function getRowValue(row, key) {
     case "flight":
       return getFlightText(row);
     case "stop":
-      return row.stops ?? 0;
+      return row.displayStop ?? row.stops ?? 0;
     case "totalGcd":
       return row.totalGcd || row.odViaGcd || row.sectorGcd || 0;
     case "timeInclLayover":
@@ -122,10 +123,13 @@ function getRowValue(row, key) {
     case "rate":
       return row.odRate || row.legRate || 0;
     case "paxRevenue":
+      if (row.paxRevenue !== undefined) return row.paxRevenue;
       return row.odPaxRev || row.legPaxRev || row.fnlRccyPaxRev || 0;
     case "cargoRevenue":
+      if (row.cargoRevenue !== undefined) return row.cargoRevenue;
       return row.odCargoRev || row.legCargoRev || row.fnlRccyCargoRev || 0;
     case "totalRevenue":
+      if (row.totalRevenue !== undefined) return row.totalRevenue;
       return row.odTotalRev || row.legTotalRev || row.fnlRccyTotalRev || 0;
     case "loadFare":
     case "loadRate":
@@ -428,27 +432,29 @@ const PooTable = () => {
   }, [records, searchTerm]);
 
   const sections = useMemo(() => {
-    const odRows = visibleRows.filter((row) =>
+    const rawOdRows = visibleRows.filter((row) =>
       ["Leg", "Behind", "Beyond"].includes(row.displayType)
     );
+    const odRows = buildPooOdSummaryRows(rawOdRows);
     const transitRows = visibleRows.filter((row) => row.displayType?.startsWith("Transit"));
-    const usedIds = new Set([...odRows, ...transitRows].map((row) => row._id));
+    const usedIds = new Set([...rawOdRows, ...transitRows].map((row) => row._id));
     const external = visibleRows.filter((row) => (row.interline || row.codeshare) && !usedIds.has(row._id));
     return [
       { title: "OD pairs", kind: "od", rows: odRows },
-      { title: "Interline and Codeshare", kind: "external", rows: external },
       { title: "Transits (same Aircraft)", kind: "transit", rows: transitRows },
+      { title: "Interline and Codeshare", kind: "external", rows: external },
     ];
   }, [visibleRows]);
 
   const summary = useMemo(() => {
-    return visibleRows.reduce((acc, row) => ({
+    const displayedRows = sections.flatMap((section) => section.rows);
+    return displayedRows.reduce((acc, row) => ({
       pax: acc.pax + Number(row.pax || 0),
       cargoT: acc.cargoT + Number(row.cargoT || 0),
       odTotalRev: acc.odTotalRev + Number(row.odTotalRev || 0),
       fnlRccyTotalRev: acc.fnlRccyTotalRev + Number(row.fnlRccyTotalRev || 0),
     }), { pax: 0, cargoT: 0, odTotalRev: 0, fnlRccyTotalRev: 0 });
-  }, [visibleRows]);
+  }, [sections]);
 
   const toggleSelectedRow = (rowId) => {
     setSelectedRowIds((prev) => {
