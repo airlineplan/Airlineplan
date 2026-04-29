@@ -48,8 +48,8 @@ const GRID_COLUMNS = [
   { key: "paxRevenue", label: "Pax revenu", subLabel: "Total", width: "w-32", align: "right" },
   { key: "cargoRevenue", label: "Cargo revenu", subLabel: "Total", width: "w-32", align: "right" },
   { key: "totalRevenue", label: "Total revenu", subLabel: "Total", width: "w-32", align: "right" },
-  { key: "loadFare", label: "Load & Fare", width: "w-32", align: "right", green: true },
-  { key: "loadRate", label: "Load & Rate on Date(s)", width: "w-44", align: "right", green: true },
+  { key: "loadFare", label: "Pax & Fare", subLabel: "Date(s)", width: "w-44", align: "center", green: true },
+  { key: "loadRate", label: "Cargo & Rate", subLabel: "Date(s)", width: "w-44", align: "center", green: true },
 ];
 
 const NUMERIC_TOTAL_FIELDS = [
@@ -145,6 +145,27 @@ function canSelectRow(row) {
   return Number(row.stops || 0) >= 1 || String(row.displayType || "").startsWith("Transit");
 }
 
+function getApplyCellKey(rowId, group) {
+  return `${rowId}:${group}`;
+}
+
+function getApplyFields(row, group) {
+  if (group === "paxFare") return ["pax", getEditableField(row, "fare")];
+  if (group === "cargoRate") return ["cargoT", getEditableField(row, "rate")];
+  return [];
+}
+
+function createApplyRecord(row, existing = {}) {
+  return {
+    _id: row._id,
+    pax: row.pax ?? 0,
+    cargoT: row.cargoT ?? 0,
+    [getEditableField(row, "fare")]: row[getEditableField(row, "fare")] ?? 0,
+    [getEditableField(row, "rate")]: row[getEditableField(row, "rate")] ?? 0,
+    ...existing,
+  };
+}
+
 function createSectionSummary(rows) {
   const count = rows.length || 1;
   return GRID_COLUMNS.reduce((acc, column) => {
@@ -177,8 +198,8 @@ const PooTable = () => {
   const [dirtyMap, setDirtyMap] = useState({});
   const [validationErrors, setValidationErrors] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [applyDates, setApplyDates] = useState([]);
-  const [pendingApplyDate, setPendingApplyDate] = useState("");
+  const [applyDateDrafts, setApplyDateDrafts] = useState({});
+  const [applyDateTargets, setApplyDateTargets] = useState({});
   const [transitDraft, setTransitDraft] = useState(blankTransitDraft);
   const [selectedRowIds, setSelectedRowIds] = useState(() => new Set());
 
@@ -220,6 +241,8 @@ const PooTable = () => {
       setMeta(response.data.meta || { stationCurrency: "", reportingCurrency: "" });
       setDirtyMap({});
       setValidationErrors([]);
+      setApplyDateDrafts({});
+      setApplyDateTargets({});
       setSelectedRowIds(new Set());
     } catch (error) {
       console.error(error);
@@ -274,18 +297,51 @@ const PooTable = () => {
     }));
   };
 
-  const addApplyDate = () => {
-    if (!pendingApplyDate) return;
-    setApplyDates((prev) => [...new Set([...prev, pendingApplyDate])].sort());
-    setPendingApplyDate("");
+  const addApplyDate = (row, group) => {
+    const key = getApplyCellKey(row._id, group);
+    const targetDate = applyDateDrafts[key];
+    if (!targetDate) return;
+    setApplyDateTargets((prev) => ({
+      ...prev,
+      [key]: {
+        sourceId: row._id,
+        group,
+        fields: getApplyFields(row, group),
+        dates: [...new Set([...(prev[key]?.dates || []), targetDate])].sort(),
+      },
+    }));
+    setApplyDateDrafts((prev) => ({ ...prev, [key]: "" }));
   };
 
-  const removeApplyDate = (target) => {
-    setApplyDates((prev) => prev.filter((item) => item !== target));
+  const removeApplyDate = (rowId, group, targetDate) => {
+    const key = getApplyCellKey(rowId, group);
+    setApplyDateTargets((prev) => {
+      const dates = (prev[key]?.dates || []).filter((item) => item !== targetDate);
+      if (!dates.length) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+      return { ...prev, [key]: { ...prev[key], dates } };
+    });
   };
 
   const handleSave = async () => {
-    const payload = Object.values(dirtyMap);
+    const applyTargets = Object.values(applyDateTargets).filter((target) => target.dates?.length);
+    const applySourceIds = new Set(applyTargets.map((target) => String(target.sourceId)));
+    const recordsById = new Map(Object.values(dirtyMap).map((record) => [String(record._id), record]));
+
+    records.forEach((row) => {
+      if (applySourceIds.has(String(row._id)) && !recordsById.has(String(row._id))) {
+        recordsById.set(String(row._id), createApplyRecord(row));
+      }
+    });
+
+    const payload = [...recordsById.values()].map((record) => {
+      const row = records.find((item) => String(item._id) === String(record._id));
+      return row ? createApplyRecord(row, record) : record;
+    });
+
     if (!payload.length) {
       toast.info("No POO changes to save");
       return;
@@ -295,7 +351,7 @@ const PooTable = () => {
     try {
       const response = await api.post("/poo/update", {
         records: payload,
-        applyToDates: applyDates,
+        applyTargets,
       });
       setValidationErrors([]);
       toast.success(response.data.message || "POO traffic allocation saved");
@@ -380,8 +436,8 @@ const PooTable = () => {
     const external = visibleRows.filter((row) => (row.interline || row.codeshare) && !usedIds.has(row._id));
     return [
       { title: "OD pairs", kind: "od", rows: odRows },
-      { title: "Transits (same Aircraft)", kind: "transit", rows: transitRows },
       { title: "Interline and Codeshare", kind: "external", rows: external },
+      { title: "Transits (same Aircraft)", kind: "transit", rows: transitRows },
     ];
   }, [visibleRows]);
 
@@ -406,8 +462,51 @@ const PooTable = () => {
   const getSelectedRowsForSection = (rows) => rows.filter((row) => selectedRowIds.has(row._id));
 
   const totalDirtyRows = Object.keys(dirtyMap).length;
+  const totalApplyTargets = Object.values(applyDateTargets).reduce((sum, target) => sum + (target.dates?.length || 0), 0);
 
   const renderCellError = (rowId, field) => errorLookup.get(`${rowId}:${field}`) || "";
+
+  const renderApplyDateCell = (row, group) => {
+    const key = getApplyCellKey(row._id, group);
+    const dates = applyDateTargets[key]?.dates || [];
+    return (
+      <div className="flex min-h-8 w-full flex-col gap-1 py-1">
+        <div className="flex items-center justify-center gap-1">
+          <input
+            type="date"
+            value={applyDateDrafts[key] || ""}
+            onChange={(e) => setApplyDateDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
+            className="h-7 w-28 border border-emerald-300 bg-white px-1 text-xs outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 dark:border-emerald-800 dark:bg-slate-950"
+          />
+          <button
+            type="button"
+            onClick={() => addApplyDate(row, group)}
+            className="inline-flex h-7 w-7 items-center justify-center rounded border border-emerald-300 bg-white text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-800 dark:bg-slate-950 dark:text-emerald-200"
+            title="Add apply date"
+            aria-label="Add apply date"
+          >
+            <CalendarPlus2 size={14} />
+          </button>
+        </div>
+        {dates.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-1">
+            {dates.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => removeApplyDate(row._id, group, item)}
+                className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-emerald-800 ring-1 ring-emerald-200 dark:bg-slate-950 dark:text-emerald-100 dark:ring-emerald-800"
+                title="Remove apply date"
+              >
+                {item}
+                <X size={10} />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderSheetCell = (row, column, isSummary = false, summaryValues = {}) => {
     const baseClass = cn(
@@ -433,6 +532,14 @@ const PooTable = () => {
               aria-label={`Select ${row.od || "POO row"}`}
             />
           )}
+        </td>
+      );
+    }
+
+    if (!isSummary && (column.key === "loadFare" || column.key === "loadRate")) {
+      return (
+        <td key={column.key} className={baseClass}>
+          {renderApplyDateCell(row, column.key === "loadFare" ? "paxFare" : "cargoRate")}
         </td>
       );
     }
@@ -633,25 +740,6 @@ const PooTable = () => {
               />
             </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Apply To Dates</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={pendingApplyDate}
-                onChange={(e) => setPendingApplyDate(e.target.value)}
-                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950"
-              />
-              <button
-                type="button"
-                onClick={addApplyDate}
-                className="inline-flex h-10 items-center gap-2 rounded-md border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-200"
-              >
-                <CalendarPlus2 size={16} />
-                Add
-              </button>
-            </div>
-          </div>
           <button
             onClick={refreshAllocation}
             disabled={loading || saving}
@@ -662,32 +750,16 @@ const PooTable = () => {
           </button>
           <button
             onClick={handleSave}
-            disabled={loading || saving || totalDirtyRows === 0}
+            disabled={loading || saving || (totalDirtyRows === 0 && totalApplyTargets === 0)}
             className="inline-flex h-10 items-center gap-2 rounded-md bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save size={16} />
             {saving ? "Saving..." : "Save"}
           </button>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
-            {selectedRowIds.size} selected · {totalDirtyRows} pending
+            {selectedRowIds.size} selected · {totalDirtyRows} pending · {totalApplyTargets} date target(s)
           </div>
         </div>
-
-        {applyDates.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {applyDates.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => removeApplyDate(item)}
-                className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-              >
-                {item}
-                <X size={12} />
-              </button>
-            ))}
-          </div>
-        )}
 
         <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_auto]">
           <div className="grid gap-2 md:grid-cols-4">
@@ -707,8 +779,6 @@ const PooTable = () => {
           <div className="flex flex-wrap items-center gap-2">
             <input value={transitDraft.firstFlightNumber} onChange={(e) => setTransitDraft((prev) => ({ ...prev, firstFlightNumber: e.target.value }))} placeholder="First flight" className="h-9 w-28 border border-slate-300 bg-white px-2 text-sm outline-none dark:border-slate-700 dark:bg-slate-950" />
             <input value={transitDraft.secondFlightNumber} onChange={(e) => setTransitDraft((prev) => ({ ...prev, secondFlightNumber: e.target.value }))} placeholder="Second flight" className="h-9 w-28 border border-slate-300 bg-white px-2 text-sm outline-none dark:border-slate-700 dark:bg-slate-950" />
-            <input value={transitDraft.pax} onChange={(e) => setTransitDraft((prev) => ({ ...prev, pax: e.target.value }))} placeholder="Pax" className="h-9 w-20 border border-slate-300 bg-white px-2 text-right text-sm outline-none dark:border-slate-700 dark:bg-slate-950" />
-            <input value={transitDraft.cargoT} onChange={(e) => setTransitDraft((prev) => ({ ...prev, cargoT: e.target.value }))} placeholder="Cargo" className="h-9 w-20 border border-slate-300 bg-white px-2 text-right text-sm outline-none dark:border-slate-700 dark:bg-slate-950" />
             <button
               onClick={handleCreateTransit}
               disabled={saving || loading}
