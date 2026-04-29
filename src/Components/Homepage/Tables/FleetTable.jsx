@@ -1,20 +1,37 @@
 import { useState, useEffect, useRef } from "react";
-import { Upload, Search, Plus, Save, Trash2 } from "lucide-react";
+import { Search, Plus, Save, Trash2 } from "lucide-react";
 import moment from "moment";
 import api from "../../../apiConfig";
 import { toast } from "react-toastify";
 
 const CATEGORIES = ["Aircraft", "Engine", "APU"];
-const STATUSES = ["Active", "Available", "Assigned", "Maintenance", "Retired"];
 const METRIC_OPTIONS = [
     { label: "FH", value: "fh" },
     { label: "BH", value: "bh" },
     { label: "Dep", value: "dep" }
 ];
 const SUMMARY_ROWS = [
-    { label: "Total BH", metricKey: "bh" },
-    { label: "Total FH", metricKey: "fh" },
-    { label: "Total Dep", metricKey: "dep" }
+    {
+        rowKey: "bh",
+        options: [
+            { label: "BH/Op. ACFT", value: "bh-op" },
+            { label: "BH/All ACFT", value: "bh-all" }
+        ]
+    },
+    {
+        rowKey: "dep",
+        options: [
+            { label: "Dep/Op. ACFT", value: "dep-op" },
+            { label: "Dep/All ACFT", value: "dep-all" }
+        ]
+    },
+    {
+        rowKey: "acft",
+        options: [
+            { label: "Op. ACFT", value: "op-acft" },
+            { label: "All ACFT", value: "all-acft" }
+        ]
+    }
 ];
 const DATE_LABEL_COL_CLASS = "w-24 flex-shrink-0";
 const METRICS_CACHE_KEY_PREFIX = "fleet:metrics:";
@@ -96,6 +113,36 @@ const formatMetricValue = (value, metricKey) => {
     return numericValue.toFixed(2);
 };
 
+const formatSummaryValue = (value, rowKey) => {
+    const numericValue = Number(value) || 0;
+    if (rowKey === "acft") return String(Math.round(numericValue));
+    if (rowKey === "dep") return numericValue.toFixed(2);
+    return numericValue.toFixed(2);
+};
+
+const isAircraftInFleetOnDate = (asset, date) => {
+    if (asset.category !== "Aircraft") return false;
+
+    const scheduleDate = moment(date, "DD MMM YY").startOf("day");
+    const entryDate = asset.entry ? moment(asset.entry, "YYYY-MM-DD").startOf("day") : null;
+    const exitDate = asset.exit ? moment(asset.exit, "YYYY-MM-DD").startOf("day") : null;
+
+    if (entryDate?.isValid() && scheduleDate.isBefore(entryDate)) return false;
+    if (exitDate?.isValid() && scheduleDate.isAfter(exitDate)) return false;
+
+    return true;
+};
+
+const isOperationalAircraftMetric = (metric) => {
+    const status = String(metric?.status || "").toLowerCase();
+    return !(
+        status.includes("maintenance") ||
+        status.includes("check") ||
+        status.includes("ground") ||
+        status.includes("retired")
+    );
+};
+
 const isSpareComponentAsset = (asset) =>
     ["Engine", "APU"].includes(asset?.category) &&
     String(asset?.titled || "").trim().toLowerCase() === "spare";
@@ -114,6 +161,11 @@ const FleetTable = () => {
     const [months, setMonths] = useState([]);
     const [selectedMonth, setSelectedMonth] = useState("");
     const [selectedMetric, setSelectedMetric] = useState("bh");
+    const [selectedSummaryMetrics, setSelectedSummaryMetrics] = useState({
+        bh: "bh-op",
+        dep: "dep-op",
+        acft: "op-acft"
+    });
     const [searchTerm, setSearchTerm] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [scheduleDates, setScheduleDates] = useState([]);
@@ -359,24 +411,53 @@ const FleetTable = () => {
         a.type.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const handleSummaryMetricChange = (rowKey, value) => {
+        setSelectedSummaryMetrics((prev) => ({ ...prev, [rowKey]: value }));
+    };
+
     const totalsByDate = scheduleDates.reduce((acc, date) => {
         acc[date] = assets.reduce((totals, asset) => {
             if (asset.category !== "Aircraft") return totals;
+            if (!isAircraftInFleetOnDate(asset, date)) return totals;
+
+            totals.allAcft += 1;
 
             const snKey = createMetricKey("Aircraft", asset.sn);
-            if (!snKey) return totals;
+            const metric = snKey ? metricsData[snKey]?.[date] : null;
 
-            const metric = metricsData[snKey]?.[date];
+            if (isOperationalAircraftMetric(metric)) totals.opAcft += 1;
             if (!metric || metric.status !== "aircraft-assigned") return totals;
 
             totals.bh += Number(metric.bh) || 0;
-            totals.fh += Number(metric.fh) || 0;
             totals.dep += Number(metric.dep) || 0;
             return totals;
-        }, { bh: 0, fh: 0, dep: 0 });
+        }, { bh: 0, dep: 0, opAcft: 0, allAcft: 0 });
 
         return acc;
     }, {});
+
+    const getSummaryValue = (date, selectedSummaryMetric) => {
+        const totals = totalsByDate[date] || { bh: 0, dep: 0, opAcft: 0, allAcft: 0 };
+        const opDenominator = totals.opAcft || 0;
+        const allDenominator = totals.allAcft || 0;
+
+        switch (selectedSummaryMetric) {
+            case "bh-op":
+                return opDenominator > 0 ? totals.bh / opDenominator : 0;
+            case "bh-all":
+                return allDenominator > 0 ? totals.bh / allDenominator : 0;
+            case "dep-op":
+                return opDenominator > 0 ? totals.dep / opDenominator : 0;
+            case "dep-all":
+                return allDenominator > 0 ? totals.dep / allDenominator : 0;
+            case "op-acft":
+                return totals.opAcft;
+            case "all-acft":
+                return totals.allAcft;
+            default:
+                return 0;
+        }
+    };
 
     return (
         <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900 rounded-xl font-sans">
@@ -516,25 +597,41 @@ const FleetTable = () => {
                             </div>
                             {/* Date column 5-row header (totals + DOW + date) */}
                             <div className="flex flex-col bg-[#fae6da] dark:bg-orange-900/30 flex-grow">
-                                {SUMMARY_ROWS.map((summaryRow) => (
+                                {SUMMARY_ROWS.map((summaryRow) => {
+                                    const selectedSummaryMetric = selectedSummaryMetrics[summaryRow.rowKey];
+                                    const selectedLabel = summaryRow.options.find((option) => option.value === selectedSummaryMetric)?.label || "";
+
+                                    return (
                                     <div
-                                        key={`header-${summaryRow.metricKey}`}
+                                        key={`header-${summaryRow.rowKey}`}
                                         className="flex h-7 items-center text-sm font-semibold border-b border-orange-200/60"
                                     >
-                                        <div className={`${DATE_LABEL_COL_CLASS} px-2 border-r border-slate-300 text-slate-700 dark:text-slate-200 flex items-center`}>
-                                            {summaryRow.label}
+                                        <div className={`${DATE_LABEL_COL_CLASS} px-1 border-r border-slate-300 text-slate-700 dark:text-slate-200 flex items-center`}>
+                                            <select
+                                                value={selectedSummaryMetric}
+                                                onChange={(e) => handleSummaryMetricChange(summaryRow.rowKey, e.target.value)}
+                                                className="w-full bg-white/70 dark:bg-slate-900/50 border border-orange-200 dark:border-orange-800 rounded px-1 py-0.5 text-[11px] font-semibold outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                                                title={selectedLabel}
+                                            >
+                                                {summaryRow.options.map((option) => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
                                         {scheduleDates.map((date) => (
                                             <div
-                                                key={`header-${summaryRow.metricKey}-${date}`}
+                                                key={`header-${summaryRow.rowKey}-${date}`}
                                                 className="w-20 flex-shrink-0 px-1 border-r border-slate-300 text-center text-slate-700 dark:text-slate-200"
-                                                title={summaryRow.label}
+                                                title={selectedLabel}
                                             >
-                                                {formatMetricValue(totalsByDate[date]?.[summaryRow.metricKey], summaryRow.metricKey)}
+                                                {formatSummaryValue(getSummaryValue(date, selectedSummaryMetric), summaryRow.rowKey)}
                                             </div>
                                         ))}
                                     </div>
-                                ))}
+                                    );
+                                })}
                                 {/* Row 4 – Day of week */}
                                 <div className="flex h-7 items-center text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest border-b border-orange-200/60 pt-0.5">
                                     <div className={`${DATE_LABEL_COL_CLASS} border-r border-slate-300`} />

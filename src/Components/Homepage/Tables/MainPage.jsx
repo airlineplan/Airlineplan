@@ -9,7 +9,7 @@ import {
   LogOut, Plane, Network, Map,
   RotateCw, LayoutDashboard, Link2, Coins,
   RadioTower, TrendingUp, List, Eye, ClipboardList, Navigation, DollarSign, Users,
-  LayoutGrid, Wrench
+  Wrench
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -175,11 +175,16 @@ const MainPage = () => {
                 <button
                   type="button"
                   onClick={() => setMenuOpen((prev) => !prev)}
-                  className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shadow-sm border border-slate-200 dark:border-slate-700"
+                  className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-lg shadow-indigo-500/10 border border-slate-200 dark:border-slate-700 overflow-hidden"
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
+                  aria-label="Open Airlineplan menu"
                 >
-                  <LayoutGrid className={cn("text-slate-700 dark:text-slate-300 transition-transform duration-300", menuOpen && "scale-105")} size={22} />
+                  <img
+                    src="/favicon-32x32.png"
+                    alt=""
+                    className={cn("w-7 h-7 object-contain transition-transform duration-300", menuOpen && "scale-105")}
+                  />
                 </button>
 
                 {/* Dropdown Menu */}
@@ -213,10 +218,7 @@ const MainPage = () => {
               </div>
 
               {/* Logo / Title */}
-              <div className="flex items-center gap-3 min-w-fit shrink-0">
-                <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-lg shadow-indigo-500/10 shrink-0 border border-slate-200 dark:border-slate-700 overflow-hidden">
-                  <img src="/favicon-32x32.png" alt="Airlineplan Logo" className="w-7 h-7 object-contain" />
-                </div>
+              <div className="flex items-center min-w-fit shrink-0">
                 <div>
                   <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-cyan-600 dark:from-indigo-400 dark:to-cyan-400">
                     Airlineplan
