@@ -122,3 +122,76 @@ export function buildPooOdSummaryRows(rows = []) {
 
   return [...groups.values()].map(buildCollapsedRow);
 }
+
+/**
+ * Group raw POO records into sections for the redesigned POO view.
+ * Filters by selectedPoo and groups into: legs, ODs (one-stop), transits, interline.
+ */
+export function groupPooRecordsIntoSections(records, selectedPoo) {
+  const poo = String(selectedPoo || "").trim().toUpperCase();
+  const pooRecords = poo ? records.filter((r) => String(r.poo || "").trim().toUpperCase() === poo) : records;
+
+  const legRows = [];
+  const odBehindBeyondRows = [];
+  const transitRows = [];
+  const interlineRows = [];
+
+  pooRecords.forEach((row) => {
+    const tt = String(row.trafficType || "").toLowerCase();
+    const hasInterline = String(row.interline || "").trim();
+    const hasCodeshare = String(row.codeshare || "").trim();
+
+    if (hasInterline || hasCodeshare) {
+      interlineRows.push(row);
+    } else if (tt === "leg") {
+      legRows.push(row);
+    } else if (tt === "behind" || tt === "beyond") {
+      odBehindBeyondRows.push(row);
+    } else if (tt === "transit_fl" || tt === "transit_sl") {
+      transitRows.push(row);
+    }
+  });
+
+  // Group legs by OD (e.g., DEL-BOM). For the selected POO, take only the departure-side row.
+  const legsByOd = new Map();
+  legRows.forEach((row) => {
+    const od = String(row.od || "").trim().toUpperCase();
+    if (!legsByOd.has(od)) legsByOd.set(od, []);
+    legsByOd.get(od).push(row);
+  });
+  const collapsedLegs = [...legsByOd.values()].map((group) => {
+    const primary = group[0];
+    return {
+      ...primary,
+      _rows: group,
+      flightList: getFlightList(group),
+      displayStop: 0,
+      totalGcd: numericValue(primary.sectorGcd) || numericValue(primary.odViaGcd) || numericValue(primary.totalGcd),
+    };
+  });
+
+  // Group ODs by odGroupKey — collapse behind+beyond pairs into single OD row
+  const odGroups = new Map();
+  odBehindBeyondRows.forEach((row) => {
+    const key = row.odGroupKey || `${row.od}::${row.flightNumber}::${row.connectedFlightNumber}`;
+    if (!odGroups.has(key)) odGroups.set(key, []);
+    odGroups.get(key).push(row);
+  });
+  const collapsedOds = [...odGroups.values()].map(buildCollapsedRow);
+
+  // Group transits by odGroupKey
+  const transitGroups = new Map();
+  transitRows.forEach((row) => {
+    const key = row.odGroupKey || `${row.od}::${row.flightNumber}::${row.connectedFlightNumber}`;
+    if (!transitGroups.has(key)) transitGroups.set(key, []);
+    transitGroups.get(key).push(row);
+  });
+  const collapsedTransits = [...transitGroups.values()].map(buildCollapsedRow);
+
+  return {
+    legs: collapsedLegs,
+    ods: collapsedOds,
+    transits: collapsedTransits,
+    interlines: interlineRows,
+  };
+}

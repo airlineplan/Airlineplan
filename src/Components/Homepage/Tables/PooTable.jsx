@@ -12,6 +12,7 @@ import {
 import { toast } from "react-toastify";
 
 import api from "../../../apiConfig";
+import { groupPooRecordsIntoSections } from "./pooSummary";
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -441,6 +442,10 @@ const PooTable = () => {
       fnlRccyTotalRev: acc.fnlRccyTotalRev + Number(row.fnlRccyTotalRev || 0),
     }), { pax: 0, cargoT: 0, odTotalRev: 0, fnlRccyTotalRev: 0 });
   }, [visibleRows]);
+
+  const sections = useMemo(() => {
+    return groupPooRecordsIntoSections(visibleRows, poo);
+  }, [visibleRows, poo]);
 
   const toggleSelectedRow = (rowId) => {
     setSelectedRowIds((prev) => {
