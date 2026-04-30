@@ -323,3 +323,90 @@ test("groupPooRecordsIntoSections surfaces OD rows alongside legs for the select
   assert.ok(sections.ods.every((row) => row.flightList.length >= 2));
   assert.ok(sections.ods.every((row) => row.timeInclLayover));
 });
+
+test("groupPooRecordsIntoSections keeps transit rows out of OD pairs", () => {
+  const rows = [
+    ...sampleRows(),
+    baseRow({
+      _id: "transit-fl",
+      trafficType: "transit_fl",
+      od: "DEL-HYD",
+      odOrigin: "DEL",
+      odDestination: "HYD",
+      sector: "DEL-BOM",
+      identifier: "Transit FL",
+      odGroupKey: "user::DEL-HYD::A100-2026-03-04::A101-2026-03-04",
+      flightNumber: "A 100",
+      connectedFlightNumber: "A 101",
+      flightList: ["A 100", "A 101"],
+      stops: 1,
+      pax: 3,
+      cargoT: 0,
+      maxPax: 128,
+      maxCargoT: 0.6,
+      odViaGcd: 1800,
+      sectorGcd: 1200,
+      totalGcd: 1800,
+    }),
+    baseRow({
+      _id: "transit-sl",
+      trafficType: "transit_sl",
+      od: "DEL-HYD",
+      odOrigin: "DEL",
+      odDestination: "HYD",
+      sector: "BOM-HYD",
+      identifier: "Transit SL",
+      odGroupKey: "user::DEL-HYD::A100-2026-03-04::A101-2026-03-04",
+      flightNumber: "A 101",
+      connectedFlightNumber: "A 100",
+      flightList: ["A 100", "A 101"],
+      stops: 1,
+      pax: 3,
+      cargoT: 0,
+      maxPax: 128,
+      maxCargoT: 0.6,
+      odViaGcd: 1800,
+      sectorGcd: 600,
+      totalGcd: 1800,
+    }),
+  ];
+
+  const sections = groupPooRecordsIntoSections(rows, "DEL");
+
+  assert.equal(sections.ods.length, 2);
+  assert.equal(sections.transits.length, 1);
+  assert.equal(sections.transits[0].pax, 3);
+});
+
+test("groupPooRecordsIntoSections keeps same-OD leg flights as separate visible rows", () => {
+  const rows = [
+    ...sampleRows(),
+    baseRow({
+      _id: "a200-del",
+      trafficType: "leg",
+      od: "DEL-BOM",
+      odOrigin: "DEL",
+      odDestination: "BOM",
+      sector: "DEL-BOM",
+      identifier: "Leg",
+      odGroupKey: "leg::A200-2026-03-04",
+      flightId: "A200-2026-03-04",
+      flightNumber: "A 200",
+      timeInclLayover: "02:35",
+      pax: 60,
+      cargoT: 0.2,
+      maxPax: 120,
+      maxCargoT: 0.4,
+      odViaGcd: 1200,
+      sectorGcd: 1200,
+    }),
+  ];
+
+  const sections = groupPooRecordsIntoSections(rows, "DEL");
+
+  assert.equal(sections.legs.length, 2);
+  assert.deepEqual(
+    sections.legs.map((row) => row.flightNumber).sort(),
+    ["A 100", "A 200"]
+  );
+});

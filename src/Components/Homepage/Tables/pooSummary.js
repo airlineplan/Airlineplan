@@ -145,6 +145,8 @@ export function groupPooRecordsIntoSections(records, selectedPoo) {
       interlineRows.push(row);
     } else if (tt === "leg") {
       legRows.push(row);
+    } else if (tt === "transit_fl" || tt === "transit_sl") {
+      transitRows.push(row);
     } else if (
       tt === "behind" ||
       tt === "beyond" ||
@@ -153,17 +155,18 @@ export function groupPooRecordsIntoSections(records, selectedPoo) {
       String(row.displayType || "").toLowerCase() === "beyond"
     ) {
       odLikeRows.push(row);
-    } else if (tt === "transit_fl" || tt === "transit_sl") {
-      transitRows.push(row);
     }
   });
 
-  // Group legs by OD (e.g., DEL-BOM). For the selected POO, take only the departure-side row.
+  // Keep dated flight instances distinct even when multiple flights operate the same OD.
   const legsByOd = new Map();
   legRows.forEach((row) => {
-    const od = String(row.od || "").trim().toUpperCase();
-    if (!legsByOd.has(od)) legsByOd.set(od, []);
-    legsByOd.get(od).push(row);
+    const key = [
+      String(row.od || "").trim().toUpperCase(),
+      row.flightId || row.flightNumber || row.rowKey || row._id,
+    ].join("|");
+    if (!legsByOd.has(key)) legsByOd.set(key, []);
+    legsByOd.get(key).push(row);
   });
   const collapsedLegs = [...legsByOd.values()].map((group) => {
     const primary = group[0];
