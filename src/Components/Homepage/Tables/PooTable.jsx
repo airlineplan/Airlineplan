@@ -169,7 +169,6 @@ function buildErrorLookup(errors = []) {
 const PooTable = () => {
   const [poo, setPoo] = useState("");
   const [date, setDate] = useState("");
-  const [dateTo, setDateTo] = useState("");
   const [records, setRecords] = useState([]);
   const [meta, setMeta] = useState({ stationCurrency: "", reportingCurrency: "" });
   const [stationsData, setStationsData] = useState([]);
@@ -219,8 +218,7 @@ const PooTable = () => {
       const response = await api.get("/poo", {
         params: {
           ...(poo ? { poo } : {}),
-          dateFrom: date,
-          dateTo: dateTo || date,
+          date,
         },
       });
       setRecords(response.data.data || []);
@@ -236,7 +234,7 @@ const PooTable = () => {
     } finally {
       setLoading(false);
     }
-  }, [poo, date, dateTo]);
+  }, [poo, date]);
 
   useEffect(() => {
     if (date) fetchData();
@@ -252,8 +250,7 @@ const PooTable = () => {
     try {
       const response = await api.post("/poo/populate", {
         ...(poo ? { poo } : {}),
-        dateFrom: date,
-        dateTo: dateTo || date,
+        date,
       });
       toast.success(response.data.message || "POO allocation refreshed");
       await fetchData();
@@ -618,7 +615,7 @@ const PooTable = () => {
             <LayoutDashboard size={14} /> Allocation Filters
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">POO</label>
               <select
@@ -633,21 +630,11 @@ const PooTable = () => {
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Date From</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Date</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full h-9 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Date To</label>
-              <input
-                type="date"
-                value={dateTo}
-                min={date || undefined}
-                onChange={(e) => setDateTo(e.target.value)}
                 className="w-full h-9 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               />
             </div>
@@ -705,18 +692,7 @@ const PooTable = () => {
               <span className="text-[10px] text-slate-400 font-bold uppercase">POO CCY</span>
               <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{meta.stationCurrency || "--"}</span>
             </div>
-            <div className="flex flex-col p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
-              <span className="text-[10px] text-slate-400 font-bold uppercase">RCCY</span>
-              <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{meta.reportingCurrency || "--"}</span>
-            </div>
-            <div className="flex flex-col p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Pax total</span>
-              <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{formatNumber(summary.pax, 0)}</span>
-            </div>
-            <div className="flex flex-col p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Final RCCY</span>
-              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{formatNumber(summary.fnlRccyTotalRev)}</span>
-            </div>
+
           </div>
 
           <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-2">
