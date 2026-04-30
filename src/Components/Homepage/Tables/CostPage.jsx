@@ -243,7 +243,8 @@ const COST_TYPE_OPTIONS = [
     { label: "Crew allowances", value: "crewAllowancesRCCY" },
     { label: "Layover Cost", value: "layoverCostRCCY" },
     { label: "Crew positioning", value: "crewPositioningCostRCCY" },
-    { label: "Other DOC", value: "otherDocRCCY" }
+    { label: "Other DOC", value: "otherDocRCCY" },
+    { label: "Total Cost", value: "totalCostRCCY" }
 ];
 
 const GROUPING_OPTIONS = [
