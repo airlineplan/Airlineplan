@@ -423,23 +423,6 @@ const FINANCE_SECTIONS = [
             id: "maintenance-schmx",
             label: "Sch. Mx.",
             key: "qualifyingSchMxEventsRCCY",
-            children: [
-              {
-                id: "maintenance-event-1",
-                label: "Sch. Mx. Event 1",
-                key: "schMxEvent1RCCY",
-                children: [
-                  { id: "maintenance-event-1-apun-1", label: "MSN/ESN/APUN 1", key: "schMxEvent1Detail1RCCY" },
-                  { id: "maintenance-event-1-apun-2", label: "MSN/ESN/APUN 2", key: "schMxEvent1Detail2RCCY" },
-                ],
-              },
-              {
-                id: "maintenance-event-2",
-                label: "Sch. Mx. Event 2",
-                key: "schMxEvent2RCCY",
-                children: [{ id: "maintenance-event-2-apun-1", label: "MSN/ESN/APUN 1", key: "schMxEvent2Detail1RCCY" }],
-              },
-            ],
           },
           {
             id: "maintenance-transit-maintenance",
@@ -459,6 +442,11 @@ const FINANCE_SECTIONS = [
             id: "maintenance-rotable",
             label: "Rotable changes",
             key: "rotableChangesRCCY",
+          },
+          {
+            id: "maintenance-other-mx-expenses",
+            label: "Other Mx expenses",
+            key: "otherMxExpensesRCCY",
           },
           {
             id: "crew-total-direct",
@@ -527,6 +515,7 @@ function buildFinancePeriods({
     const otherMaintenanceRCCY = toNumberLike(periodData.otherMaintenanceRCCY);
     const otherMaintenanceUtilisationRCCY = toNumberLike(periodData.otherMaintenanceUtilisationRCCY ?? (toNumberLike(periodData.otherMaintenance1) + toNumberLike(periodData.otherMaintenance2)));
     const otherMaintenanceCalendarRCCY = toNumberLike(periodData.otherMaintenanceCalendarRCCY ?? periodData.otherMaintenance3);
+    const otherMxExpensesRCCY = toNumberLike(periodData.otherMxExpensesRCCY);
     const rotableChangesRCCY = toNumberLike(periodData.rotableChangesRCCY);
 
     const crewAllowancesRCCY = toNumberLike(periodData.crewAllowancesRCCY);
@@ -544,6 +533,7 @@ function buildFinancePeriods({
         qualifyingSchMxEventsRCCY +
         transitMaintenanceRCCY +
         otherMaintenanceRCCY +
+        otherMxExpensesRCCY +
         rotableChangesRCCY
       ));
 
@@ -587,6 +577,7 @@ function buildFinancePeriods({
       otherMaintenanceRCCY,
       otherMaintenanceUtilisationRCCY,
       otherMaintenanceCalendarRCCY,
+      otherMxExpensesRCCY,
       rotableChangesRCCY,
       crewAllowancesRCCY,
       layoverCostRCCY,
@@ -1524,6 +1515,15 @@ const DashboardTable = () => {
       const response = await api.get("/dashboard", { params: serializedFilters });
       const payload = Array.isArray(response.data) ? response.data : Array.isArray(response.data?.data) ? response.data.data : [];
       setData(payload);
+      if (response.data && !Array.isArray(response.data)) {
+        const config = response.data.revenueConfig || {};
+        const codes = response.data.currencyCodes || config.currencyCodes || [];
+        const normalizedCodes = [...new Set(codes.map((code) => normalizeCurrencyCode(code)).filter(Boolean))];
+        if (normalizedCodes.length) setCurrencyCodes(normalizedCodes);
+        if (config.reportingCurrency) setReportingCurrency(normalizeCurrencyCode(config.reportingCurrency));
+        if (Array.isArray(response.data.fxRates)) setSavedFxRates(response.data.fxRates);
+        if (Array.isArray(response.data.flightsForFxDates)) setFxDateColumns(buildFxDateColumns(response.data.flightsForFxDates));
+      }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       toast.error("Failed to load dashboard data");

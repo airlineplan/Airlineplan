@@ -107,7 +107,7 @@ const formatHeaderDate = (inputDate, periodicity) => {
 const formatMetricValue = (metricKey, value) => {
   const numeric = Number(value || 0);
 
-  if (["fnlRccyPaxRev", "fnlRccyCargoRev"].includes(metricKey)) {
+  if (String(metricKey || "").toLowerCase().includes("rev") || String(metricKey || "").toLowerCase().includes("rate") || String(metricKey || "").toLowerCase().includes("fare")) {
     return numeric.toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
@@ -312,9 +312,20 @@ const PERIODICITY_OPTIONS = [
 
 const METRIC_OPTIONS = [
   { label: "Pax", value: "pax" },
-  { label: "CargoT", value: "cargoT" },
-  { label: "Pax revenue", value: "fnlRccyPaxRev" },
-  { label: "Cargo revenue", value: "fnlRccyCargoRev" },
+  { label: "Cargo T", value: "cargoT" },
+  { label: "Pax Revenue", value: "fnlRccyPaxRev" },
+  { label: "Cargo Revenue", value: "fnlRccyCargoRev" },
+  { label: "Total Revenue", value: "fnlRccyTotalRev" },
+  { label: "OD Pax Revenue", value: "odPaxRev" },
+  { label: "OD Cargo Revenue", value: "odCargoRev" },
+  { label: "OD Total Revenue", value: "odTotalRev" },
+  { label: "Leg Pax Revenue", value: "legPaxRev" },
+  { label: "Leg Cargo Revenue", value: "legCargoRev" },
+  { label: "Leg Total Revenue", value: "legTotalRev" },
+  { label: "Average Fare", value: "averageFare" },
+  { label: "Average Cargo Rate", value: "averageCargoRate" },
+  { label: "Revenue per ASK", value: "revenuePerAsk" },
+  { label: "Revenue per RPK", value: "revenuePerRpk" },
 ];
 
 const REVENUE_LABEL_OPTIONS = [
@@ -326,12 +337,21 @@ const REVENUE_LABEL_OPTIONS = [
 
 const GROUPING_OPTIONS = [
   { label: "None", value: "none" },
+  { label: "Dep Stn", value: "depStn" },
+  { label: "Arr Stn", value: "arrStn" },
+  { label: "Sector", value: "sector" },
+  { label: "Variant", value: "variant" },
   { label: "POO", value: "poo" },
   { label: "OD", value: "od" },
-  { label: "Sector", value: "sector" },
   { label: "Flight #", value: "flightNumber" },
+  { label: "User Tag 1", value: "userTag1" },
+  { label: "User Tag 2", value: "userTag2" },
   { label: "Stop", value: "stops" },
+  { label: "AL", value: "al" },
+  { label: "OD DI", value: "odDI" },
+  { label: "Leg DI", value: "legDI" },
   { label: "Identifier", value: "identifier" },
+  { label: "Traffic Type", value: "trafficType" },
 ];
 
 const TRAFFIC_CLASS_OPTIONS = [
@@ -487,6 +507,17 @@ const RevenuePage = () => {
           cargoT: Number(row.cargoT || 0),
           fnlRccyPaxRev: Number(row.fnlRccyPaxRev || 0),
           fnlRccyCargoRev: Number(row.fnlRccyCargoRev || 0),
+          fnlRccyTotalRev: Number(row.fnlRccyTotalRev || 0),
+          odPaxRev: Number(row.odPaxRev || 0),
+          odCargoRev: Number(row.odCargoRev || 0),
+          odTotalRev: Number(row.odTotalRev || 0),
+          legPaxRev: Number(row.legPaxRev || 0),
+          legCargoRev: Number(row.legCargoRev || 0),
+          legTotalRev: Number(row.legTotalRev || 0),
+          averageFare: Number(row.pax || 0) > 0 ? Number(row.fnlRccyPaxRev || 0) / Number(row.pax || 0) : 0,
+          averageCargoRate: Number(row.cargoT || 0) > 0 ? Number(row.fnlRccyCargoRev || 0) / Number(row.cargoT || 0) : 0,
+          revenuePerAsk: Number(row.ask || row.ASK || 0) > 0 ? Number(row.fnlRccyTotalRev || 0) / Number(row.ask || row.ASK || 0) : 0,
+          revenuePerRpk: Number(row.rpk || row.rsk || row.RPK || 0) > 0 ? Number(row.fnlRccyTotalRev || 0) / Number(row.rpk || row.rsk || row.RPK || 0) : 0,
         },
       };
     });
