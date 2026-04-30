@@ -246,3 +246,67 @@ test("collapsed edited connection rows keep schedule time and do not double coun
   assert.equal(rowsByOd.get("DEL-HYD").pax, 5);
   assert.equal(rowsByOd.get("DEL-HYD").cargoT, 0.1);
 });
+
+test("collapsed OD D/I becomes Intl when any connected behind or beyond row is Intl", () => {
+  const rows = [
+    baseRow({
+      _id: "a100-del",
+      trafficType: "leg",
+      od: "DEL-BOM",
+      odOrigin: "DEL",
+      odDestination: "BOM",
+      sector: "DEL-BOM",
+      identifier: "Leg",
+      odGroupKey: "leg::A100-2026-03-04",
+      flightNumber: "A 100",
+      pax: 77,
+      cargoT: 0.3,
+      maxPax: 153,
+      maxCargoT: 0.6,
+      odViaGcd: 1200,
+      sectorGcd: 1200,
+      odDI: "Dom",
+    }),
+    baseRow({
+      _id: "del-hyd-behind",
+      trafficType: "behind",
+      od: "DEL-HYD",
+      odOrigin: "DEL",
+      odDestination: "HYD",
+      sector: "DEL-BOM",
+      identifier: "Behind",
+      odGroupKey: "system::DEL-HYD::A100-2026-03-04::A101-2026-03-04",
+      flightNumber: "A 100",
+      connectedFlightNumber: "A 101",
+      flightList: ["A 100", "A 101"],
+      stops: 1,
+      odViaGcd: 1800,
+      sectorGcd: 1200,
+      totalGcd: 1800,
+      odDI: "Dom",
+    }),
+    baseRow({
+      _id: "del-hyd-beyond",
+      trafficType: "beyond",
+      od: "DEL-HYD",
+      odOrigin: "DEL",
+      odDestination: "HYD",
+      sector: "BOM-HYD",
+      identifier: "Beyond",
+      odGroupKey: "system::DEL-HYD::A100-2026-03-04::A101-2026-03-04",
+      flightNumber: "A 101",
+      connectedFlightNumber: "A 100",
+      flightList: ["A 100", "A 101"],
+      stops: 1,
+      odViaGcd: 1800,
+      sectorGcd: 600,
+      totalGcd: 1800,
+      odDI: "Dom",
+      legDI: "Intl",
+    }),
+  ];
+
+  const rowsByOd = new Map(buildPooOdSummaryRows(rows).map((row) => [row.od, row]));
+
+  assert.equal(rowsByOd.get("DEL-HYD").odDI, "Intl");
+});

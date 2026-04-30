@@ -3,6 +3,16 @@ function numericValue(value) {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
+function normalizeDi(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "intl" || normalized === "international") return "Intl";
+  return "Dom";
+}
+
+function isIntlValue(value) {
+  return normalizeDi(value) === "Intl";
+}
+
 function uniqueValues(values) {
   return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
 }
@@ -60,16 +70,25 @@ function getCollapsedRevenue(rows, field, primary) {
   return numericValue(primary?.[field]);
 }
 
+function getCollapsedDi(rows, primary) {
+  const directDi = rows.find((row) => isIntlValue(row.odDI) || isIntlValue(row.legDI));
+  if (directDi) return "Intl";
+
+  return normalizeDi(primary?.odDI || primary?.legDI);
+}
+
 function buildCollapsedRow(rows) {
   const primary = getPrimaryRow(rows);
   const flightList = getFlightList(rows);
   const stops = getTransferStation(rows, primary);
+  const odDI = getCollapsedDi(rows, primary);
 
   return {
     ...primary,
     _id: primary._id,
     sourceRowIds: rows.map((row) => row._id).filter(Boolean),
     isCollapsedPooRow: rows.length > 1,
+    odDI,
     displayStop: stops,
     flightList,
     flightNumber: flightList[0] || primary.flightNumber,

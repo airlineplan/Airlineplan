@@ -12,7 +12,6 @@ import {
 import { toast } from "react-toastify";
 
 import api from "../../../apiConfig";
-import { buildPooOdSummaryRows } from "./pooSummary";
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -33,38 +32,32 @@ const blankTransitDraft = {
 };
 
 const GRID_COLUMNS = [
-  { key: "checkbox", label: "Checkbox", width: "w-24", align: "center" },
+  { key: "sNo", label: "S.No", width: "w-20", align: "right" },
+  { key: "al", label: "AL", width: "w-24" },
+  { key: "poo", label: "POO", width: "w-24" },
   { key: "od", label: "OD", width: "w-32" },
-  { key: "odDI", label: "Dom / INTL", width: "w-28", align: "center" },
-  { key: "flight", label: "Flight", width: "w-32" },
+  { key: "odDI", label: "OD D/I", width: "w-24", align: "center" },
   { key: "stop", label: "Stop", width: "w-24", align: "center" },
-  { key: "totalGcd", label: "Total GCD", width: "w-28", align: "right" },
-  { key: "timeInclLayover", label: "Time incl Ly", width: "w-28", align: "center" },
-  { key: "maxPax", label: "Max pax", width: "w-28", align: "right" },
-  { key: "maxCargoT", label: "Max Cargo T", width: "w-28", align: "right" },
-  { key: "pax", label: "Pax", subLabel: "Total", width: "w-28", align: "right", editable: true, green: true },
-  { key: "cargoT", label: "Cargo", subLabel: "Total", width: "w-28", align: "right", editable: true, green: true },
-  { key: "fare", label: "Fare", subLabel: "Wght Avg", width: "w-28", align: "right", editable: true, green: true },
-  { key: "rate", label: "Rate", subLabel: "Wght Avg", width: "w-28", align: "right", editable: true, green: true },
-  { key: "paxRevenue", label: "Pax revenu", subLabel: "Total", width: "w-32", align: "right" },
-  { key: "cargoRevenue", label: "Cargo revenu", subLabel: "Total", width: "w-32", align: "right" },
-  { key: "totalRevenue", label: "Total revenu", subLabel: "Total", width: "w-32", align: "right" },
-  { key: "loadFare", label: "Pax & Fare", subLabel: "Date(s)", width: "w-44", align: "center", green: true },
-  { key: "loadRate", label: "Cargo & Rate", subLabel: "Date(s)", width: "w-44", align: "center", green: true },
+  { key: "identifier", label: "Identifier", width: "w-32" },
+  { key: "sector", label: "Sector", width: "w-32" },
+  { key: "legDI", label: "Leg D/I", width: "w-24", align: "center" },
+  { key: "date", label: "Date", width: "w-28" },
+  { key: "day", label: "Day", width: "w-20" },
+  { key: "flightNumber", label: "Flight #", width: "w-28" },
+  { key: "maxPax", label: "Max Pax", width: "w-28", align: "right" },
+  { key: "maxCargoT", label: "Max Cargo T", width: "w-32", align: "right" },
+  { key: "pax", label: "Pax", width: "w-24", align: "right", editable: true, green: true },
+  { key: "cargoT", label: "Cargo T", width: "w-28", align: "right", editable: true, green: true },
 ];
 
 const NUMERIC_TOTAL_FIELDS = [
-  "totalGcd",
   "maxPax",
   "maxCargoT",
   "pax",
   "cargoT",
-  "paxRevenue",
-  "cargoRevenue",
-  "totalRevenue",
 ];
 
-const NUMERIC_AVG_FIELDS = ["fare", "rate"];
+const NUMERIC_AVG_FIELDS = [];
 
 function formatNumber(value, maxFractionDigits = 2) {
   const numeric = Number(value);
@@ -98,18 +91,30 @@ function getFlightText(row) {
 
 function getRowValue(row, key) {
   switch (key) {
+    case "sNo":
+      return row.sNo || "";
+    case "al":
+      return row.al || "";
+    case "poo":
+      return row.poo || "";
     case "od":
       return row.od || "";
     case "odDI":
       return row.odDI || "";
-    case "flight":
-      return getFlightText(row);
     case "stop":
       return row.displayStop ?? row.stops ?? 0;
-    case "totalGcd":
-      return row.totalGcd || row.odViaGcd || row.sectorGcd || 0;
-    case "timeInclLayover":
-      return row.timeInclLayover || "";
+    case "identifier":
+      return row.identifier || row.displayType || "";
+    case "sector":
+      return row.sector || "";
+    case "legDI":
+      return row.legDI || "";
+    case "date":
+      return formatSheetDate(row.date);
+    case "day":
+      return row.day || "";
+    case "flightNumber":
+      return row.flightNumber || getFlightText(row);
     case "maxPax":
       return row.maxPax || 0;
     case "maxCargoT":
@@ -118,22 +123,6 @@ function getRowValue(row, key) {
       return row.pax || 0;
     case "cargoT":
       return row.cargoT || 0;
-    case "fare":
-      return row.odFare || row.legFare || 0;
-    case "rate":
-      return row.odRate || row.legRate || 0;
-    case "paxRevenue":
-      if (row.paxRevenue !== undefined) return row.paxRevenue;
-      return row.odPaxRev || row.legPaxRev || row.fnlRccyPaxRev || 0;
-    case "cargoRevenue":
-      if (row.cargoRevenue !== undefined) return row.cargoRevenue;
-      return row.odCargoRev || row.legCargoRev || row.fnlRccyCargoRev || 0;
-    case "totalRevenue":
-      if (row.totalRevenue !== undefined) return row.totalRevenue;
-      return row.odTotalRev || row.legTotalRev || row.fnlRccyTotalRev || 0;
-    case "loadFare":
-    case "loadRate":
-      return "";
     default:
       return "";
   }
@@ -192,8 +181,9 @@ function buildErrorLookup(errors = []) {
 }
 
 const PooTable = () => {
-  const [poo, setPoo] = useState("DEL");
+  const [poo, setPoo] = useState("");
   const [date, setDate] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [records, setRecords] = useState([]);
   const [meta, setMeta] = useState({ stationCurrency: "", reportingCurrency: "" });
   const [stationsData, setStationsData] = useState([]);
@@ -237,10 +227,16 @@ const PooTable = () => {
   }, [stationsData, poo]);
 
   const fetchData = useCallback(async () => {
-    if (!poo || !date) return;
+    if (!date) return;
     setLoading(true);
     try {
-      const response = await api.get("/poo", { params: { poo, date } });
+      const response = await api.get("/poo", {
+        params: {
+          ...(poo ? { poo } : {}),
+          dateFrom: date,
+          dateTo: dateTo || date,
+        },
+      });
       setRecords(response.data.data || []);
       setMeta(response.data.meta || { stationCurrency: "", reportingCurrency: "" });
       setDirtyMap({});
@@ -254,21 +250,25 @@ const PooTable = () => {
     } finally {
       setLoading(false);
     }
-  }, [poo, date]);
+  }, [poo, date, dateTo]);
 
   useEffect(() => {
-    if (poo && date) fetchData();
-  }, [fetchData, poo, date]);
+    if (date) fetchData();
+  }, [fetchData, date]);
 
   const refreshAllocation = async () => {
-    if (!poo || !date) {
-      toast.warn("Choose a POO station and date first");
+    if (!date) {
+      toast.warn("Choose a date or date range first");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await api.post("/poo/populate", { poo, date });
+      const response = await api.post("/poo/populate", {
+        ...(poo ? { poo } : {}),
+        dateFrom: date,
+        dateTo: dateTo || date,
+      });
       toast.success(response.data.message || "POO allocation refreshed");
       await fetchData();
     } catch (error) {
@@ -425,36 +425,22 @@ const PooTable = () => {
         row.identifier,
         row.odDI,
         row.legDI,
+        row.day,
+        formatSheetDate(row.date),
       ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query));
     });
   }, [records, searchTerm]);
 
-  const sections = useMemo(() => {
-    const rawOdRows = visibleRows.filter((row) =>
-      ["Leg", "Behind", "Beyond"].includes(row.displayType)
-    );
-    const odRows = buildPooOdSummaryRows(rawOdRows);
-    const transitRows = visibleRows.filter((row) => row.displayType?.startsWith("Transit"));
-    const usedIds = new Set([...rawOdRows, ...transitRows].map((row) => row._id));
-    const external = visibleRows.filter((row) => (row.interline || row.codeshare) && !usedIds.has(row._id));
-    return [
-      { title: "OD pairs", kind: "od", rows: odRows },
-      { title: "Transits (same Aircraft)", kind: "transit", rows: transitRows },
-      { title: "Interline and Codeshare", kind: "external", rows: external },
-    ];
-  }, [visibleRows]);
-
   const summary = useMemo(() => {
-    const displayedRows = sections.flatMap((section) => section.rows);
-    return displayedRows.reduce((acc, row) => ({
+    return visibleRows.reduce((acc, row) => ({
       pax: acc.pax + Number(row.pax || 0),
       cargoT: acc.cargoT + Number(row.cargoT || 0),
       odTotalRev: acc.odTotalRev + Number(row.odTotalRev || 0),
       fnlRccyTotalRev: acc.fnlRccyTotalRev + Number(row.fnlRccyTotalRev || 0),
     }), { pax: 0, cargoT: 0, odTotalRev: 0, fnlRccyTotalRev: 0 });
-  }, [sections]);
+  }, [visibleRows]);
 
   const toggleSelectedRow = (rowId) => {
     setSelectedRowIds((prev) => {
@@ -591,43 +577,16 @@ const PooTable = () => {
   };
 
   const renderSheetSection = (section) => {
-    const selectedRows = getSelectedRowsForSection(section.rows);
-    const selectedSummary = createSectionSummary(selectedRows);
-    const emptyRows = Math.max(0, section.kind === "od" ? 3 - section.rows.length : 1 - section.rows.length);
+    const sectionSummary = createSectionSummary(section.rows);
+    const emptyRows = Math.max(0, 1 - section.rows.length);
 
     return (
       <div key={section.title} className="min-w-max">
-        {section.kind !== "od" && (
-          <div className="h-10 border-x border-t border-slate-300 bg-white px-24 pt-5 text-sm font-medium text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
-            {section.title}
-          </div>
-        )}
+        <div className="h-10 border-x border-t border-slate-300 bg-white px-4 pt-2 text-sm font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
+          {section.title}
+        </div>
         <table className="border-collapse bg-white text-sm dark:bg-slate-950">
           <thead>
-            {section.kind === "od" && (
-              <>
-                <tr>
-                  <th colSpan={GRID_COLUMNS.length} className="h-10 border-x border-t border-slate-300 px-24 text-left text-base font-medium text-slate-900 dark:border-slate-700 dark:text-slate-100">
-                    OD pairs
-                  </th>
-                </tr>
-                <tr>
-                  <th colSpan={2} className="h-8 border border-slate-300 bg-white text-right text-sm font-medium dark:border-slate-700 dark:bg-slate-950">
-                    Date
-                  </th>
-                  <th className="border border-slate-300 bg-white text-left text-base font-medium dark:border-slate-700 dark:bg-slate-950">
-                    {formatSheetDate(date)}
-                  </th>
-                  <th colSpan={GRID_COLUMNS.length - 3} className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950" />
-                </tr>
-                <tr>
-                  <th colSpan={2} className="h-7 border border-slate-300 bg-white text-right text-xs font-medium dark:border-slate-700 dark:bg-slate-950">
-                    Search
-                  </th>
-                  <th colSpan={GRID_COLUMNS.length - 2} className="border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950" />
-                </tr>
-              </>
-            )}
             <tr>
               {GRID_COLUMNS.map((column, index) => (
                 <th
@@ -676,7 +635,7 @@ const PooTable = () => {
           </thead>
           <tbody>
             <tr>
-              {GRID_COLUMNS.map((column) => renderSheetCell(null, column, true, selectedSummary))}
+              {GRID_COLUMNS.map((column) => renderSheetCell(null, column, true, sectionSummary))}
             </tr>
             {section.rows.map((row) => (
               <tr key={row._id} className={cn(selectedRowIds.has(row._id) && "outline outline-2 outline-fuchsia-400/70")}>
@@ -712,10 +671,11 @@ const PooTable = () => {
             <select
               value={poo}
               onChange={(e) => setPoo(e.target.value.toUpperCase())}
-              className="h-10 w-28 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950"
+              className="h-10 w-32 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950"
             >
+              <option value="">All POO</option>
               {stationOptions.length === 0 ? (
-                <option value="">No stations</option>
+                null
               ) : (
                 stationOptions.map((station) => (
                   <option key={station} value={station}>
@@ -726,11 +686,21 @@ const PooTable = () => {
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Date</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Date From</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
+              className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">Date To</label>
+            <input
+              type="date"
+              value={dateTo}
+              min={date || undefined}
+              onChange={(e) => setDateTo(e.target.value)}
               className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950"
             />
           </div>
@@ -763,7 +733,7 @@ const PooTable = () => {
             {saving ? "Saving..." : "Save"}
           </button>
           <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
-            {selectedRowIds.size} selected · {totalDirtyRows} pending · {totalApplyTargets} date target(s)
+            {visibleRows.length} row(s) · {totalDirtyRows} pending · {totalApplyTargets} date target(s)
           </div>
         </div>
 
@@ -811,13 +781,13 @@ const PooTable = () => {
             <div className="space-y-2 px-6">
               <div className="text-lg font-semibold">No POO traffic rows</div>
               <div className="text-sm text-slate-500 dark:text-slate-400">
-                Choose a station and date, refresh allocation, or adjust your search.
+                Choose a date range, refresh allocation, or adjust your search.
               </div>
             </div>
           </div>
         ) : (
           <div className="inline-block border-2 border-slate-900 bg-white p-0 dark:border-slate-500 dark:bg-slate-950">
-            {sections.map(renderSheetSection)}
+            {renderSheetSection({ title: "Raw POO entries", kind: "raw", rows: visibleRows })}
           </div>
         )}
       </div>
