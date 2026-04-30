@@ -132,7 +132,7 @@ export function groupPooRecordsIntoSections(records, selectedPoo) {
   const pooRecords = poo ? records.filter((r) => String(r.poo || "").trim().toUpperCase() === poo) : records;
 
   const legRows = [];
-  const odBehindBeyondRows = [];
+  const odLikeRows = [];
   const transitRows = [];
   const interlineRows = [];
 
@@ -145,8 +145,14 @@ export function groupPooRecordsIntoSections(records, selectedPoo) {
       interlineRows.push(row);
     } else if (tt === "leg") {
       legRows.push(row);
-    } else if (tt === "behind" || tt === "beyond") {
-      odBehindBeyondRows.push(row);
+    } else if (
+      tt === "behind" ||
+      tt === "beyond" ||
+      Number(row.stops || 0) >= 1 ||
+      String(row.displayType || "").toLowerCase() === "behind" ||
+      String(row.displayType || "").toLowerCase() === "beyond"
+    ) {
+      odLikeRows.push(row);
     } else if (tt === "transit_fl" || tt === "transit_sl") {
       transitRows.push(row);
     }
@@ -170,14 +176,9 @@ export function groupPooRecordsIntoSections(records, selectedPoo) {
     };
   });
 
-  // Group ODs by odGroupKey — collapse behind+beyond pairs into single OD row
-  const odGroups = new Map();
-  odBehindBeyondRows.forEach((row) => {
-    const key = row.odGroupKey || `${row.od}::${row.flightNumber}::${row.connectedFlightNumber}`;
-    if (!odGroups.has(key)) odGroups.set(key, []);
-    odGroups.get(key).push(row);
-  });
-  const collapsedOds = [...odGroups.values()].map(buildCollapsedRow);
+  // Group ODs by odGroupKey — collapse behind+beyond pairs into single OD row.
+  // If the backing rows are incomplete, fall back to any stop-based OD-like rows.
+  const collapsedOds = buildPooOdSummaryRows(odLikeRows);
 
   // Group transits by odGroupKey
   const transitGroups = new Map();

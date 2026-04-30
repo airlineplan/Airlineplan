@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildPooOdSummaryRows } from "./pooSummary.js";
+import { buildPooOdSummaryRows, groupPooRecordsIntoSections } from "./pooSummary.js";
 
 const baseRow = (overrides) => ({
   _id: overrides._id,
@@ -309,4 +309,17 @@ test("collapsed OD D/I becomes Intl when any connected behind or beyond row is I
   const rowsByOd = new Map(buildPooOdSummaryRows(rows).map((row) => [row.od, row]));
 
   assert.equal(rowsByOd.get("DEL-HYD").odDI, "Intl");
+});
+
+test("groupPooRecordsIntoSections surfaces OD rows alongside legs for the selected POO", () => {
+  const sections = groupPooRecordsIntoSections(sampleRows(), "DEL");
+
+  assert.equal(sections.legs.length, 1);
+  assert.equal(sections.ods.length, 2);
+  assert.deepEqual(
+    sections.ods.map((row) => row.od).sort(),
+    ["DEL-DXB", "DEL-HYD"]
+  );
+  assert.ok(sections.ods.every((row) => row.flightList.length >= 2));
+  assert.ok(sections.ods.every((row) => row.timeInclLayover));
 });
