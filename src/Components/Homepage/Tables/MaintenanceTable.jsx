@@ -1037,7 +1037,11 @@ const MaintenanceDashboard = () => {
             const res = await api.post('/maintenance/compute');
             if (res.data && res.data.success) {
                 toast.success(res.data.message || "Computation successful!");
-                fetchDashboardData();
+                await Promise.all([
+                    fetchDashboardData(),
+                    fetchTargetsData(),
+                    fetchCalendarData()
+                ]);
             }
         } catch (error) {
             console.error("Failed to compute maintenance logic:", error);
@@ -1309,8 +1313,8 @@ const MaintenanceDashboard = () => {
                                         <StatusHeaderLabel column={column} />
                                     </th>
                                 ))}
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[120px]">Last occurre</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[120px]">Next estima</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[140px]">Last occurre</th>
+                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[140px]">Next estima</th>
                                 <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">Down days</th>
                                 <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">Avg Downda</th>
                                 <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">Occurrence</th>
@@ -1371,11 +1375,11 @@ const MaintenanceDashboard = () => {
                                             {isEditingCalendar || row.isNew ? <input type="text" value={row.eDsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'eDsr', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.eDsr}</div>}
                                         </td>
 
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.lastOccurre || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'lastOccurre', e.target.value)} className={`${calendarEditableInputClass} text-left`} /> : row.lastOccurre}
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed min-w-[140px]">
+                                            {isEditingCalendar || row.isNew ? <DateTextInput value={row.lastOccurre || ""} onChange={(value) => handleCalendarFieldChange(row.id, 'lastOccurre', value)} className={`${calendarEditableInputClass} text-left`} /> : formatDateForDisplay(row.lastOccurre)}
                                         </td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.nextEstima || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'nextEstima', e.target.value)} className={`${calendarEditableInputClass} text-left`} /> : row.nextEstima}
+                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed min-w-[140px]">
+                                            {isEditingCalendar || row.isNew ? <DateTextInput value={row.nextEstima || ""} onChange={(value) => handleCalendarFieldChange(row.id, 'nextEstima', value)} className={`${calendarEditableInputClass} text-left`} /> : formatDateForDisplay(row.nextEstima)}
                                         </td>
 
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-bold text-emerald-600 dark:text-emerald-400">
