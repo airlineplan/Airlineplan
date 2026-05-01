@@ -3,6 +3,7 @@ import { Upload, Calendar, Loader2 } from "lucide-react";
 import api from "../../../apiConfig"; // Adjust path as needed
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { invalidateFleetMetricsCache } from "./fleetMetricsCache";
 
 // Hardcoded dates replaced by dynamic fetch from /master-weeks
 
@@ -158,6 +159,7 @@ const AssignmentTable = () => {
             } else {
                 toast.success(message);
             }
+            invalidateFleetMetricsCache();
             window.dispatchEvent(new CustomEvent("assignments:updated"));
             await fetchWeeks(); // Refresh dropdown range
             fetchAssignments(); // Refresh table immediately

@@ -10,6 +10,7 @@ import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { calculateAutoSta } from "./networkStaUtils";
 import useEscapeKey from "../../../hooks/useEscapeKey";
+import { invalidateFleetMetricsCache } from "./fleetMetricsCache";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -362,6 +363,7 @@ const UpdatePopUp = (props) => {
           setLoading(false);
           toast.success("Updated successfully");
           setMessage(data.message);
+          invalidateFleetMetricsCache();
           window.dispatchEvent(new CustomEvent("assignments:updated"));
           setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
         })

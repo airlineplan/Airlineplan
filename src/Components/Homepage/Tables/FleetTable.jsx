@@ -3,6 +3,13 @@ import { Search, Plus, Save, Trash2 } from "lucide-react";
 import moment from "moment";
 import api from "../../../apiConfig";
 import { toast } from "react-toastify";
+import {
+    METRICS_CACHE_KEY_PREFIX,
+    METRICS_CACHE_TTL_MS,
+    clearFleetMetricsCache,
+    getFleetMetricsInvalidatedAt,
+    invalidateFleetMetricsCache
+} from "./fleetMetricsCache";
 
 const CATEGORIES = ["Aircraft", "Engine", "APU"];
 const METRIC_OPTIONS = [
@@ -34,8 +41,6 @@ const SUMMARY_ROWS = [
     }
 ];
 const DATE_LABEL_COL_CLASS = "w-24 flex-shrink-0";
-const METRICS_CACHE_KEY_PREFIX = "fleet:metrics:";
-const METRICS_CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
 
 // STRICT COLOR LOGIC
 // Aircraft/Engine/APU schedule colors:
@@ -221,16 +226,7 @@ const FleetTable = () => {
     useEffect(() => {
         const refreshMetrics = (forceRefresh = false) => {
             metricsCacheRef.current.clear();
-            try {
-                const keysToDelete = [];
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && key.startsWith(METRICS_CACHE_KEY_PREFIX)) keysToDelete.push(key);
-                }
-                keysToDelete.forEach((k) => localStorage.removeItem(k));
-            } catch (error) {
-                console.warn("Failed to clear fleet metrics cache from localStorage", error);
-            }
+            clearFleetMetricsCache();
             if (selectedMonth) fetchScheduleMetrics(selectedMonth, { forceRefresh });
             fetchTodayMetrics();
         };
@@ -302,6 +298,7 @@ const FleetTable = () => {
             const parsed = JSON.parse(cacheRaw);
             if (!parsed || typeof parsed !== "object") return null;
             if (!parsed.savedAt || (Date.now() - parsed.savedAt > METRICS_CACHE_TTL_MS)) return null;
+            if (parsed.savedAt < getFleetMetricsInvalidatedAt()) return null;
             return parsed.data || {};
         } catch (error) {
             console.warn("Failed to read fleet metrics cache", error);
@@ -324,8 +321,14 @@ const FleetTable = () => {
         const { forceRefresh = false } = options;
         const reqId = ++activeMetricsReqIdRef.current;
         const cacheEntry = metricsCacheRef.current.get(monthStr);
+        const invalidatedAt = getFleetMetricsInvalidatedAt();
 
-        if (!forceRefresh && cacheEntry && (Date.now() - cacheEntry.savedAt <= METRICS_CACHE_TTL_MS)) {
+        if (
+            !forceRefresh &&
+            cacheEntry &&
+            cacheEntry.savedAt >= invalidatedAt &&
+            (Date.now() - cacheEntry.savedAt <= METRICS_CACHE_TTL_MS)
+        ) {
             setMetricsData(cacheEntry.data || {});
             return;
         }
@@ -396,6 +399,10 @@ const FleetTable = () => {
                 setIsSaving(false); return;
             }
             await api.post("/fleet/bulk-save", { fleetData: validAssets });
+            metricsCacheRef.current.clear();
+            invalidateFleetMetricsCache();
+            if (selectedMonth) fetchScheduleMetrics(selectedMonth, { forceRefresh: true });
+            fetchTodayMetrics();
             toast.success("Fleet data saved successfully!");
         } catch (error) {
             console.error("Error saving fleet", error);
