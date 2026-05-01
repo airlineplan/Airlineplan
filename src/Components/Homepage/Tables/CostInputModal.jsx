@@ -1538,7 +1538,6 @@ export default function CostInputModal({ isOpen, onClose }) {
                 />
                 <EditableTable
                   title="Schedule Maintenance Events calendar table"
-                  titleNote="Green cells are auto-filled from maintenance logic."
                   data={schMxEvents}
                   setData={setSchMxEvents}
                   highlightAutoFields
@@ -1565,7 +1564,6 @@ export default function CostInputModal({ isOpen, onClose }) {
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                   <EditableTable
                     title="Transit maintenance"
-                    titleNote="Fill the most specific identifier you have. Matching prefers SN, then ACFT Regn, then PN, then Variant."
                     data={transitMx}
                     setData={setTransitMx}
                     columns={[
@@ -1582,11 +1580,9 @@ export default function CostInputModal({ isOpen, onClose }) {
                   />
                   <EditableTable
                     title="Other maintenance expenses (consumption, loan charges...etc)"
-                    titleNote="Fill whichever identifiers exist. Matching is additive, so a flight can pick up both a variant row and a regn row."
                     data={otherMx}
                     setData={setOtherMx}
                     columns={[
-                      { label: "Station", key: "depStn" },
                       { label: "Variant/ACFT", key: "variant" },
                       { label: "ACFT Regn", key: "acftRegn" },
                       { label: "PN", key: "pn" },
@@ -1627,9 +1623,6 @@ export default function CostInputModal({ isOpen, onClose }) {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">MTOW tiers</div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Edit the MTOW labels used by the ENR and Terminal tables, then apply the change.
-                      </div>
                     </div>
                     <button
                       type="button"
@@ -1687,7 +1680,6 @@ export default function CostInputModal({ isOpen, onClose }) {
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                   <EditableTable
                     title="Landing"
-                    titleNote="Landing rows match by Arr Stn, MTOW, and date range on the flight."
                     data={airportLanding}
                     setData={setAirportLanding}
                     columns={[
@@ -1701,7 +1693,6 @@ export default function CostInputModal({ isOpen, onClose }) {
                   />
                   <EditableTable
                     title="Dom flight handling"
-                    titleNote="Handling rows match by Arr Stn, MTOW, and date range on the flight."
                     data={airportDom}
                     setData={setAirportDom}
                     columns={[
@@ -1778,9 +1769,6 @@ export default function CostInputModal({ isOpen, onClose }) {
 
                 <div className="mt-8 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                   <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">Basis of cost allocation</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-                    This controls how APU fuel cost is spread across flights when the table is rebuilt.
-                  </p>
                   <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900">
                     <table className="w-full text-left text-sm whitespace-nowrap">
                       <thead className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">

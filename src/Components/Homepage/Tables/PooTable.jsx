@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
@@ -181,6 +181,7 @@ const PooTable = () => {
   const [applyDateTargets, setApplyDateTargets] = useState({});
   const [transitDraft, setTransitDraft] = useState(blankTransitDraft);
   const [selectedRowIds, setSelectedRowIds] = useState(() => new Set());
+  const requestSeqRef = useRef(0);
 
   useEffect(() => {
     const loadStations = async () => {
@@ -211,8 +212,20 @@ const PooTable = () => {
     return uniqueNames;
   }, [stationsData, poo]);
 
-  const fetchData = useCallback(async () => {
+  const applyLoadedRows = useCallback((payload) => {
+    setRecords(Array.isArray(payload?.data) ? payload.data : []);
+    setMeta(payload?.meta || { stationCurrency: "", reportingCurrency: "" });
+    setDirtyMap({});
+    setValidationErrors([]);
+    setApplyDateDrafts({});
+    setApplyDateTargets({});
+    setSelectedRowIds(new Set());
+  }, []);
+
+  const fetchData = useCallback(async ({ populateIfEmpty = false } = {}) => {
     if (!date) return;
+    const requestId = requestSeqRef.current + 1;
+    requestSeqRef.current = requestId;
     setLoading(true);
     try {
       const response = await api.get("/poo", {
@@ -221,24 +234,33 @@ const PooTable = () => {
           date,
         },
       });
-      setRecords(response.data.data || []);
-      setMeta(response.data.meta || { stationCurrency: "", reportingCurrency: "" });
-      setDirtyMap({});
-      setValidationErrors([]);
-      setApplyDateDrafts({});
-      setApplyDateTargets({});
-      setSelectedRowIds(new Set());
+      if (requestSeqRef.current !== requestId) return;
+
+      const rows = Array.isArray(response.data?.data) ? response.data.data : [];
+      if (populateIfEmpty && poo && rows.length === 0) {
+        const populateResponse = await api.post("/poo/populate", { poo, date });
+        if (requestSeqRef.current !== requestId) return;
+        applyLoadedRows({
+          data: populateResponse.data?.data || [],
+          meta: response.data?.meta,
+        });
+        return;
+      }
+
+      applyLoadedRows(response.data || {});
     } catch (error) {
       console.error(error);
       toast.error("Failed to load POO traffic allocation");
     } finally {
-      setLoading(false);
+      if (requestSeqRef.current === requestId) {
+        setLoading(false);
+      }
     }
-  }, [poo, date]);
+  }, [applyLoadedRows, poo, date]);
 
   useEffect(() => {
-    if (date) fetchData();
-  }, [fetchData, date]);
+    if (date) fetchData({ populateIfEmpty: Boolean(poo) });
+  }, [fetchData, date, poo]);
 
   const refreshAllocation = async () => {
     if (!date) {
@@ -395,15 +417,6 @@ const PooTable = () => {
         .some((value) => String(value).toLowerCase().includes(query));
     });
   }, [records, searchTerm]);
-
-  const summary = useMemo(() => {
-    return visibleRows.reduce((acc, row) => ({
-      pax: acc.pax + Number(row.pax || 0),
-      cargoT: acc.cargoT + Number(row.cargoT || 0),
-      odTotalRev: acc.odTotalRev + Number(row.odTotalRev || 0),
-      fnlRccyTotalRev: acc.fnlRccyTotalRev + Number(row.fnlRccyTotalRev || 0),
-    }), { pax: 0, cargoT: 0, odTotalRev: 0, fnlRccyTotalRev: 0 });
-  }, [visibleRows]);
 
   const sections = useMemo(() => {
     return groupPooRecordsIntoSections(visibleRows, poo);
