@@ -16,6 +16,10 @@ function cn(...inputs) {
 const MODAL_TABLE_COLUMN_WIDTH = 148;
 const modalTableScrollClass = "overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg";
 const modalTableClass = "w-full table-fixed text-left text-sm whitespace-nowrap border-collapse";
+const PLF_HEADER_ROW_TYPE = "header";
+const PLF_CARRY_FORWARD_KEY = "p100";
+const PLF_DEFAULT_THRESHOLD_KEYS = ["p80", "p90", "p95", "p98"];
+const PLF_PERCENT_KEY_RE = /^p(\d{1,3})$/i;
 
 function EqualWidthColGroup({ count }) {
   return (
@@ -29,6 +33,80 @@ function EqualWidthColGroup({ count }) {
 
 function getModalTableStyle(columnCount) {
   return { minWidth: `${columnCount * MODAL_TABLE_COLUMN_WIDTH}px` };
+}
+
+function parsePlfPercentInput(value) {
+  const digits = String(value ?? "").replace(/[^0-9]/g, "");
+  if (!digits) return "";
+
+  const numeric = Number(digits);
+  if (!Number.isFinite(numeric) || numeric <= 0) return "";
+  return String(Math.min(99, Math.floor(numeric)));
+}
+
+function getPlfThresholdNumber(key) {
+  const match = String(key ?? "").match(PLF_PERCENT_KEY_RE);
+  if (!match) return null;
+  const threshold = Number(match[1]);
+  if (!Number.isFinite(threshold) || threshold <= 0 || threshold >= 100) return null;
+  return threshold;
+}
+
+function formatPlfThresholdLabel(key) {
+  const threshold = getPlfThresholdNumber(key);
+  return threshold === null ? "" : `${threshold}%`;
+}
+
+function getPlfThresholdKeys(rows = []) {
+  const keys = new Set();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    Object.keys(row || {}).forEach((key) => {
+      if (key === PLF_CARRY_FORWARD_KEY) return;
+      const threshold = getPlfThresholdNumber(key);
+      if (threshold !== null) {
+        keys.add(`p${threshold}`);
+      }
+    });
+  });
+
+  const sorted = [...keys].sort((a, b) => getPlfThresholdNumber(a) - getPlfThresholdNumber(b));
+  return sorted.length > 0 ? sorted : [...PLF_DEFAULT_THRESHOLD_KEYS];
+}
+
+function getNextPlfThresholdKey(rows = []) {
+  const used = new Set(getPlfThresholdKeys(rows).map((key) => key.toLowerCase()));
+  const numericKeys = [...used]
+    .map((key) => getPlfThresholdNumber(key))
+    .filter((value) => Number.isFinite(value) && value < 100);
+  const start = numericKeys.length ? Math.min(99, Math.max(...numericKeys) + 1) : 99;
+
+  for (let threshold = start; threshold < 100; threshold += 1) {
+    const candidate = `p${threshold}`;
+    if (!used.has(candidate)) return candidate;
+  }
+
+  return null;
+}
+
+function createPlfBlankRow(rowType, thresholdKeys, extra = {}) {
+  const row = { rowType, ...extra };
+  (thresholdKeys || []).forEach((key) => {
+    row[key] = row[key] ?? "";
+  });
+  if (rowType === "aircraft") {
+    row[PLF_CARRY_FORWARD_KEY] = row[PLF_CARRY_FORWARD_KEY] ?? "1.00";
+  }
+  return row;
+}
+
+function createPlfHeaderRow(thresholdKeys) {
+  return createPlfBlankRow(PLF_HEADER_ROW_TYPE, thresholdKeys);
+}
+
+function ensurePlfHeaderRow(rows, thresholdKeys) {
+  const source = Array.isArray(rows) ? rows : [];
+  if (source.some((row) => row?.rowType === PLF_HEADER_ROW_TYPE)) return source;
+  return [createPlfHeaderRow(thresholdKeys), ...source];
 }
 
 const APU_FUEL_ALLOCATION_CODE = "APUFUELCOST";
@@ -307,9 +385,25 @@ function FuelConsumptionTable({ data, setData, className }) {
 }
 
 function PlfEffectTable({ data, setData, className }) {
+  const isHeaderRow = (row) => row?.rowType === PLF_HEADER_ROW_TYPE;
   const isSectorRow = (row) => (row.rowType ? row.rowType === "sector" : !row.acftRegn);
+  const rows = data.length ? data : [createPlfBlankRow("sector", PLF_DEFAULT_THRESHOLD_KEYS, { sectorOrGcd: "", gcd: "" })];
+  const visibleRows = rows.filter((row) => !isHeaderRow(row));
+  const thresholdKeys = getPlfThresholdKeys(rows);
+  const renderedRows = visibleRows.length
+    ? rows.map((row, index) => ({ row, index })).filter(({ row }) => !isHeaderRow(row))
+    : [{ row: createPlfBlankRow("sector", thresholdKeys, { sectorOrGcd: "", gcd: "" }), index: -1 }];
+  const [thresholdDrafts, setThresholdDrafts] = useState({});
 
-  const thresholdKeys = ["p80", "p90", "p95", "p98"];
+  useEffect(() => {
+    setThresholdDrafts((prev) => {
+      const next = {};
+      thresholdKeys.forEach((key) => {
+        next[key] = prev[key] ?? formatPlfThresholdLabel(key);
+      });
+      return next;
+    });
+  }, [thresholdKeys.join("|")]);
 
   const getCarryForwardValue = (row) => {
     let lastValue = "";
@@ -351,7 +445,7 @@ function PlfEffectTable({ data, setData, className }) {
   };
 
   const addSector = () => {
-    setData([...data, { rowType: "sector", sectorOrGcd: "", gcd: "" }]);
+    setData([...data, createPlfBlankRow("sector", thresholdKeys, { sectorOrGcd: "", gcd: "" })]);
   };
 
   const addAircraft = () => {
@@ -366,20 +460,96 @@ function PlfEffectTable({ data, setData, className }) {
       }
     }
 
-    setData([...data, normalizeAircraftRow({ rowType: "aircraft", sectorOrGcd, gcd, acftRegn: "", p80: "", p90: "", p95: "", p98: "", p100: "1.00" })]);
+    setData([
+      ...data,
+      normalizeAircraftRow(createPlfBlankRow("aircraft", thresholdKeys, {
+        sectorOrGcd,
+        gcd,
+        acftRegn: "",
+      })),
+    ]);
+  };
+
+  const addThresholdColumn = () => {
+    const nextKey = getNextPlfThresholdKey(rows);
+    if (!nextKey) {
+      toast.error("No more percentage columns can be added.");
+      return;
+    }
+
+    setData((prev) => {
+      const baseRows = ensurePlfHeaderRow(prev, thresholdKeys);
+      return baseRows.map((row) => ({
+        ...row,
+        [nextKey]: row[nextKey] ?? "",
+      }));
+    });
+  };
+
+  const commitThresholdColumn = (oldKey) => {
+    const draftValue = thresholdDrafts[oldKey] ?? formatPlfThresholdLabel(oldKey);
+    const nextPercent = parsePlfPercentInput(draftValue);
+    if (!nextPercent) {
+      setThresholdDrafts((prev) => ({ ...prev, [oldKey]: formatPlfThresholdLabel(oldKey) }));
+      return;
+    }
+
+    const nextKey = `p${nextPercent}`;
+    if (nextKey !== oldKey) {
+      const existingKeys = new Set(getPlfThresholdKeys(rows).map((key) => key.toLowerCase()));
+      existingKeys.delete(String(oldKey).toLowerCase());
+      if (existingKeys.has(nextKey.toLowerCase())) {
+        toast.error("That percentage column already exists.");
+        setThresholdDrafts((prev) => ({ ...prev, [oldKey]: formatPlfThresholdLabel(oldKey) }));
+        return;
+      }
+
+      setData((prev) => {
+        const baseRows = ensurePlfHeaderRow(prev, thresholdKeys);
+        return baseRows.map((row) => {
+          const updated = { ...row };
+          if (updated[oldKey] !== undefined) {
+            updated[nextKey] = updated[oldKey];
+            delete updated[oldKey];
+          }
+          return isHeaderRow(updated) || isSectorRow(updated) ? updated : normalizeAircraftRow(updated);
+        });
+      });
+      setThresholdDrafts((prev) => {
+        const next = { ...prev };
+        delete next[oldKey];
+        next[nextKey] = `${nextPercent}%`;
+        return next;
+      });
+      return;
+    }
+
+    setThresholdDrafts((prev) => ({ ...prev, [oldKey]: `${nextPercent}%` }));
+  };
+
+  const removeThresholdColumn = (key) => {
+    setData((prev) => ensurePlfHeaderRow(prev, thresholdKeys).map((row) => {
+      const updated = { ...row };
+      delete updated[key];
+      return isHeaderRow(updated) || isSectorRow(updated) ? updated : normalizeAircraftRow(updated);
+    }));
   };
 
   const deleteRow = (index) => {
     setData(data.filter((_, rowIndex) => rowIndex !== index));
   };
 
-  const rows = data.length ? data : [{ rowType: "sector", sectorOrGcd: "", gcd: "" }];
-
   return (
     <div className={cn("mb-8", className)}>
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">PLF Effect</h3>
         <div className="flex items-center gap-2">
+          <button
+            onClick={addThresholdColumn}
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+          >
+            <Plus size={14} /> % Column
+          </button>
           <button
             onClick={addSector}
             className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
@@ -396,31 +566,48 @@ function PlfEffectTable({ data, setData, className }) {
       </div>
       <div className="flex items-start">
         <div className={modalTableScrollClass}>
-          <table className={modalTableClass} style={getModalTableStyle(8)}>
-            <EqualWidthColGroup count={8} />
+          <table className={modalTableClass} style={getModalTableStyle(thresholdKeys.length + 4)}>
+            <EqualWidthColGroup count={thresholdKeys.length + 4} />
             <thead>
               <tr className="bg-white dark:bg-slate-900">
                 <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">PLF effect</th>
                 <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">GCD</th>
-                {[
-                  ["80%", "p80"],
-                  ["90%", "p90"],
-                  ["95%", "p95"],
-                  ["98%", "p98"],
-                  ["100%", "p100"],
-                ].map(([label], idx) => (
-                  <th key={label} className="min-w-[88px] border border-slate-300 dark:border-slate-700 px-2 py-1 text-right text-xs font-semibold text-slate-800 dark:text-slate-200">
-                    {label}
-                    {idx === 4 && <div className="text-[10px] font-normal text-slate-500">Carry forward</div>}
+                {thresholdKeys.map((key) => (
+                  <th key={key} className="min-w-[88px] border border-slate-300 dark:border-slate-700 p-0 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    <div className="flex items-center gap-1 px-2 py-1">
+                      <Input
+                        value={thresholdDrafts[key] ?? formatPlfThresholdLabel(key)}
+                        onChange={(e) => setThresholdDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
+                        onBlur={() => commitThresholdColumn(key)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.currentTarget.blur();
+                          }
+                        }}
+                        placeholder="%"
+                        inputMode="numeric"
+                        className="border-0 rounded-none text-right font-semibold px-0"
+                      />
+                      <button
+                        onClick={() => removeThresholdColumn(key)}
+                        className="p-1 text-rose-500 hover:bg-rose-50 rounded dark:hover:bg-rose-900/30"
+                        title="Remove percentage column"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </th>
                 ))}
+                <th className="min-w-[88px] border border-slate-300 dark:border-slate-700 px-2 py-1 text-right text-xs font-semibold text-slate-800 dark:text-slate-200">
+                  100%
+                </th>
                 <th className="border border-slate-300 dark:border-slate-700" />
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, index) => {
+              {renderedRows.map(({ row, index }) => {
                 const sectorRow = isSectorRow(row);
-                const disabledPlaceholder = data.length === 0;
+                const disabledPlaceholder = data.length === 0 || index < 0;
 
                 return (
                   <tr key={index} className={cn(sectorRow && "bg-slate-50 dark:bg-slate-800/60")}>
@@ -429,7 +616,7 @@ function PlfEffectTable({ data, setData, className }) {
                         value={sectorRow ? row.sectorOrGcd : row.acftRegn}
                         onChange={(e) => {
                           if (disabledPlaceholder) {
-                            setData([{ rowType: "sector", sectorOrGcd: e.target.value, gcd: "" }]);
+                            setData((prev) => [...prev, createPlfBlankRow("sector", thresholdKeys, { sectorOrGcd: e.target.value, gcd: "" })]);
                             return;
                           }
                           if (sectorRow) updateSectorGroup(index, "sectorOrGcd", e.target.value);
@@ -449,7 +636,7 @@ function PlfEffectTable({ data, setData, className }) {
                           value={row.gcd}
                           onChange={(e) => {
                             if (disabledPlaceholder) {
-                              setData([{ rowType: "sector", sectorOrGcd: "", gcd: e.target.value }]);
+                              setData((prev) => [...prev, createPlfBlankRow("sector", thresholdKeys, { sectorOrGcd: "", gcd: e.target.value })]);
                               return;
                             }
                             updateSectorGroup(index, "gcd", e.target.value);
@@ -462,18 +649,13 @@ function PlfEffectTable({ data, setData, className }) {
                         <div className="h-8 bg-slate-100 dark:bg-slate-800" />
                       )}
                     </td>
-                    {[
-                      ["p80", row.p80],
-                      ["p90", row.p90],
-                      ["p95", row.p95],
-                      ["p98", row.p98],
-                    ].map(([key, value]) => (
+                    {thresholdKeys.map((key) => (
                       <td key={key} className="border border-slate-300 dark:border-slate-700 p-0">
                         {sectorRow ? (
                           <div className="h-8 bg-slate-100 dark:bg-slate-800" />
                         ) : (
                           <Input
-                            value={value}
+                            value={row[key]}
                             onChange={(e) => updateRow(index, key, e.target.value)}
                             type="number"
                             className="border-0 rounded-none text-right"
@@ -834,10 +1016,12 @@ function ApuUsageTable({ data, setData, className }) {
 }
 
 function FuelPriceTable({ data, setData, className }) {
+  const [fallbackMonth1, setFallbackMonth1] = useState("");
+  const [fallbackMonth2, setFallbackMonth2] = useState("");
   const month1Row = data.find((row) => row.month1 || row.m1Label || row.month);
   const month2Row = data.find((row) => row.month2 || row.m2Label);
-  const month1 = month1Row?.month1 || month1Row?.m1Label || month1Row?.month || "";
-  const month2 = month2Row?.month2 || month2Row?.m2Label || "";
+  const month1 = month1Row?.month1 || month1Row?.m1Label || month1Row?.month || fallbackMonth1;
+  const month2 = month2Row?.month2 || month2Row?.m2Label || fallbackMonth2;
 
   const normalizeRow = (row) => {
     return {
@@ -848,10 +1032,26 @@ function FuelPriceTable({ data, setData, className }) {
   };
 
   const updateMonthLabel = (key, value) => {
+    if (key === "month1") setFallbackMonth1(value);
+    if (key === "month2") setFallbackMonth2(value);
     setData(data.map((row) => ({ ...row, [key]: value })));
   };
 
   const updateRow = (index, key, value) => {
+    if (data.length === 0) {
+      setData([normalizeRow({
+        station: "",
+        ccy: "",
+        kgPerLtr: "",
+        month1,
+        month2,
+        m1: "",
+        m2: "",
+        [key]: value,
+      })]);
+      return;
+    }
+
     setData(data.map((row, rowIndex) => {
       if (rowIndex !== index) return row;
       const next = { ...row, [key]: value, month1, month2 };
