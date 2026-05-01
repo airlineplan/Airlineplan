@@ -915,6 +915,14 @@ const FxRateModal = ({
       return;
     }
 
+    const nextCurrencyCodes = [
+      nextReportingCurrency,
+      ...(Array.isArray(currencyCodes) ? currencyCodes : []),
+    ]
+      .map(normalizeCurrencyCode)
+      .filter(Boolean)
+      .filter((code, index, list) => list.indexOf(code) === index);
+
     const nextRates = (Array.isArray(fxRows) ? fxRows : []).flatMap((row) =>
       Object.entries(row.pairs || {}).map(([pair, rate]) => ({
         pair,
@@ -925,12 +933,24 @@ const FxRateModal = ({
 
     try {
       setSaving(true);
-      await api.post("/revenue/config", {
+      const response = await api.post("/revenue/config", {
         reportingCurrency: nextReportingCurrency,
-        currencyCodes,
+        currencyCodes: nextCurrencyCodes,
         fxRates: nextRates,
       });
-      setSavedFxRates(nextRates);
+      const savedConfig = response.data?.data || {};
+      const savedReportingCurrency = normalizeCurrencyCode(savedConfig.reportingCurrency) || nextReportingCurrency;
+      const savedCurrencyCodes = Array.isArray(savedConfig.currencyCodes)
+        ? savedConfig.currencyCodes.map(normalizeCurrencyCode).filter(Boolean)
+        : nextCurrencyCodes;
+      const uniqueSavedCurrencyCodes = savedCurrencyCodes.filter((code, index, list) => list.indexOf(code) === index);
+      const savedRates = Array.isArray(savedConfig.fxRates) ? savedConfig.fxRates : nextRates;
+
+      setReportingCurrency(savedReportingCurrency);
+      setExposureCurrency?.(savedReportingCurrency);
+      setCurrencyCodes(uniqueSavedCurrencyCodes.length ? uniqueSavedCurrencyCodes : nextCurrencyCodes);
+      setSavedFxRates(savedRates);
+      setFxRows(createFxRows(periodColumns, buildCurrencyPairs(uniqueSavedCurrencyCodes.length ? uniqueSavedCurrencyCodes : nextCurrencyCodes, savedReportingCurrency), savedRates));
       toast.success("FX rates saved");
     } catch (error) {
       console.error("Error saving FX rates:", error);

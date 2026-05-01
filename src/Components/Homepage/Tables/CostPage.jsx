@@ -69,6 +69,24 @@ const formatHeaderDate = (inputDate) => {
     return `${day} ${month} ${year}`;
 };
 
+const normalizeCurrencyCode = (value) => String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "")
+    .slice(0, 3);
+
+const formatCurrencyAmount = (value, currencyCode) => {
+    const normalizedCurrency = normalizeCurrencyCode(currencyCode) || "USD";
+    try {
+        return new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: normalizedCurrency,
+        }).format(value);
+    } catch {
+        return `${normalizedCurrency} ${new Intl.NumberFormat("en-US").format(value)}`;
+    }
+};
+
 // --- DROPDOWN COMPONENTS ---
 
 const MultiSelectDropdown = ({ placeholder, options = [], onChange, selected = [] }) => {
@@ -265,6 +283,7 @@ const CostPage = () => {
     const [loading, setLoading] = useState(false);
     const [rawFlights, setRawFlights] = useState([]);
     const [isCostInputOpen, setIsCostInputOpen] = useState(false);
+    const [reportingCurrency, setReportingCurrency] = useState("USD");
 
     const [dropdownOptions, setDropdownOptions] = useState({
         from: [], to: [], sector: [], sn: [], flight: [], variant: [], userTag1: [], userTag2: []
@@ -326,6 +345,25 @@ const CostPage = () => {
         };
         getDropdownData();
     }, []);
+
+    useEffect(() => {
+        const loadRevenueConfig = async () => {
+            try {
+                const response = await api.get("/revenue/config");
+                const nextCurrency = normalizeCurrencyCode(response.data?.data?.reportingCurrency);
+                setReportingCurrency(nextCurrency || "USD");
+            } catch (error) {
+                console.error("Error fetching revenue config:", error);
+                setReportingCurrency("USD");
+            }
+        };
+
+        loadRevenueConfig();
+    }, []);
+
+    const currencyFormatter = useMemo(() => (
+        (value) => formatCurrencyAmount(value, reportingCurrency)
+    ), [reportingCurrency]);
 
     const fetchCostData = async () => {
         try {
@@ -462,7 +500,7 @@ const CostPage = () => {
         if (!tableData || tableData.length === 0) return toast.warn("No data available to export.");
         try {
             const prettyHeaders = tableColumns.map(c => formatHeaderDate(c));
-            const headers = ["Hierarchy / Grouping", ...prettyHeaders];
+            const headers = [`Hierarchy / Grouping (RCCY ${reportingCurrency || "USD"})`, ...prettyHeaders];
             const excelRows = tableData.map((row) => {
                 const indent = "    ".repeat(row.level);
                 const label = row.isTotalRow ? `${indent}${row.label}` : `${indent}${row.label}`;
@@ -614,7 +652,7 @@ const CostPage = () => {
                                             row.isTotalRow ? "font-bold text-slate-800 dark:text-slate-200" : "text-slate-600 dark:text-slate-400",
                                             row.isGrandTotal && "text-emerald-700 dark:text-emerald-400 font-black"
                                         )}>
-                                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val)}
+                                            {currencyFormatter(val)}
                                         </td>
                                     ))}
                                 </tr>
