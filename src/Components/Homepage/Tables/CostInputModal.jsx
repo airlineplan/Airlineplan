@@ -2137,66 +2137,49 @@ export default function CostInputModal({ isOpen, onClose }) {
                 <h2 className="mb-4 border-b border-slate-200 pb-2 text-lg font-bold text-slate-800 dark:border-slate-700 dark:text-slate-200">
                   Airport cost
                 </h2>
-                <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                  <div className="space-y-8">
-                    <TierSheetTable
-                      title="Landing @ Arr Stn"
-                      rowLabel="Landing @"
-                      rowKey="arrStn"
-                      data={airportLanding}
-                      setData={setAirportLanding}
-                      tierKeys={navMtowTiers}
-                    />
-                    <ChargeSheetTable
-                      title="Dom flight handling"
-                      data={airportDom}
-                      setData={setAirportDom}
-                      columns={[
-                        { label: "CCY", key: "ccy", placeholder: "CCY" },
-                        { label: "Arr Stn", key: "arrStn", placeholder: "Stn" },
-                        { label: "Variant", key: "variant", placeholder: "Variant" },
-                        { label: "MTOW", key: "mtow", type: "number", placeholder: "MTOW" },
-                        { label: "Month", key: "month", placeholder: "Month" },
-                        { label: "Cost", key: "cost", type: "number", placeholder: "Cost" },
-                      ]}
-                    />
-                    <TierSheetTable
-                      title="Other APT costs @ Arr Stn"
-                      rowLabel="Other APT"
-                      rowKey="arrStn"
-                      data={airportOther}
-                      setData={setAirportOther}
-                      tierKeys={navMtowTiers}
-                    />
-                  </div>
-                  <div className="space-y-8">
-                    <ChargeSheetTable
-                      title="INTL flight handling"
-                      data={airportIntl}
-                      setData={setAirportIntl}
-                      columns={[
-                        { label: "CCY", key: "ccy", placeholder: "CCY" },
-                        { label: "Arr Stn", key: "arrStn", placeholder: "Stn" },
-                        { label: "Variant", key: "variant", placeholder: "Variant" },
-                        { label: "MTOW", key: "mtow", type: "number", placeholder: "MTOW" },
-                        { label: "Month", key: "month", placeholder: "Month" },
-                        { label: "Cost", key: "cost", type: "number", placeholder: "Cost" },
-                      ]}
-                    />
-                    <ChargeSheetTable
-                      title="AvSec"
-                      data={airportAvsec}
-                      setData={setAirportAvsec}
-                      columns={[
-                        { label: "CCY", key: "ccy", placeholder: "CCY" },
-                        { label: "Arr Stn", key: "arrStn", placeholder: "Stn" },
-                        { label: "Variant", key: "variant", placeholder: "Variant" },
-                        { label: "MTOW", key: "mtow", type: "number", placeholder: "MTOW" },
-                        { label: "Month", key: "month", placeholder: "Month" },
-                        { label: "Cost", key: "cost", type: "number", placeholder: "Cost" },
-                      ]}
-                    />
-                  </div>
+                <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
+                  <TierSheetTable
+                    title="Landing @ Arr Stn"
+                    rowLabel="Landing @"
+                    rowKey="arrStn"
+                    data={airportLanding}
+                    setData={setAirportLanding}
+                    tierKeys={navMtowTiers}
+                  />
+                  <ChargeSheetTable
+                    title="Dom flight handling"
+                    data={airportDom}
+                    setData={setAirportDom}
+                    columns={[
+                      { label: "CCY", key: "ccy", placeholder: "CCY" },
+                      { label: "Arr Stn", key: "arrStn", placeholder: "Stn" },
+                      { label: "Variant", key: "variant", placeholder: "Variant" },
+                      { label: "MTOW", key: "mtow", type: "number", placeholder: "MTOW" },
+                      { label: "Month", key: "month", placeholder: "Month" },
+                      { label: "Cost", key: "cost", type: "number", placeholder: "Cost" },
+                    ]}
+                  />
+                  <ChargeSheetTable
+                    title="INTL flight handling"
+                    data={airportIntl}
+                    setData={setAirportIntl}
+                    columns={[
+                      { label: "CCY", key: "ccy", placeholder: "CCY" },
+                      { label: "Arr Stn", key: "arrStn", placeholder: "Stn" },
+                      { label: "Variant", key: "variant", placeholder: "Variant" },
+                      { label: "MTOW", key: "mtow", type: "number", placeholder: "MTOW" },
+                      { label: "Month", key: "month", placeholder: "Month" },
+                      { label: "Cost", key: "cost", type: "number", placeholder: "Cost" },
+                    ]}
+                  />
+                  <TierSheetTable
+                    title="Other APT costs @ Arr Stn"
+                    rowLabel="Other APT"
+                    rowKey="arrStn"
+                    data={airportOther}
+                    setData={setAirportOther}
+                    tierKeys={navMtowTiers}
+                  />
                 </div>
               </section>
 
