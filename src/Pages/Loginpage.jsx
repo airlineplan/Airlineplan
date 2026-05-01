@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from '../apiConfig';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -13,6 +13,8 @@ import "react-toastify/dist/ReactToastify.css";
 import TermsAndConditionsModal from '../Components/Homepage/TermsAndConditionsModal';
 // Ensure path is correct
 import backgroundPic from "../assets/Images/bglogin.jpeg";
+import { validateStoredSession } from "../auth/validateSession";
+import { setAccessToken } from "../auth/session";
 
 // --- UI COMPONENTS ---
 
@@ -58,18 +60,50 @@ export default function Loginpage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const loginInFlightRef = useRef(false);
   const navigate = useNavigate();
 
   // Check Auth
   useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken');
-    if (accessToken) {
-      navigate('/homepage');
-    }
+    let isMounted = true;
+
+    const checkAuth = async () => {
+      const accessToken = localStorage.getItem('accessToken');
+      if (!accessToken) {
+        if (isMounted) {
+          setCheckingSession(false);
+        }
+        return;
+      }
+
+      const isValid = await validateStoredSession();
+      if (!isMounted) {
+        return;
+      }
+
+      if (isValid) {
+        navigate('/homepage', { replace: true });
+        return;
+      }
+
+      setCheckingSession(false);
+    };
+
+    checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, [navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (loading || loginInFlightRef.current) {
+      return;
+    }
+
+    loginInFlightRef.current = true;
     setLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/user-login`, {
@@ -80,9 +114,9 @@ export default function Loginpage() {
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem('accessToken', data.token);
+        setAccessToken(data.token);
         toast.success(data.message || "Login successful!");
-        setTimeout(() => navigate('/homepage'), 1000);
+        setTimeout(() => navigate('/homepage', { replace: true }), 1000);
       } else {
         toast.error(data.error || "Invalid credentials");
       }
@@ -90,6 +124,7 @@ export default function Loginpage() {
       console.error(error);
       toast.error("Network error occurred.");
     } finally {
+      loginInFlightRef.current = false;
       setLoading(false);
     }
   };
@@ -105,6 +140,14 @@ export default function Loginpage() {
 
   return (
     <div className="min-h-screen w-full relative font-sans flex items-center justify-center p-4 lg:p-8 overflow-hidden bg-black">
+      {checkingSession && localStorage.getItem('accessToken') && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-center text-white shadow-2xl">
+            <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+            <p className="text-sm font-medium">Checking session...</p>
+          </div>
+        </div>
+      )}
 
       {/* --- FULL SCREEN BACKGROUND --- */}
       <div className="absolute inset-0 z-0">

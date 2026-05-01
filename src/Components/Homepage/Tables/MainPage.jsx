@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../apiConfig";
+import { forceLogout } from "../../../auth/session";
+import { validateStoredSession } from "../../../auth/validateSession";
 import { motion, AnimatePresence } from "framer-motion";
 import PropTypes from "prop-types";
 import { clsx } from "clsx";
@@ -91,15 +93,40 @@ const MainPage = () => {
   const [, setTotalFlights] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
 
 
   useEffect(() => {
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) {
-      navigate("/");
-    } else if (window.location.pathname !== "/homepage") {
-      navigate("/homepage", { replace: true });
-    }
+    let isMounted = true;
+
+    const checkAuth = async () => {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        navigate("/", { replace: true });
+        return;
+      }
+
+      const isValid = await validateStoredSession();
+      if (!isMounted) {
+        return;
+      }
+
+      if (!isValid) {
+        return;
+      }
+
+      setSessionReady(true);
+
+      if (window.location.pathname !== "/homepage") {
+        navigate("/homepage", { replace: true });
+      }
+    };
+
+    checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, [navigate]);
 
   useEffect(() => {
@@ -147,12 +174,22 @@ const MainPage = () => {
   }, [activeStep, refreshKey]);
 
   const handleLogout = () => {
-    localStorage.removeItem("accessToken");
+    forceLogout("manual_logout");
     toast.success("Logout successful!");
-    setTimeout(() => navigate("/"), 1500);
   };
 
   const ActiveComponent = TABS[activeStep].component;
+
+  if (!sessionReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+        <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-center shadow-2xl">
+          <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+          <p className="text-sm font-medium">Verifying session...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 relative overflow-x-hidden">
