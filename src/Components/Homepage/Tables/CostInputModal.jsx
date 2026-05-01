@@ -190,6 +190,243 @@ function Input({ value, onChange, placeholder, type = "text", className, ...rest
   );
 }
 
+function SheetInput({ className, ...props }) {
+  return (
+    <Input
+      {...props}
+      className={cn(
+        "min-h-[34px] h-9 rounded-none border-slate-300 dark:border-slate-700 bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 focus:bg-slate-50 dark:focus:bg-slate-800 focus:ring-0",
+        className
+      )}
+    />
+  );
+}
+
+function SheetTableCard({ title, subtitle, action, children, className }) {
+  return (
+    <div className={cn("w-full", className)}>
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{title}</h3>
+        </div>
+        {action}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function TierSheetTable({
+  title,
+  subtitle = null,
+  rowLabel,
+  rowKey,
+  data,
+  setData,
+  tierKeys,
+  className,
+}) {
+  const rows = Array.isArray(data) && data.length > 0 ? data : [{ ccy: "", [rowKey]: "", ...Object.fromEntries(tierKeys.map((tier) => [tier, ""])) }];
+
+  const updateRow = (index, key, value) => {
+    setData(rows.map((row, rowIndex) => (rowIndex === index ? { ...row, [key]: value } : row)));
+  };
+
+  const addRow = () => {
+    setData([
+      ...rows,
+      { ccy: "", [rowKey]: "", ...Object.fromEntries(tierKeys.map((tier) => [tier, ""])) },
+    ]);
+  };
+
+  const deleteRow = (index) => {
+    setData(rows.filter((_, rowIndex) => rowIndex !== index));
+  };
+
+  return (
+    <SheetTableCard
+      title={title}
+      subtitle={subtitle}
+      action={(
+        <button
+          type="button"
+          onClick={addRow}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+        >
+          <Plus size={12} /> Add Row
+        </button>
+      )}
+      className={className}
+    >
+      <div className="overflow-x-auto border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900">
+        <table className="w-full table-fixed border-collapse whitespace-nowrap" style={getModalTableStyle(tierKeys.length + 3)}>
+          <EqualWidthColGroup count={tierKeys.length + 3} />
+          <thead>
+            <tr className="bg-white dark:bg-slate-900">
+              <th className="border border-slate-300 px-3 py-1.5 text-left text-sm font-semibold text-slate-800 dark:border-slate-700 dark:text-slate-200">
+                CCY
+              </th>
+              <th className="border border-slate-300 px-3 py-1.5 text-left text-sm font-semibold text-slate-800 dark:border-slate-700 dark:text-slate-200">
+                {rowLabel}
+              </th>
+              {tierKeys.map((tier) => (
+                <th
+                  key={tier}
+                  className="border border-slate-300 px-3 py-1.5 text-right text-sm font-semibold text-slate-800 dark:border-slate-700 dark:text-slate-200"
+                >
+                  {tier}
+                </th>
+              ))}
+              <th className="border border-slate-300 px-3 py-1.5 text-center text-sm font-semibold text-slate-800 dark:border-slate-700 dark:text-slate-200" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => {
+              const isPlaceholder = !Array.isArray(data) || data.length === 0;
+              return (
+                <tr key={index}>
+                  <td className="border border-slate-300 p-0 dark:border-slate-700">
+                    <SheetInput
+                      value={row.ccy}
+                      onChange={(e) => updateRow(index, "ccy", e.target.value)}
+                      placeholder="CCY"
+                      className="border-0 px-2 text-sm font-medium"
+                    />
+                  </td>
+                  <td className="border border-slate-300 p-0 dark:border-slate-700">
+                    <SheetInput
+                      value={row[rowKey]}
+                      onChange={(e) => updateRow(index, rowKey, e.target.value)}
+                      placeholder={rowLabel}
+                      className="border-0 px-2 text-sm font-medium"
+                    />
+                  </td>
+                  {tierKeys.map((tier) => (
+                    <td key={tier} className="border border-slate-300 p-0 dark:border-slate-700">
+                      <SheetInput
+                        value={row[tier]}
+                        onChange={(e) => updateRow(index, tier, e.target.value)}
+                        type="number"
+                        className="border-0 px-2 text-right font-medium"
+                      />
+                    </td>
+                  ))}
+                  <td className="border border-slate-300 px-1 text-center dark:border-slate-700">
+                    {!isPlaceholder && (
+                      <button
+                        type="button"
+                        onClick={() => deleteRow(index)}
+                        className="rounded p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </SheetTableCard>
+  );
+}
+
+function ChargeSheetTable({
+  title,
+  subtitle = null,
+  data,
+  setData,
+  columns,
+  className,
+}) {
+  const rows = Array.isArray(data) && data.length > 0
+    ? data
+    : [columns.reduce((acc, col) => ({ ...acc, [col.key]: "" }), {})];
+
+  const updateRow = (index, key, value) => {
+    setData(rows.map((row, rowIndex) => (rowIndex === index ? { ...row, [key]: value } : row)));
+  };
+
+  const addRow = () => {
+    setData([...rows, columns.reduce((acc, col) => ({ ...acc, [col.key]: "" }), {})]);
+  };
+
+  const deleteRow = (index) => {
+    setData(rows.filter((_, rowIndex) => rowIndex !== index));
+  };
+
+  return (
+    <SheetTableCard
+      title={title}
+      subtitle={subtitle}
+      action={(
+        <button
+          type="button"
+          onClick={addRow}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+        >
+          <Plus size={12} /> Add Row
+        </button>
+      )}
+      className={className}
+    >
+      <div className="overflow-x-auto border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900">
+        <table className="w-full table-fixed border-collapse whitespace-nowrap" style={getModalTableStyle(columns.length + 1)}>
+          <EqualWidthColGroup count={columns.length + 1} />
+          <thead>
+            <tr className="bg-white dark:bg-slate-900">
+              {columns.map((col) => (
+                <th
+                  key={col.key}
+                  className="border border-slate-300 px-3 py-1.5 text-left text-sm font-semibold text-slate-800 dark:border-slate-700 dark:text-slate-200"
+                >
+                  {col.label}
+                </th>
+              ))}
+              <th className="border border-slate-300 px-3 py-1.5 text-center text-sm font-semibold text-slate-800 dark:border-slate-700 dark:text-slate-200" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => {
+              const isPlaceholder = !Array.isArray(data) || data.length === 0;
+              return (
+                <tr key={index}>
+                  {columns.map((col) => (
+                    <td key={col.key} className="border border-slate-300 p-0 dark:border-slate-700">
+                      <SheetInput
+                        value={row[col.key]}
+                        onChange={(e) => updateRow(index, col.key, e.target.value)}
+                        type={col.type || "text"}
+                        placeholder={col.placeholder || col.label}
+                        className={cn(
+                          "border-0 px-2 text-sm",
+                          col.type === "number" && "text-right font-medium"
+                        )}
+                      />
+                    </td>
+                  ))}
+                  <td className="border border-slate-300 px-1 text-center dark:border-slate-700">
+                    {!isPlaceholder && (
+                      <button
+                        type="button"
+                        onClick={() => deleteRow(index)}
+                        className="rounded p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </SheetTableCard>
+  );
+}
+
 function FuelConsumptionTable({ data, setData, className }) {
   const [fallbackMonth1, setFallbackMonth1] = useState("");
   const [fallbackMonth2, setFallbackMonth2] = useState("");
@@ -1841,23 +2078,26 @@ export default function CostInputModal({ isOpen, onClose }) {
 
               {/* === SECTION: NAVIGATION === */}
               <section>
-                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4">Navigation</h2>
-                <div className="mb-6 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/40 p-4">
+                <h2 className="mb-4 border-b border-slate-200 pb-2 text-lg font-bold text-slate-800 dark:border-slate-700 dark:text-slate-200">
+                  Navigation cost
+                </h2>
+                <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/30">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <div className="text-sm font-semibold text-slate-800 dark:text-slate-200">MTOW tiers</div>
+                      <div className="mt-1 text-xs italic text-slate-600 dark:text-slate-400">Adjust tiers before applying them to the tables below.</div>
                     </div>
                     <button
                       type="button"
                       onClick={applyNavMtowTiers}
-                      className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+                      className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
                     >
                       Apply tiers
                     </button>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
                     {navMtowTierDraft.map((tier, index) => (
-                      <Input
+                      <SheetInput
                         key={index}
                         value={tier}
                         onChange={(e) => {
@@ -1867,102 +2107,96 @@ export default function CostInputModal({ isOpen, onClose }) {
                         }}
                         type="number"
                         placeholder={`Tier ${index + 1}`}
+                        className="text-right font-medium"
                       />
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
-                  <CompactEditableTable
-                    title="Enroute (ENR)"
-                    className="max-w-full"
+                <div className="grid grid-cols-1 gap-10 xl:grid-cols-2">
+                  <TierSheetTable
+                    title="Enroute"
+                    rowLabel="ENR"
+                    rowKey="sector"
                     data={navEnr}
                     setData={setNavEnr}
-                    columns={[
-                      { label: "CCY", key: "ccy" },
-                      { label: "ENR", key: "sector" },
-                      ...navMtowTiers.map((tier) => ({ label: String(tier), key: String(tier), type: "number" })),
-                    ]}
+                    tierKeys={navMtowTiers}
                   />
-                  <CompactEditableTable
+                  <TierSheetTable
                     title="Terminal @ Arr Stn"
-                    className="max-w-full"
+                    rowLabel="Terminal @ Arr Stn"
+                    rowKey="arrStn"
                     data={navTerm}
                     setData={setNavTerm}
-                    columns={[
-                      { label: "CCY", key: "ccy" },
-                      { label: "Terminal @ Arr Stn", key: "arrStn" },
-                      ...navMtowTiers.map((tier) => ({ label: String(tier), key: String(tier), type: "number" })),
-                    ]}
+                    tierKeys={navMtowTiers}
                   />
                 </div>
               </section>
 
               {/* === SECTION: AIRPORT === */}
               <section>
-                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4">Airport</h2>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                  <EditableTable
-                    title="Landing"
-                    data={airportLanding}
-                    setData={setAirportLanding}
-                    columns={[
-                      { label: "Arr Stn", key: "arrStn" },
-                      { label: "MTOW", key: "mtow", type: "number" },
-                      { label: "Variant", key: "variant" },
-                      { label: "Month", key: "month" },
-                      { label: "Cost", key: "cost", type: "number" },
-                      { label: "CCY", key: "ccy" },
-                    ]}
-                  />
-                  <EditableTable
-                    title="Dom flight handling"
-                    data={airportDom}
-                    setData={setAirportDom}
-                    columns={[
-                      { label: "Arr Stn", key: "arrStn" },
-                      { label: "MTOW", key: "mtow", type: "number" },
-                      { label: "Variant", key: "variant" },
-                      { label: "Month", key: "month" },
-                      { label: "Cost", key: "cost", type: "number" },
-                      { label: "CCY", key: "ccy" },
-                    ]}
-                  />
-                  <EditableTable
-                    title="Intl flight handling"
-                    data={airportIntl}
-                    setData={setAirportIntl}
-                    columns={[
-                      { label: "Arr Stn", key: "arrStn" },
-                      { label: "MTOW", key: "mtow", type: "number" },
-                      { label: "Variant", key: "variant" },
-                      { label: "Month", key: "month" },
-                      { label: "Cost", key: "cost", type: "number" },
-                      { label: "CCY", key: "ccy" },
-                    ]}
-                  />
-                  <CompactEditableTable
-                    title="Other APT costs @ Arr Stn"
-                    className="xl:col-span-2"
-                    data={airportOther}
-                    setData={setAirportOther}
-                    columns={[
-                      { label: "Arr Stn", key: "arrStn" },
-                      { label: "CCY", key: "ccy" },
-                      ...navMtowTiers.map((tier) => ({ label: String(tier), key: String(tier), type: "number" })),
-                    ]}
-                  />
-                  <EditableTable
-                    title="AvSec"
-                    data={airportAvsec}
-                    setData={setAirportAvsec}
-                    columns={[
-                      { label: "Arr Stn", key: "arrStn" },
-                      { label: "Variant", key: "variant" },
-                      { label: "Month", key: "month" },
-                      { label: "Cost", key: "cost", type: "number" },
-                      { label: "CCY", key: "ccy" },
-                    ]}
-                  />
+                <h2 className="mb-4 border-b border-slate-200 pb-2 text-lg font-bold text-slate-800 dark:border-slate-700 dark:text-slate-200">
+                  Airport cost
+                </h2>
+                <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                  <div className="space-y-8">
+                    <TierSheetTable
+                      title="Landing @ Arr Stn"
+                      rowLabel="Landing @"
+                      rowKey="arrStn"
+                      data={airportLanding}
+                      setData={setAirportLanding}
+                      tierKeys={navMtowTiers}
+                    />
+                    <ChargeSheetTable
+                      title="Dom flight handling"
+                      data={airportDom}
+                      setData={setAirportDom}
+                      columns={[
+                        { label: "CCY", key: "ccy", placeholder: "CCY" },
+                        { label: "Arr Stn", key: "arrStn", placeholder: "Stn" },
+                        { label: "Variant", key: "variant", placeholder: "Variant" },
+                        { label: "MTOW", key: "mtow", type: "number", placeholder: "MTOW" },
+                        { label: "Month", key: "month", placeholder: "Month" },
+                        { label: "Cost", key: "cost", type: "number", placeholder: "Cost" },
+                      ]}
+                    />
+                    <TierSheetTable
+                      title="Other APT costs @ Arr Stn"
+                      rowLabel="Other APT"
+                      rowKey="arrStn"
+                      data={airportOther}
+                      setData={setAirportOther}
+                      tierKeys={navMtowTiers}
+                    />
+                  </div>
+                  <div className="space-y-8">
+                    <ChargeSheetTable
+                      title="INTL flight handling"
+                      data={airportIntl}
+                      setData={setAirportIntl}
+                      columns={[
+                        { label: "CCY", key: "ccy", placeholder: "CCY" },
+                        { label: "Arr Stn", key: "arrStn", placeholder: "Stn" },
+                        { label: "Variant", key: "variant", placeholder: "Variant" },
+                        { label: "MTOW", key: "mtow", type: "number", placeholder: "MTOW" },
+                        { label: "Month", key: "month", placeholder: "Month" },
+                        { label: "Cost", key: "cost", type: "number", placeholder: "Cost" },
+                      ]}
+                    />
+                    <ChargeSheetTable
+                      title="AvSec"
+                      data={airportAvsec}
+                      setData={setAirportAvsec}
+                      columns={[
+                        { label: "CCY", key: "ccy", placeholder: "CCY" },
+                        { label: "Arr Stn", key: "arrStn", placeholder: "Stn" },
+                        { label: "Variant", key: "variant", placeholder: "Variant" },
+                        { label: "MTOW", key: "mtow", type: "number", placeholder: "MTOW" },
+                        { label: "Month", key: "month", placeholder: "Month" },
+                        { label: "Cost", key: "cost", type: "number", placeholder: "Cost" },
+                      ]}
+                    />
+                  </div>
                 </div>
               </section>
 
