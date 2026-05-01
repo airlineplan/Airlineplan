@@ -13,9 +13,9 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-const MODAL_TABLE_COLUMN_WIDTH = 148;
+const MODAL_TABLE_COLUMN_WIDTH = 168;
 const modalTableScrollClass = "overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg";
-const modalTableClass = "w-full table-fixed text-left text-sm whitespace-nowrap border-collapse";
+const modalTableClass = "w-full table-fixed text-left text-base whitespace-nowrap border-collapse";
 const PLF_HEADER_ROW_TYPE = "header";
 const PLF_CARRY_FORWARD_KEY = "p100";
 const PLF_DEFAULT_THRESHOLD_KEYS = ["p80", "p90", "p95", "p98"];
@@ -182,7 +182,7 @@ function Input({ value, onChange, placeholder, type = "text", className, ...rest
       placeholder={placeholder}
       {...rest}
       className={cn(
-        "w-full px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-indigo-500",
+        "w-full min-h-[44px] px-3 py-2.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-indigo-500",
         "bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200",
         className
       )}
@@ -260,13 +260,13 @@ function FuelConsumptionTable({ data, setData, className }) {
         <div className="flex items-center gap-2">
           <button
             onClick={addSector}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
           >
             <Plus size={14} /> Sector
           </button>
           <button
             onClick={addAircraft}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
           >
             <Plus size={14} /> ACFT
           </button>
@@ -277,8 +277,8 @@ function FuelConsumptionTable({ data, setData, className }) {
           <EqualWidthColGroup count={5} />
           <thead>
             <tr className="bg-white dark:bg-slate-900">
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Fuel Kg</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">GCD</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Fuel Kg</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">GCD</th>
               <th className="border border-slate-300 dark:border-slate-700 p-0">
                 <Input
                   value={month1}
@@ -340,12 +340,12 @@ function FuelConsumptionTable({ data, setData, className }) {
                         className="border-0 rounded-none text-right bg-slate-50 dark:bg-slate-800/60"
                       />
                     ) : (
-                      <div className="h-8 bg-slate-100 dark:bg-slate-800" />
+                      <div className="h-10 bg-slate-100 dark:bg-slate-800" />
                     )}
                   </td>
                   <td className="border border-slate-300 dark:border-slate-700 p-0">
                     {sectorRow ? (
-                      <div className="h-8 bg-slate-100 dark:bg-slate-800" />
+                      <div className="h-10 bg-slate-100 dark:bg-slate-800" />
                     ) : (
                       <Input
                         value={row.m1 ?? (row.month === month1 ? row.fuelConsumptionKg : "")}
@@ -357,7 +357,7 @@ function FuelConsumptionTable({ data, setData, className }) {
                   </td>
                   <td className="border border-slate-300 dark:border-slate-700 p-0">
                     {sectorRow ? (
-                      <div className="h-8 bg-slate-100 dark:bg-slate-800" />
+                      <div className="h-10 bg-slate-100 dark:bg-slate-800" />
                     ) : (
                       <Input
                         value={row.m2}
@@ -546,19 +546,19 @@ function PlfEffectTable({ data, setData, className }) {
         <div className="flex items-center gap-2">
           <button
             onClick={addThresholdColumn}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
           >
             <Plus size={14} /> % Column
           </button>
           <button
             onClick={addSector}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
           >
             <Plus size={14} /> Sector
           </button>
           <button
             onClick={addAircraft}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
           >
             <Plus size={14} /> ACFT
           </button>
@@ -570,11 +570,11 @@ function PlfEffectTable({ data, setData, className }) {
             <EqualWidthColGroup count={thresholdKeys.length + 4} />
             <thead>
               <tr className="bg-white dark:bg-slate-900">
-                <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">PLF effect</th>
-                <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">GCD</th>
+                <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">PLF effect</th>
+                <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">GCD</th>
                 {thresholdKeys.map((key) => (
-                  <th key={key} className="min-w-[88px] border border-slate-300 dark:border-slate-700 p-0 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                    <div className="flex items-center gap-1 px-2 py-1">
+                  <th key={key} className="min-w-[96px] border border-slate-300 dark:border-slate-700 p-0 text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    <div className="flex items-center gap-1 px-3 py-2">
                       <Input
                         value={thresholdDrafts[key] ?? formatPlfThresholdLabel(key)}
                         onChange={(e) => setThresholdDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
@@ -598,7 +598,7 @@ function PlfEffectTable({ data, setData, className }) {
                     </div>
                   </th>
                 ))}
-                <th className="min-w-[88px] border border-slate-300 dark:border-slate-700 px-2 py-1 text-right text-xs font-semibold text-slate-800 dark:text-slate-200">
+                <th className="min-w-[96px] border border-slate-300 dark:border-slate-700 px-3 py-2 text-right text-sm font-semibold text-slate-800 dark:text-slate-200">
                   100%
                 </th>
                 <th className="border border-slate-300 dark:border-slate-700" />
@@ -646,13 +646,13 @@ function PlfEffectTable({ data, setData, className }) {
                           className="border-0 rounded-none text-right bg-slate-50 dark:bg-slate-800/60"
                         />
                       ) : (
-                        <div className="h-8 bg-slate-100 dark:bg-slate-800" />
+                        <div className="h-10 bg-slate-100 dark:bg-slate-800" />
                       )}
                     </td>
                     {thresholdKeys.map((key) => (
                       <td key={key} className="border border-slate-300 dark:border-slate-700 p-0">
                         {sectorRow ? (
-                          <div className="h-8 bg-slate-100 dark:bg-slate-800" />
+                          <div className="h-10 bg-slate-100 dark:bg-slate-800" />
                         ) : (
                           <Input
                             value={row[key]}
@@ -665,7 +665,7 @@ function PlfEffectTable({ data, setData, className }) {
                     ))}
                     <td className="border border-slate-300 dark:border-slate-700 p-0">
                       {sectorRow ? (
-                        <div className="h-8 bg-slate-100 dark:bg-slate-800" />
+                        <div className="h-10 bg-slate-100 dark:bg-slate-800" />
                       ) : (
                         <Input
                           value={getCarryForwardValue(row)}
@@ -743,7 +743,7 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
         <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Fuel Consumption Index</h3>
         <button
           onClick={addRow}
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
         >
           <Plus size={14} /> Add Row
         </button>
@@ -753,7 +753,7 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
           <EqualWidthColGroup count={7} />
           <thead>
             <tr className="bg-white dark:bg-slate-900">
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Fuel consum</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Fuel consum</th>
               {monthKeys.map(([monthKey], index) => (
                 <th key={monthKey} className="min-w-[92px] border border-slate-300 dark:border-slate-700 p-0">
                   <Input
@@ -894,7 +894,7 @@ function ApuUsageTable({ data, setData, className }) {
         <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">APU Usage</h3>
         <button
           onClick={addRow}
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
         >
           <Plus size={14} /> Add Row
         </button>
@@ -904,15 +904,15 @@ function ApuUsageTable({ data, setData, className }) {
           <EqualWidthColGroup count={10} />
           <thead>
             <tr className="bg-white dark:bg-slate-900">
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Stn</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">From date</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">To date</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Variant</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">ACFT Regn</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">APU Hr/day</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Kg / APU Hr</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Addln use</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">CCY</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Stn</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">From date</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">To date</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Variant</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">ACFT Regn</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">APU Hr/day</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Kg / APU Hr</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Addln use</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">CCY</th>
               <th className="border border-slate-300 dark:border-slate-700" />
             </tr>
           </thead>
@@ -982,7 +982,7 @@ function ApuUsageTable({ data, setData, className }) {
                     <select
                       value={row.addlnUse || "N"}
                       onChange={(e) => updateRow(index, "addlnUse", e.target.value)}
-                      className="w-full h-8 px-2 text-xs outline-none bg-white dark:bg-slate-900 border-0 text-slate-800 dark:text-slate-200"
+                      className="w-full h-10 px-3 text-sm outline-none bg-white dark:bg-slate-900 border-0 text-slate-800 dark:text-slate-200"
                     >
                       <option value="N">N</option>
                       <option value="Y">Y</option>
@@ -1084,7 +1084,7 @@ function FuelPriceTable({ data, setData, className }) {
         <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Fuel Price</h3>
         <button
           onClick={addRow}
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
         >
           <Plus size={14} /> Add Row
         </button>
@@ -1094,9 +1094,9 @@ function FuelPriceTable({ data, setData, className }) {
           <EqualWidthColGroup count={6} />
           <thead>
             <tr className="bg-white dark:bg-slate-900">
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Kg/Ltr</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">CCY</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Into plane (per kLtr)</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Kg/Ltr</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">CCY</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Into plane (per kLtr)</th>
               <th className="border border-slate-300 dark:border-slate-700 p-0">
                 <Input
                   value={month1}
@@ -1268,7 +1268,7 @@ function EditableTable({
         </div>
         <button
           onClick={handleAdd}
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
         >
           <Plus size={14} /> Add Row
         </button>
@@ -1280,12 +1280,12 @@ function EditableTable({
             {sortFilter && (
               <tr>
                 {columns.map((col) => (
-                  <th key={`${col.key}-filter`} className="px-1 py-1 text-xs font-medium text-slate-500">
+                  <th key={`${col.key}-filter`} className="px-1 py-1 text-sm font-medium text-slate-500">
                     <input
                       value={filters[col.key] || ""}
                       onChange={(e) => handleFilterChange(col.key, e.target.value)}
                       placeholder="Sort+Filter"
-                      className="w-full px-2 py-1 text-xs border rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200"
+                      className="w-full px-3 py-2 text-sm border rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200"
                     />
                   </th>
                 ))}
@@ -1298,7 +1298,7 @@ function EditableTable({
                   key={i}
                   onClick={() => handleSort(col.key)}
                   className={cn(
-                    "px-3 py-2 text-xs font-medium text-slate-500 uppercase",
+                    "px-3 py-3 text-sm font-medium text-slate-500 uppercase",
                     sortFilter && "cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700",
                     col.headerClassName
                   )}
@@ -1311,13 +1311,13 @@ function EditableTable({
                   </span>
                 </th>
               ))}
-              <th className="px-3 py-2 text-xs font-medium text-slate-500 uppercase text-right">Actions</th>
+              <th className="px-3 py-3 text-sm font-medium text-slate-500 uppercase text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
             {visibleRows.length === 0 && (
               <tr>
-                <td colSpan={columns.length + 1} className="px-3 py-4 text-center text-slate-400 text-xs italic">
+                <td colSpan={columns.length + 1} className="px-3 py-5 text-center text-slate-400 text-sm italic">
                   {data.length === 0 ? 'No data. Click "Add Row" to start.' : "No rows match the filters."}
                 </td>
               </tr>
@@ -1337,7 +1337,7 @@ function EditableTable({
                     <td
                       key={col.key}
                       className={cn(
-                        "px-3 py-2",
+                        "px-3 py-3",
                         col.cellClassName,
                         highlightAutoFields && autoFields.has(col.key) && "bg-emerald-50/70 dark:bg-emerald-900/20"
                       )}
@@ -1419,26 +1419,26 @@ function CompactEditableTable({ title, columns, data, setData, className, addLab
         <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</h3>
         <button
           onClick={handleAdd}
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
           <Plus size={12} /> {addLabel}
         </button>
       </div>
 
       <div className="overflow-x-auto border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
-        <table className="w-full table-fixed border-collapse text-[11px] whitespace-nowrap" style={getModalTableStyle(columns.length + 1)}>
+        <table className="w-full table-fixed border-collapse text-sm whitespace-nowrap" style={getModalTableStyle(columns.length + 1)}>
           <EqualWidthColGroup count={columns.length + 1} />
           <thead>
             <tr className="bg-white dark:bg-slate-900">
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-800 dark:text-slate-200"
+                  className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-left font-semibold text-slate-800 dark:text-slate-200"
                 >
                   {col.label}
                 </th>
               ))}
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-left font-semibold text-slate-800 dark:text-slate-200">
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-left font-semibold text-slate-800 dark:text-slate-200">
                 Action
               </th>
             </tr>
@@ -1448,7 +1448,7 @@ function CompactEditableTable({ title, columns, data, setData, className, addLab
               <tr>
                 <td
                   colSpan={columns.length + 1}
-                  className="border border-slate-300 dark:border-slate-700 px-2 py-3 text-center text-slate-400"
+                  className="border border-slate-300 dark:border-slate-700 px-3 py-4 text-center text-slate-400"
                 >
                   No rows yet. Add a row to begin.
                 </td>
@@ -1466,14 +1466,14 @@ function CompactEditableTable({ title, columns, data, setData, className, addLab
                             value={editRow[col.key] || ""}
                             onChange={(e) => setEditRow({ ...editRow, [col.key]: e.target.value })}
                             className={cn(
-                              "w-full h-7 px-2 text-[11px] outline-none bg-transparent text-slate-800 dark:text-slate-200",
+                              "w-full h-9 px-3 text-sm outline-none bg-transparent text-slate-800 dark:text-slate-200",
                               col.type === "number" ? "text-right" : ""
                             )}
                           />
                         ) : (
                           <div
                             className={cn(
-                              "h-7 px-2 flex items-center text-[11px] text-slate-700 dark:text-slate-300",
+                              "h-9 px-3 flex items-center text-sm text-slate-700 dark:text-slate-300",
                               col.type === "number" ? "justify-end font-mono" : ""
                             )}
                           >
@@ -1484,7 +1484,7 @@ function CompactEditableTable({ title, columns, data, setData, className, addLab
                     ))}
                     <td className="border border-slate-300 dark:border-slate-700 px-1 py-0">
                       {isEditing ? (
-                        <div className="flex items-center justify-center gap-1 h-7">
+                        <div className="flex items-center justify-center gap-1 h-9">
                           <button
                             onClick={() => handleSave(index)}
                             className="p-1 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded"
@@ -1499,7 +1499,7 @@ function CompactEditableTable({ title, columns, data, setData, className, addLab
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center gap-1 h-7">
+                        <div className="flex items-center justify-center gap-1 h-9">
                           <button
                             onClick={() => handleEdit(index, row)}
                             className="p-1 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded"
@@ -1858,7 +1858,7 @@ export default function CostInputModal({ isOpen, onClose }) {
                   <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
                     {navMtowTierDraft.map((tier, index) => (
                       <Input
-                        key={`${index}-${tier}`}
+                        key={index}
                         value={tier}
                         onChange={(e) => {
                           const next = [...navMtowTierDraft];
