@@ -826,10 +826,10 @@ function ApuUsageTable({ data, setData, className }) {
     return {
       ...row,
       addlnUse,
-      arrStn: addlnUse === "Y" ? "" : (row.arrStn || ""),
+      stn: addlnUse === "Y" ? "" : (row.stn || ""),
       toDate: addlnUse === "Y" ? (row.fromDate || row.toDate || "") : (row.toDate || ""),
-      apuHours: blankIfInvalidNumber(row.apuHours),
-      consumptionPerApuHour: blankIfInvalidNumber(row.consumptionPerApuHour),
+      apuHrPerDay: blankIfInvalidNumber(row.apuHrPerDay),
+      kgPerApuHr: blankIfInvalidNumber(row.kgPerApuHr),
     };
   };
 
@@ -838,14 +838,14 @@ function ApuUsageTable({ data, setData, className }) {
       if (rowIndex !== index) return row;
       const next = {
         ...row,
-        [key]: key === "apuHours" || key === "consumptionPerApuHour"
+        [key]: key === "apuHrPerDay" || key === "kgPerApuHr"
           ? blankIfInvalidNumber(value)
           : value,
       };
       if (key === "addlnUse") {
         next.addlnUse = value === "Y" ? "Y" : "N";
         if (next.addlnUse === "Y") {
-          next.arrStn = "";
+          next.stn = "";
           next.toDate = next.fromDate || next.toDate || "";
         }
       }
@@ -860,13 +860,13 @@ function ApuUsageTable({ data, setData, className }) {
     setData([
       ...data,
       {
-        arrStn: "",
+        stn: "",
         fromDate: "",
         toDate: "",
         variant: "",
         acftRegn: "",
-        apuHours: "",
-        consumptionPerApuHour: "",
+        apuHrPerDay: "",
+        kgPerApuHr: "",
         addlnUse: "N",
         ccy: "",
       },
@@ -878,13 +878,13 @@ function ApuUsageTable({ data, setData, className }) {
   };
 
   const rows = data.length ? data.map(normalizeRow) : [{
-    arrStn: "",
+    stn: "",
     fromDate: "",
     toDate: "",
     variant: "",
     acftRegn: "",
-    apuHours: "",
-    consumptionPerApuHour: "",
+    apuHrPerDay: "",
+    kgPerApuHr: "",
     addlnUse: "N",
     ccy: "",
   }];
@@ -905,13 +905,13 @@ function ApuUsageTable({ data, setData, className }) {
           <EqualWidthColGroup count={10} />
           <thead>
             <tr className="bg-white dark:bg-slate-900">
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Arr Stn</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Stn</th>
               <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">From date</th>
               <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">To date</th>
               <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Variant</th>
               <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">ACFT Regn</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">APU Hr</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Consumption/APUHr</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">APU Hr/day</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Kg / APU Hr</th>
               <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Addln use</th>
               <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">CCY</th>
               <th className="border border-slate-300 dark:border-slate-700" />
@@ -924,9 +924,9 @@ function ApuUsageTable({ data, setData, className }) {
                 <tr key={index}>
                   <td className="border border-slate-300 dark:border-slate-700 p-0">
                     <Input
-                      value={row.arrStn}
-                      onChange={(e) => updateRow(index, "arrStn", e.target.value)}
-                      placeholder="Arr Stn"
+                      value={row.stn}
+                      onChange={(e) => updateRow(index, "stn", e.target.value)}
+                      placeholder="Stn"
                       disabled={(row.addlnUse || "N") === "Y"}
                       className="border-0 rounded-none"
                     />
@@ -966,16 +966,16 @@ function ApuUsageTable({ data, setData, className }) {
                   </td>
                   <td className="border border-slate-300 dark:border-slate-700 p-0">
                     <Input
-                      value={row.apuHours}
-                      onChange={(e) => updateRow(index, "apuHours", e.target.value)}
+                      value={row.apuHrPerDay}
+                      onChange={(e) => updateRow(index, "apuHrPerDay", e.target.value)}
                       type="number"
                       className="border-0 rounded-none text-right"
                     />
                   </td>
                   <td className="border border-slate-300 dark:border-slate-700 p-0">
                     <Input
-                      value={row.consumptionPerApuHour}
-                      onChange={(e) => updateRow(index, "consumptionPerApuHour", e.target.value)}
+                      value={row.kgPerApuHr}
+                      onChange={(e) => updateRow(index, "kgPerApuHr", e.target.value)}
                       type="number"
                       className="border-0 rounded-none text-right"
                     />
