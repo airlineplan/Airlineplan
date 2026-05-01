@@ -826,7 +826,7 @@ function ApuUsageTable({ data, setData, className }) {
     return {
       ...row,
       addlnUse,
-      stn: addlnUse === "Y" ? "" : (row.stn || ""),
+      stn: row.stn || "",
       toDate: addlnUse === "Y" ? (row.fromDate || row.toDate || "") : (row.toDate || ""),
       apuHrPerDay: blankIfInvalidNumber(row.apuHrPerDay),
       kgPerApuHr: blankIfInvalidNumber(row.kgPerApuHr),
@@ -845,7 +845,6 @@ function ApuUsageTable({ data, setData, className }) {
       if (key === "addlnUse") {
         next.addlnUse = value === "Y" ? "Y" : "N";
         if (next.addlnUse === "Y") {
-          next.stn = "";
           next.toDate = next.fromDate || next.toDate || "";
         }
       }
@@ -927,7 +926,6 @@ function ApuUsageTable({ data, setData, className }) {
                       value={row.stn}
                       onChange={(e) => updateRow(index, "stn", e.target.value)}
                       placeholder="Stn"
-                      disabled={(row.addlnUse || "N") === "Y"}
                       className="border-0 rounded-none"
                     />
                   </td>
