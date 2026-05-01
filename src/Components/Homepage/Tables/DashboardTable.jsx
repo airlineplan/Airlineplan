@@ -74,6 +74,14 @@ function normalizeCurrencyCode(value) {
     .slice(0, 3);
 }
 
+function uniqueCurrencyCodes(...groups) {
+  return groups
+    .flatMap((group) => (Array.isArray(group) ? group : [group]))
+    .map(normalizeCurrencyCode)
+    .filter(Boolean)
+    .filter((code, index, list) => list.indexOf(code) === index);
+}
+
 const DEFAULT_CURRENCIES = ["EUR", "USD", "GBP", "INR", "AED", "JPY"];
 
 const FX_BASIS_OPTIONS = [
@@ -882,9 +890,11 @@ const FxRateModal = ({
   const resetForReportingCurrency = (nextReportingCurrency) => {
     const normalized = normalizeCurrencyCode(nextReportingCurrency);
     if (!normalized) return;
+    const nextCurrencyCodes = uniqueCurrencyCodes(normalized, currencyCodes);
     setReportingCurrency(normalized);
     setExposureCurrency?.(normalized);
-    const nextPairs = buildCurrencyPairs(currencyCodes, normalized);
+    setCurrencyCodes(nextCurrencyCodes);
+    const nextPairs = buildCurrencyPairs(nextCurrencyCodes, normalized);
     const resetRows = createFxRows(periodColumns, nextPairs, []);
     setSavedFxRates(
       resetRows.flatMap((row) =>
@@ -915,13 +925,7 @@ const FxRateModal = ({
       return;
     }
 
-    const nextCurrencyCodes = [
-      nextReportingCurrency,
-      ...(Array.isArray(currencyCodes) ? currencyCodes : []),
-    ]
-      .map(normalizeCurrencyCode)
-      .filter(Boolean)
-      .filter((code, index, list) => list.indexOf(code) === index);
+    const nextCurrencyCodes = uniqueCurrencyCodes(nextReportingCurrency, currencyCodes);
 
     const nextRates = (Array.isArray(fxRows) ? fxRows : []).flatMap((row) =>
       Object.entries(row.pairs || {}).map(([pair, rate]) => ({
