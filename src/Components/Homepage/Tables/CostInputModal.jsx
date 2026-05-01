@@ -13,6 +13,24 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
+const MODAL_TABLE_COLUMN_WIDTH = 148;
+const modalTableScrollClass = "overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg";
+const modalTableClass = "w-full table-fixed text-left text-sm whitespace-nowrap border-collapse";
+
+function EqualWidthColGroup({ count }) {
+  return (
+    <colgroup>
+      {Array.from({ length: count }).map((_, index) => (
+        <col key={index} style={{ width: `${MODAL_TABLE_COLUMN_WIDTH}px` }} />
+      ))}
+    </colgroup>
+  );
+}
+
+function getModalTableStyle(columnCount) {
+  return { minWidth: `${columnCount * MODAL_TABLE_COLUMN_WIDTH}px` };
+}
+
 const APU_FUEL_ALLOCATION_CODE = "APUFUELCOST";
 const APU_FUEL_BASIS_OPTIONS = [
   { label: "Departure", value: "DEPARTURES" },
@@ -176,8 +194,9 @@ function FuelConsumptionTable({ data, setData, className }) {
           </button>
         </div>
       </div>
-      <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-        <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
+      <div className={modalTableScrollClass}>
+        <table className={modalTableClass} style={getModalTableStyle(5)}>
+          <EqualWidthColGroup count={5} />
           <thead>
             <tr className="bg-white dark:bg-slate-900">
               <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Fuel Kg</th>
@@ -198,7 +217,7 @@ function FuelConsumptionTable({ data, setData, className }) {
                   className="border-0 rounded-none text-right font-semibold"
                 />
               </th>
-              <th className="w-9 border border-slate-300 dark:border-slate-700" />
+              <th className="border border-slate-300 dark:border-slate-700" />
             </tr>
           </thead>
           <tbody>
@@ -376,8 +395,9 @@ function PlfEffectTable({ data, setData, className }) {
         </div>
       </div>
       <div className="flex items-start">
-        <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-          <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
+        <div className={modalTableScrollClass}>
+          <table className={modalTableClass} style={getModalTableStyle(8)}>
+            <EqualWidthColGroup count={8} />
             <thead>
               <tr className="bg-white dark:bg-slate-900">
                 <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">PLF effect</th>
@@ -394,7 +414,7 @@ function PlfEffectTable({ data, setData, className }) {
                     {idx === 4 && <div className="text-[10px] font-normal text-slate-500">Carry forward</div>}
                   </th>
                 ))}
-                <th className="w-9 border border-slate-300 dark:border-slate-700" />
+                <th className="border border-slate-300 dark:border-slate-700" />
               </tr>
             </thead>
             <tbody>
@@ -439,7 +459,7 @@ function PlfEffectTable({ data, setData, className }) {
                           className="border-0 rounded-none text-right bg-slate-50 dark:bg-slate-800/60"
                         />
                       ) : (
-                        <div className="h-8 bg-slate-100 dark:bg-slate-80011" />
+                        <div className="h-8 bg-slate-100 dark:bg-slate-800" />
                       )}
                     </td>
                     {[
@@ -546,8 +566,9 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
           <Plus size={14} /> Add Row
         </button>
       </div>
-      <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-        <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
+      <div className={modalTableScrollClass}>
+        <table className={modalTableClass} style={getModalTableStyle(7)}>
+          <EqualWidthColGroup count={7} />
           <thead>
             <tr className="bg-white dark:bg-slate-900">
               <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Fuel consum</th>
@@ -561,7 +582,7 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
                   />
                 </th>
               ))}
-              <th className="w-9 border border-slate-300 dark:border-slate-700" />
+              <th className="border border-slate-300 dark:border-slate-700" />
             </tr>
           </thead>
           <tbody>
@@ -697,8 +718,9 @@ function ApuUsageTable({ data, setData, className }) {
           <Plus size={14} /> Add Row
         </button>
       </div>
-      <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-        <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
+      <div className={modalTableScrollClass}>
+        <table className={modalTableClass} style={getModalTableStyle(10)}>
+          <EqualWidthColGroup count={10} />
           <thead>
             <tr className="bg-white dark:bg-slate-900">
               <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Arr Stn</th>
@@ -710,7 +732,7 @@ function ApuUsageTable({ data, setData, className }) {
               <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Consumption/APUHr</th>
               <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Addln use</th>
               <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">CCY</th>
-              <th className="w-9 border border-slate-300 dark:border-slate-700" />
+              <th className="border border-slate-300 dark:border-slate-700" />
             </tr>
           </thead>
           <tbody>
@@ -869,8 +891,9 @@ function FuelPriceTable({ data, setData, className }) {
           <Plus size={14} /> Add Row
         </button>
       </div>
-      <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-        <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
+      <div className={modalTableScrollClass}>
+        <table className={modalTableClass} style={getModalTableStyle(6)}>
+          <EqualWidthColGroup count={6} />
           <thead>
             <tr className="bg-white dark:bg-slate-900">
               <th className="border border-slate-300 dark:border-slate-700 px-2 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200">Kg/Ltr</th>
@@ -892,7 +915,7 @@ function FuelPriceTable({ data, setData, className }) {
                   className="border-0 rounded-none text-right font-semibold"
                 />
               </th>
-              <th className="w-9 border border-slate-300 dark:border-slate-700" />
+              <th className="border border-slate-300 dark:border-slate-700" />
             </tr>
           </thead>
           <tbody>
@@ -1052,8 +1075,9 @@ function EditableTable({
           <Plus size={14} /> Add Row
         </button>
       </div>
-      <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg">
-        <table className="w-full text-left text-sm whitespace-nowrap">
+      <div className={modalTableScrollClass}>
+        <table className={modalTableClass} style={getModalTableStyle(columns.length + 1)}>
+          <EqualWidthColGroup count={columns.length + 1} />
           <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
             {sortFilter && (
               <tr>
@@ -1063,7 +1087,7 @@ function EditableTable({
                       value={filters[col.key] || ""}
                       onChange={(e) => handleFilterChange(col.key, e.target.value)}
                       placeholder="Sort+Filter"
-                      className="w-full min-w-[90px] px-2 py-1 text-xs border rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200"
+                      className="w-full px-2 py-1 text-xs border rounded bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200"
                     />
                   </th>
                 ))}
@@ -1204,7 +1228,8 @@ function CompactEditableTable({ title, columns, data, setData, className, addLab
       </div>
 
       <div className="overflow-x-auto border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
-        <table className="w-full border-collapse text-[11px] whitespace-nowrap">
+        <table className="w-full table-fixed border-collapse text-[11px] whitespace-nowrap" style={getModalTableStyle(columns.length + 1)}>
+          <EqualWidthColGroup count={columns.length + 1} />
           <thead>
             <tr className="bg-white dark:bg-slate-900">
               {columns.map((col) => (
@@ -1449,7 +1474,7 @@ export default function CostInputModal({ isOpen, onClose }) {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="relative w-full max-w-7xl h-[90vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700"
+            className="relative w-full max-w-[98vw] h-[92vh] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
@@ -1770,7 +1795,8 @@ export default function CostInputModal({ isOpen, onClose }) {
                 <div className="mt-8 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
                   <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-1">Basis of cost allocation</h3>
                   <div className="overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900">
-                    <table className="w-full text-left text-sm whitespace-nowrap">
+                    <table className={modalTableClass} style={getModalTableStyle(2)}>
+                      <EqualWidthColGroup count={2} />
                       <thead className="bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                         <tr>
                           <th className="px-4 py-2 font-semibold">Cost</th>
