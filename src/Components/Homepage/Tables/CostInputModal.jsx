@@ -1843,6 +1843,17 @@ export default function CostInputModal({ isOpen, onClose }) {
 
   const handleSave = async () => {
     try {
+      const missingApuStationIndex = (Array.isArray(apuUsage) ? apuUsage : []).findIndex((row) => {
+        const addlnUse = String(row?.addlnUse || "N").trim().toUpperCase();
+        const station = String(row?.stn || row?.arrStn || row?.station || "").trim();
+        return addlnUse === "Y" && !station;
+      });
+
+      if (missingApuStationIndex >= 0) {
+        toast.error(`APU Usage row ${missingApuStationIndex + 1}: enter Stn for Addln use.`);
+        return;
+      }
+
       const payload = {
         allocationTable,
         fuelConsum, fuelConsumIndex, apuUsage, plfEffect, ccyFuel,
