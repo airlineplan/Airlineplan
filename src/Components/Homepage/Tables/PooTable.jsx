@@ -49,7 +49,6 @@ const GRID_COLUMNS = [
   { key: "od", label: "OD", width: "w-32" },
   { key: "odDI", label: "OD D/I", width: "w-24", align: "center" },
   { key: "stop", label: "Stop", width: "w-24", align: "center" },
-  { key: "identifier", label: "Identifier", width: "w-32" },
   { key: "sector", label: "Sector", width: "w-32" },
   { key: "legDI", label: "Leg D/I", width: "w-24", align: "center" },
   { key: "date", label: "Date", width: "w-28" },
@@ -75,13 +74,13 @@ const OD_TABLE_COLUMNS = [
   { key: "maxCargoT", label: "Max Cargo T", numeric: true },
   { key: "pax", label: "Pax", numeric: true },
   { key: "cargoT", label: "Cargo", numeric: true },
-  { key: "fare", label: "Fare", numeric: true },
-  { key: "rate", label: "Rate", numeric: true },
+  { key: "fare", label: "Fare (/pax)", numeric: true },
+  { key: "rate", label: "Rate (/Kg)", numeric: true },
   { key: "paxRevenue", label: "Pax revenue", numeric: true },
   { key: "cargoRevenue", label: "Cargo revenue", numeric: true },
   { key: "totalRevenue", label: "Total revenue", numeric: true },
-  { key: "applyPaxFare", label: "Apply Pax/Fare Date(s)", filterable: false, sortable: false },
-  { key: "applyCargoRate", label: "Apply Cargo/Rate Date(s)", filterable: false, sortable: false },
+  { key: "applyPaxFare", label: "Apply Pax load & Fare on Date(s)", filterable: false, sortable: false },
+  { key: "applyCargoRate", label: "Apply Cargo load & Rate on Date(s)", filterable: false, sortable: false },
 ];
 
 const INTERLINE_TABLE_COLUMNS = [
@@ -142,7 +141,6 @@ function getRowValue(row, key) {
     case "od": return row.od || "";
     case "odDI": return row.odDI || "";
     case "stop": return row.displayStop ?? row.stops ?? 0;
-    case "identifier": return row.identifier || row.displayType || "";
     case "sector": return row.sector || "";
     case "legDI": return row.legDI || "";
     case "date": return formatSheetDate(row.date);
@@ -626,10 +624,12 @@ const PooTable = () => {
     return sortConfig.direction === "Up" ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
   };
 
-  const renderFilterSortHeaderRows = (columns, { leadingLabel = "✓", summaryCells = [] } = {}) => (
+  const renderFilterSortHeaderRows = (columns, { leadingLabel = "✓", summaryCells = [] } = {}) => {
+    const hasLeadingColumn = leadingLabel !== null;
+    return (
     <>
       <tr>
-        <th className={cn(thSubStyle, "w-10")}></th>
+        {hasLeadingColumn && <th className={cn(thSubStyle, "w-10")}></th>}
         {columns.map((column) => (
           <th key={`${column.key}-filter`} className={thSubStyle}>
             {column.filterable === false ? (
@@ -646,7 +646,7 @@ const PooTable = () => {
         ))}
       </tr>
       <tr>
-        <th className={cn(thStyle, "w-10")}>{leadingLabel}</th>
+        {hasLeadingColumn && <th className={cn(thStyle, "w-10")}>{leadingLabel}</th>}
         {columns.map((column) => (
           <th key={`${column.key}-head`} className={thStyle}>
             {column.sortable === false ? (
@@ -666,7 +666,7 @@ const PooTable = () => {
       </tr>
       {summaryCells.length > 0 && (
         <tr>
-          <th className={thSubStyle}></th>
+          {hasLeadingColumn && <th className={thSubStyle}></th>}
           <th className={cn(thSubStyle, "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-bold")}>Selected</th>
           {summaryCells.map((label, index) => (
             <th key={`${label}-${index}`} className={cn(thSubStyle, "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-bold")}>{label}</th>
@@ -674,7 +674,8 @@ const PooTable = () => {
         </tr>
       )}
     </>
-  );
+    );
+  };
 
   const renderApplyDateCell = (row, group) => {
     const key = getApplyCellKey(row._id, group);
@@ -1047,19 +1048,17 @@ const PooTable = () => {
               <div className="bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
                 <div className="bg-slate-100/90 dark:bg-slate-800/90 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
                   <Layers size={16} className="text-indigo-500" />
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">OD Pairs & Legs</h3>
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">OD</h3>
                 </div>
                 <div className="overflow-x-auto custom-scrollbar">
                   <table className="w-full text-left border-collapse min-w-max">
                     <thead>
-                      {renderFilterSortHeaderRows(OD_TABLE_COLUMNS, {
-                        summaryCells: ["", "", "", "", "", "", "", "Total", "Total", "Wght Avg", "Wght Avg", "Total", "Total", "Total", "", ""],
-                      })}
+                      {renderFilterSortHeaderRows(OD_TABLE_COLUMNS)}
                     </thead>
                     <tbody>
                       {sections.legs.length > 0 && (
                         <tr>
-                          <td colSpan={18} className="px-3 py-2 bg-indigo-50/70 dark:bg-indigo-900/20 border-b border-slate-200 dark:border-slate-700 text-[11px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                          <td colSpan={OD_TABLE_COLUMNS.length + 1} className="px-3 py-2 bg-indigo-50/70 dark:bg-indigo-900/20 border-b border-slate-200 dark:border-slate-700 text-[11px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
                             Legs
                           </td>
                         </tr>
@@ -1098,7 +1097,7 @@ const PooTable = () => {
                           {/* Empties */}
                           {[0, 0, 0].map((_, i) => (
                             <tr key={`${row._id}-blank-${i}`}>
-                              {Array.from({ length: 18 }).map((__, j) => <td key={j} className="h-8 border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/10"></td>)}
+                              {Array.from({ length: OD_TABLE_COLUMNS.length + 1 }).map((__, j) => <td key={j} className="h-8 border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/10"></td>)}
                             </tr>
                           ))}
                         </React.Fragment>
@@ -1106,7 +1105,7 @@ const PooTable = () => {
                       {/* Divider */}
                       {sections.ods.length > 0 && (
                         <tr>
-                          <td colSpan={18} className="px-3 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                          <td colSpan={OD_TABLE_COLUMNS.length + 1} className="px-3 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                             ODs
                           </td>
                         </tr>
@@ -1144,7 +1143,7 @@ const PooTable = () => {
                       ))}
                       {sections.legs.length === 0 && sections.ods.length === 0 && (
                         <tr>
-                          {Array.from({ length: 18 }).map((_, i) => (
+                          {Array.from({ length: OD_TABLE_COLUMNS.length + 1 }).map((_, i) => (
                             <td key={i} className="h-10 border-b border-r border-slate-200 dark:border-slate-700"></td>
                           ))}
                         </tr>
@@ -1167,7 +1166,7 @@ const PooTable = () => {
                     </thead>
                     <tbody>
                       {sections.transits.length === 0 ? (
-                        <tr>{Array.from({ length: 18 }).map((_, i) => <td key={i} className="h-10 border-b border-r border-slate-200 dark:border-slate-700"></td>)}</tr>
+                        <tr>{Array.from({ length: OD_TABLE_COLUMNS.length + 1 }).map((_, i) => <td key={i} className="h-10 border-b border-r border-slate-200 dark:border-slate-700"></td>)}</tr>
                       ) : sections.transits.map((row) => (
                         <tr key={row._id} className="group">
                           <td className={cn(tdStyle, "text-center")}><input type="checkbox" className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" /></td>
@@ -1216,7 +1215,7 @@ const PooTable = () => {
                     </thead>
                     <tbody>
                       {sections.interlines.length === 0 ? (
-                        <tr>{Array.from({ length: 18 }).map((_, i) => <td key={i} className="h-10 border-b border-r border-slate-200 dark:border-slate-700"></td>)}</tr>
+                        <tr>{Array.from({ length: INTERLINE_TABLE_COLUMNS.length + 1 }).map((_, i) => <td key={i} className="h-10 border-b border-r border-slate-200 dark:border-slate-700"></td>)}</tr>
                       ) : sections.interlines.map((row) => (
                         <tr key={row._id} className="group">
                           <td className={cn(tdStyle, "text-center")}><input type="checkbox" className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" /></td>
