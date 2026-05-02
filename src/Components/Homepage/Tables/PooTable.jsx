@@ -11,7 +11,9 @@ import {
   LayoutDashboard,
   Calculator,
   Layers,
-  AlertCircle
+  AlertCircle,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -59,6 +61,46 @@ const GRID_COLUMNS = [
 
 const NUMERIC_TOTAL_FIELDS = ["maxPax", "maxCargoT", "pax", "cargoT"];
 const NUMERIC_AVG_FIELDS = [];
+
+const OD_TABLE_COLUMNS = [
+  { key: "od", label: "OD" },
+  { key: "odDI", label: "Dom / INTL" },
+  { key: "flightNumber", label: "Flight" },
+  { key: "stop", label: "Stop" },
+  { key: "totalGcd", label: "Total GCD", numeric: true },
+  { key: "timeInclLayover", label: "Time incl LyOv" },
+  { key: "maxPax", label: "Max pax", numeric: true },
+  { key: "maxCargoT", label: "Max Cargo T", numeric: true },
+  { key: "pax", label: "Pax", numeric: true },
+  { key: "cargoT", label: "Cargo", numeric: true },
+  { key: "fare", label: "Fare", numeric: true },
+  { key: "rate", label: "Rate", numeric: true },
+  { key: "paxRevenue", label: "Pax revenue", numeric: true },
+  { key: "cargoRevenue", label: "Cargo revenue", numeric: true },
+  { key: "totalRevenue", label: "Total revenue", numeric: true },
+  { key: "applyPaxFare", label: "Apply Pax/Fare Date(s)", filterable: false, sortable: false },
+  { key: "applyCargoRate", label: "Apply Cargo/Rate Date(s)", filterable: false, sortable: false },
+];
+
+const INTERLINE_TABLE_COLUMNS = [
+  { key: "od", label: "OD" },
+  { key: "odDI", label: "OD D/I" },
+  { key: "sector", label: "Sector" },
+  { key: "legDI", label: "Sector D/I" },
+  { key: "flightNumber", label: "Flight" },
+  { key: "interlineCodeshare", label: "IntLn / CdS" },
+  { key: "oal", label: "OAL" },
+  { key: "transferStation", label: "Transfer Stn" },
+  { key: "pax", label: "Pax", numeric: true },
+  { key: "cargoT", label: "Cargo", numeric: true },
+  { key: "fare", label: "Prorate Fare", numeric: true },
+  { key: "rate", label: "Prorate Rate", numeric: true },
+  { key: "paxRevenue", label: "Pax revenue", numeric: true },
+  { key: "cargoRevenue", label: "Cargo revenue", numeric: true },
+  { key: "totalRevenue", label: "Total revenue", numeric: true },
+  { key: "applyPaxFare", label: "Apply Pax/Fare Date(s)", filterable: false, sortable: false },
+  { key: "applyCargoRate", label: "Apply Cargo/Rate Date(s)", filterable: false, sortable: false },
+];
 
 function formatNumber(value, maxFractionDigits = 2) {
   const numeric = Number(value);
@@ -110,6 +152,45 @@ function getRowValue(row, key) {
     case "cargoT": return row.cargoT || 0;
     default: return "";
   }
+}
+
+function getPooTableValue(row, key) {
+  switch (key) {
+    case "flightNumber": return getFlightText(row);
+    case "stop": return row.displayStop ?? row.stops ?? 0;
+    case "totalGcd": return row.totalGcd ?? row.odViaGcd ?? row.sectorGcd ?? 0;
+    case "fare": return row.trafficType === "leg" ? row.legFare : row.odFare;
+    case "rate": return row.trafficType === "leg" ? row.legRate : row.odRate;
+    case "paxRevenue": return row.paxRevenue ?? row.odPaxRev ?? row.legPaxRev ?? 0;
+    case "cargoRevenue": return row.cargoRevenue ?? row.odCargoRev ?? row.legCargoRev ?? 0;
+    case "totalRevenue": return row.totalRevenue ?? row.odTotalRev ?? row.legTotalRev ?? 0;
+    case "interlineCodeshare": return row.interline || row.codeshare || "";
+    case "oal": return row.al !== "Own" ? row.al : "";
+    case "transferStation": return row.displayStop || "";
+    default: return getRowValue(row, key) || row[key] || "";
+  }
+}
+
+function normalizeFilterValue(value) {
+  if (Array.isArray(value)) return value.join(", ");
+  return String(value ?? "").toLowerCase();
+}
+
+function comparePooValues(a, b, direction) {
+  const aNumber = Number(a);
+  const bNumber = Number(b);
+  const bothNumeric = Number.isFinite(aNumber) && Number.isFinite(bNumber);
+
+  if (bothNumeric) {
+    return direction === "Up" ? aNumber - bNumber : bNumber - aNumber;
+  }
+
+  const comparison = String(a ?? "").localeCompare(String(b ?? ""), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+
+  return direction === "Up" ? comparison : -comparison;
 }
 
 function getEditableField(row, key) {
@@ -177,6 +258,8 @@ const PooTable = () => {
   const [dirtyMap, setDirtyMap] = useState({});
   const [validationErrors, setValidationErrors] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [tableFilters, setTableFilters] = useState({});
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "Up" });
   const [applyDateDrafts, setApplyDateDrafts] = useState({});
   const [applyDateTargets, setApplyDateTargets] = useState({});
   const [transitDraft, setTransitDraft] = useState(blankTransitDraft);
@@ -406,17 +489,34 @@ const PooTable = () => {
 
   const visibleRows = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    return records.filter((row) => {
-      if (!query) return true;
-      return [
+    const activeFilters = Object.entries(tableFilters).filter(([, value]) => String(value || "").trim());
+
+    const filtered = records.filter((row) => {
+      const matchesSearch = !query || [
         row.al, row.poo, row.od, row.sector, row.flightNumber,
         row.variant, row.identifier, row.odDI, row.legDI, row.day,
         formatSheetDate(row.date),
       ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query));
+
+      if (!matchesSearch) return false;
+
+      return activeFilters.every(([key, value]) =>
+        normalizeFilterValue(getPooTableValue(row, key)).includes(String(value).trim().toLowerCase())
+      );
     });
-  }, [records, searchTerm]);
+
+    if (!sortConfig.key) return filtered;
+
+    return [...filtered].sort((a, b) =>
+      comparePooValues(
+        getPooTableValue(a, sortConfig.key),
+        getPooTableValue(b, sortConfig.key),
+        sortConfig.direction
+      )
+    );
+  }, [records, searchTerm, sortConfig, tableFilters]);
 
   const sections = useMemo(() => {
     return groupPooRecordsIntoSections(visibleRows, poo);
@@ -431,6 +531,17 @@ const PooTable = () => {
     });
   };
 
+  const handleTableFilterChange = (key, value) => {
+    setTableFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === "Up" ? "Down" : "Up",
+    }));
+  };
+
   const totalDirtyRows = Object.keys(dirtyMap).length;
   const totalApplyTargets = Object.values(applyDateTargets).reduce((sum, target) => sum + (target.dates?.length || 0), 0);
 
@@ -442,6 +553,62 @@ const PooTable = () => {
   const tdStyle = "p-2 border-b border-r border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-300 transition-colors group-hover:bg-indigo-50/50 dark:group-hover:bg-slate-800/30";
   const tdInputWrap = "p-0.5 border-b border-r border-slate-200 dark:border-slate-700 bg-emerald-50/40 dark:bg-emerald-900/10 group-hover:bg-emerald-100/50 dark:group-hover:bg-emerald-900/30 transition-colors";
   const inputStyle = "h-7 w-full border border-transparent rounded bg-transparent px-1.5 text-right text-sm font-medium outline-none focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 focus:ring-1 focus:ring-indigo-500/50";
+  const filterInputStyle = "h-7 w-full min-w-[90px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/70 px-2 text-[11px] font-medium text-slate-700 dark:text-slate-300 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500";
+
+  const renderSortIcon = (key) => {
+    if (sortConfig.key !== key) return <ArrowUp size={12} className="opacity-20" />;
+    return sortConfig.direction === "Up" ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
+  };
+
+  const renderFilterSortHeaderRows = (columns, { leadingLabel = "✓", summaryCells = [] } = {}) => (
+    <>
+      <tr>
+        <th className={cn(thSubStyle, "w-10")}></th>
+        {columns.map((column) => (
+          <th key={`${column.key}-filter`} className={thSubStyle}>
+            {column.filterable === false ? (
+              <div className="h-7" />
+            ) : (
+              <input
+                value={tableFilters[column.key] || ""}
+                onChange={(e) => handleTableFilterChange(column.key, e.target.value)}
+                placeholder="Filter..."
+                className={filterInputStyle}
+              />
+            )}
+          </th>
+        ))}
+      </tr>
+      <tr>
+        <th className={cn(thStyle, "w-10")}>{leadingLabel}</th>
+        {columns.map((column) => (
+          <th key={`${column.key}-head`} className={thStyle}>
+            {column.sortable === false ? (
+              column.label
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleSort(column.key)}
+                className="mx-auto flex items-center justify-center gap-1 transition-colors hover:text-indigo-600 dark:hover:text-indigo-400"
+              >
+                {column.label}
+                {renderSortIcon(column.key)}
+              </button>
+            )}
+          </th>
+        ))}
+      </tr>
+      {summaryCells.length > 0 && (
+        <tr>
+          <th className={thSubStyle}></th>
+          <th className={cn(thSubStyle, "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-bold")}>Selected</th>
+          {summaryCells.map((label, index) => (
+            <th key={`${label}-${index}`} className={cn(thSubStyle, "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-bold")}>{label}</th>
+          ))}
+        </tr>
+      )}
+    </>
+  );
 
   const renderApplyDateCell = (row, group) => {
     const key = getApplyCellKey(row._id, group);
@@ -572,16 +739,28 @@ const PooTable = () => {
           <table className="w-full text-left border-collapse min-w-max">
             <thead>
               <tr>
-                {GRID_COLUMNS.map((column, index) => (
+                {GRID_COLUMNS.map((column) => (
                   <th key={`${section.title}-${column.key}-filter`} className={thSubStyle}>
-                    {index === 2 ? "Filter" : index > 2 ? "Filter + Sort" : ""}
+                    <input
+                      value={tableFilters[column.key] || ""}
+                      onChange={(e) => handleTableFilterChange(column.key, e.target.value)}
+                      placeholder="Filter..."
+                      className={filterInputStyle}
+                    />
                   </th>
                 ))}
               </tr>
               <tr>
                 {GRID_COLUMNS.map((column) => (
                   <th key={`${section.title}-${column.key}-head`} className={thStyle}>
-                    {column.label}
+                    <button
+                      type="button"
+                      onClick={() => handleSort(column.key)}
+                      className="mx-auto flex items-center justify-center gap-1 transition-colors hover:text-indigo-600 dark:hover:text-indigo-400"
+                    >
+                      {column.label}
+                      {renderSortIcon(column.key)}
+                    </button>
                   </th>
                 ))}
               </tr>
@@ -736,20 +915,14 @@ const PooTable = () => {
 
       {/* --- TABLE AREA --- */}
       <div className="relative z-10 flex-1 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col">
+        {loading && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/60 dark:bg-slate-950/60 backdrop-blur-sm">
+            <RefreshCw className="animate-spin text-indigo-500 mb-3" size={32} />
+            <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">Loading POO rows...</span>
+          </div>
+        )}
         <div className="flex-1 overflow-auto custom-scrollbar p-5">
-          {!loading && visibleRows.length === 0 ? (
-            <div className="flex h-full min-h-[320px] items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/30 text-center">
-              <div className="space-y-3 px-6 max-w-sm">
-                <div className="mx-auto w-12 h-12 bg-indigo-100 dark:bg-indigo-900/40 rounded-full flex items-center justify-center text-indigo-500 mb-4">
-                  <Search size={24} />
-                </div>
-                <div className="text-lg font-bold text-slate-700 dark:text-slate-200">No POO traffic rows found</div>
-                <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                  Choose a date range, refresh the allocation, or adjust your search filters to view data.
-                </div>
-              </div>
-            </div>
-          ) : poo ? (
+          {poo ? (
             <div className="space-y-8">
 
               {/* --- OD PAIRS TABLE --- */}
@@ -761,27 +934,9 @@ const PooTable = () => {
                 <div className="overflow-x-auto custom-scrollbar">
                   <table className="w-full text-left border-collapse min-w-max">
                     <thead>
-                      <tr>
-                        <th className={cn(thSubStyle, "w-10")}></th>
-                        {["OD", "Dom / INTL", "Flight", "Stop", "Total GCD", "Time incl LyOv", "Max pax", "Max Cargo T", "Pax", "Cargo", "Fare", "Rate", "Pax revenue", "Cargo revenue", "Total revenue"].map((h) => (
-                          <th key={h} className={thSubStyle}>Filter + Sort</th>
-                        ))}
-                        <th className={thSubStyle}></th>
-                        <th className={thSubStyle}></th>
-                      </tr>
-                      <tr>
-                        <th className={cn(thStyle, "w-10")}>✓</th>
-                        {["OD", "Dom / INTL", "Flight", "Stop", "Total GCD", "Time incl LyOv", "Max pax", "Max Cargo T", "Pax", "Cargo", "Fare", "Rate", "Pax revenue", "Cargo revenue", "Total revenue", "Apply Pax/Fare Date(s)", "Apply Cargo/Rate Date(s)"].map((h) => (
-                          <th key={h} className={thStyle}>{h}</th>
-                        ))}
-                      </tr>
-                      <tr>
-                        <th className={thSubStyle}></th>
-                        <th className={cn(thSubStyle, "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-bold")}>Selected</th>
-                        {["", "", "", "", "", "", "", "Total", "Total", "Wght Avg", "Wght Avg", "Total", "Total", "Total", "", ""].map((s, i) => (
-                          <th key={i} className={cn(thSubStyle, "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-bold")}>{s}</th>
-                        ))}
-                      </tr>
+                      {renderFilterSortHeaderRows(OD_TABLE_COLUMNS, {
+                        summaryCells: ["", "", "", "", "", "", "", "Total", "Total", "Wght Avg", "Wght Avg", "Total", "Total", "Total", "", ""],
+                      })}
                     </thead>
                     <tbody>
                       {sections.legs.length > 0 && (
@@ -869,6 +1024,13 @@ const PooTable = () => {
                           <td className={tdStyle}>{renderApplyDateCell(row, "cargoRate")}</td>
                         </tr>
                       ))}
+                      {sections.legs.length === 0 && sections.ods.length === 0 && (
+                        <tr>
+                          {Array.from({ length: 18 }).map((_, i) => (
+                            <td key={i} className="h-10 border-b border-r border-slate-200 dark:border-slate-700"></td>
+                          ))}
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -883,11 +1045,7 @@ const PooTable = () => {
                 <div className="overflow-x-auto custom-scrollbar">
                   <table className="w-full text-left border-collapse min-w-max">
                     <thead>
-                      <tr>
-                        {["✓", "OD", "Dom / INTL", "Flights", "Stop", "Total GCD", "Time incl LyOv", "Max pax", "Max Cargo T", "Pax", "Cargo", "Fare", "Rate", "Pax revenue", "Cargo revenue", "Total revenue", "Apply Pax/Fare Date(s)", "Apply Cargo/Rate Date(s)"].map((h) => (
-                          <th key={h} className={thStyle}>{h}</th>
-                        ))}
-                      </tr>
+                      {renderFilterSortHeaderRows(OD_TABLE_COLUMNS)}
                     </thead>
                     <tbody>
                       {sections.transits.length === 0 ? (
@@ -928,11 +1086,7 @@ const PooTable = () => {
                 <div className="overflow-x-auto custom-scrollbar">
                   <table className="w-full text-left border-collapse min-w-max">
                     <thead>
-                      <tr>
-                        {["✓", "OD", "OD D/I", "Sector", "Sector D/I", "Flight", "IntLn / CdS", "OAL", "Transfer Stn", "Pax", "Cargo", "Prorate Fare", "Prorate Rate", "Pax revenue", "Cargo revenue", "Total revenue", "Apply Pax/Fare Date(s)", "Apply Cargo/Rate Date(s)"].map((h) => (
-                          <th key={h} className={thStyle}>{h}</th>
-                        ))}
-                      </tr>
+                      {renderFilterSortHeaderRows(INTERLINE_TABLE_COLUMNS)}
                     </thead>
                     <tbody>
                       {sections.interlines.length === 0 ? (
