@@ -1006,8 +1006,8 @@ const PooTable = () => {
           </div>
 
           <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-2">
-            <input value={transitDraft.firstFlightNumber} onChange={(e) => setTransitDraft((prev) => ({ ...prev, firstFlightNumber: e.target.value }))} placeholder="First flt" className="h-8 w-24 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs font-medium outline-none focus:border-indigo-500" />
-            <input value={transitDraft.secondFlightNumber} onChange={(e) => setTransitDraft((prev) => ({ ...prev, secondFlightNumber: e.target.value }))} placeholder="Second flt" className="h-8 w-24 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs font-medium outline-none focus:border-indigo-500" />
+            <input value={transitDraft.firstFlightNumber} onChange={(e) => setTransitDraft((prev) => ({ ...prev, firstFlightNumber: e.target.value }))} placeholder="First FLGT" className="h-8 w-24 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs font-medium outline-none focus:border-indigo-500" />
+            <input value={transitDraft.secondFlightNumber} onChange={(e) => setTransitDraft((prev) => ({ ...prev, secondFlightNumber: e.target.value }))} placeholder="Second FLGT" className="h-8 w-24 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs font-medium outline-none focus:border-indigo-500" />
             <button
               onClick={handleCreateTransit}
               disabled={saving || loading}
@@ -1246,7 +1246,7 @@ const PooTable = () => {
 
             </div>
           ) : (
-            renderSheetSection({ title: "Raw POO entries", kind: "raw", rows: [] })
+            renderSheetSection({ title: "OD", kind: "raw", rows: [] })
           )}
         </div>
       </div>
