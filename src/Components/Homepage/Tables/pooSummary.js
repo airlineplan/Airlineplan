@@ -82,11 +82,27 @@ function buildCollapsedRow(rows) {
   const flightList = getFlightList(rows);
   const stops = getTransferStation(rows, primary);
   const odDI = getCollapsedDi(rows, primary);
+  const behindRow = rows.find((row) => String(row.trafficType || "").toLowerCase() === "behind");
+  const beyondRow = rows.find((row) => String(row.trafficType || "").toLowerCase() === "beyond");
+  const transitFlRow = rows.find((row) => String(row.trafficType || "").toLowerCase() === "transit_fl");
+  const transitSlRow = rows.find((row) => String(row.trafficType || "").toLowerCase() === "transit_sl");
+  const trafficTypes = uniqueValues(rows.map((row) => row.trafficType));
 
   return {
     ...primary,
     _id: primary._id,
     sourceRowIds: rows.map((row) => row._id).filter(Boolean),
+    sourceRowKeys: rows.map((row) => row.rowKey).filter(Boolean),
+    trafficTypes,
+    trafficTypeGroup: trafficTypes.includes("transit_fl") || trafficTypes.includes("transit_sl")
+      ? "transit"
+      : trafficTypes.includes("behind") || trafficTypes.includes("beyond")
+        ? "connection"
+        : "leg",
+    behindRowId: behindRow?._id || "",
+    beyondRowId: beyondRow?._id || "",
+    transitFlRowId: transitFlRow?._id || "",
+    transitSlRowId: transitSlRow?._id || "",
     isCollapsedPooRow: rows.length > 1,
     odDI,
     displayStop: stops,

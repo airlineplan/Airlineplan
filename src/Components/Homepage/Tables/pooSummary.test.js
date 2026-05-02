@@ -376,6 +376,73 @@ test("groupPooRecordsIntoSections keeps transit rows out of OD pairs", () => {
   assert.equal(sections.ods.length, 2);
   assert.equal(sections.transits.length, 1);
   assert.equal(sections.transits[0].pax, 3);
+  assert.equal(sections.transits[0].trafficTypeGroup, "transit");
+  assert.equal(sections.transits[0].transitFlRowId, "transit-fl");
+  assert.equal(sections.transits[0].transitSlRowId, "transit-sl");
+});
+
+test("collapsed connection rows carry backing identifiers for saves and validation", () => {
+  const sections = groupPooRecordsIntoSections(sampleRows(), "DEL");
+  const delHyd = sections.ods.find((row) => row.od === "DEL-HYD");
+
+  assert.equal(delHyd.trafficTypeGroup, "connection");
+  assert.equal(delHyd.behindRowId, "del-hyd-behind");
+  assert.equal(delHyd.beyondRowId, "del-hyd-beyond");
+  assert.deepEqual(delHyd.sourceRowIds.sort(), ["del-hyd-behind", "del-hyd-beyond"]);
+  assert.ok(delHyd.sourceRowKeys.length >= 2);
+});
+
+test("groupPooRecordsIntoSections puts interline and codeshare rows in their section", () => {
+  const rows = [
+    ...sampleRows(),
+    {
+      ...baseRow({
+        _id: "interline-row",
+        trafficType: "leg",
+        od: "DEL-BOM",
+        odOrigin: "DEL",
+        odDestination: "BOM",
+        sector: "DEL-BOM",
+        identifier: "Leg",
+        odGroupKey: "leg::INT",
+        flightNumber: "OAL1",
+        pax: 2,
+        cargoT: 0,
+        maxPax: 10,
+        maxCargoT: 1,
+        odViaGcd: 1200,
+        sectorGcd: 1200,
+      }),
+      interline: "OAL",
+    },
+    {
+      ...baseRow({
+        _id: "codeshare-row",
+        trafficType: "leg",
+        od: "DEL-BOM",
+        odOrigin: "DEL",
+        odDestination: "BOM",
+        sector: "DEL-BOM",
+        identifier: "Leg",
+        odGroupKey: "leg::CDS",
+        flightNumber: "CS1",
+        pax: 1,
+        cargoT: 0,
+        maxPax: 10,
+        maxCargoT: 1,
+        odViaGcd: 1200,
+        sectorGcd: 1200,
+      }),
+      codeshare: "CS",
+    },
+  ];
+
+  const sections = groupPooRecordsIntoSections(rows, "DEL");
+
+  assert.deepEqual(
+    sections.interlines.map((row) => row._id).sort(),
+    ["codeshare-row", "interline-row"]
+  );
 });
 
 test("groupPooRecordsIntoSections keeps same-OD leg flights as separate visible rows", () => {

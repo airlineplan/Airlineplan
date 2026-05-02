@@ -239,8 +239,9 @@ function createSectionSummary(rows) {
 function buildErrorLookup(errors = []) {
   const map = new Map();
   errors.forEach((issue) => {
-    if (!issue?.rowId || !issue?.field) return;
-    map.set(`${issue.rowId}:${issue.field}`, issue.message);
+    if (!issue?.field) return;
+    if (issue.rowId) map.set(`id:${issue.rowId}:${issue.field}`, issue.message);
+    if (issue.rowKey) map.set(`key:${issue.rowKey}:${issue.field}`, issue.message);
   });
   return map;
 }
@@ -468,9 +469,7 @@ const PooTable = () => {
 
     setSaving(true);
     try {
-      const response = await api.post("/poo/update", {
-        transitDraft: { ...transitDraft, poo, date },
-      });
+      const response = await api.post("/poo/transit", { ...transitDraft, poo, date });
       setTransitDraft(blankTransitDraft);
       setValidationErrors([]);
       toast.success(response.data.message || "Transit OD created");
@@ -545,7 +544,25 @@ const PooTable = () => {
   const totalDirtyRows = Object.keys(dirtyMap).length;
   const totalApplyTargets = Object.values(applyDateTargets).reduce((sum, target) => sum + (target.dates?.length || 0), 0);
 
-  const renderCellError = (rowId, field) => errorLookup.get(`${rowId}:${field}`) || "";
+  const renderCellError = (row, field) => {
+    if (!row || !field) return "";
+    const rowIds = [row._id, ...(row.sourceRowIds || [])].filter(Boolean);
+    for (const rowId of rowIds) {
+      const message = errorLookup.get(`id:${rowId}:${field}`);
+      if (message) return message;
+    }
+    const rowKeys = [row.rowKey, ...(row.sourceRowKeys || [])].filter(Boolean);
+    for (const rowKey of rowKeys) {
+      const message = errorLookup.get(`key:${rowKey}:${field}`);
+      if (message) return message;
+    }
+    return "";
+  };
+
+  const getInputClass = (row, field) => cn(
+    inputStyle,
+    renderCellError(row, field) && "border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-900/30 dark:text-rose-100"
+  );
 
   // Helper styles
   const thStyle = "sticky top-0 z-10 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur p-2 text-[11px] md:text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-r border-slate-200 dark:border-slate-700 whitespace-nowrap text-center";
@@ -697,7 +714,7 @@ const PooTable = () => {
 
     if (column.editable) {
       const field = getEditableField(row, column.key);
-      const error = renderCellError(row._id, field);
+      const error = renderCellError(row, field);
       return (
         <td key={column.key} className={cn(baseClass, "p-0.5")}>
           <input
@@ -960,16 +977,16 @@ const PooTable = () => {
                             <td className={cn(tdStyle, "text-right")}>{formatNumber(row.maxPax, 0)}</td>
                             <td className={cn(tdStyle, "text-right")}>{formatNumber(row.maxCargoT)}</td>
                             <td className={tdInputWrap}>
-                              <input type="number" min="0" step="1" value={row.pax ?? ""} onChange={(e) => updateField(row._id, "pax", e.target.value)} className={inputStyle} />
+                              <input type="number" min="0" step="1" value={row.pax ?? ""} title={renderCellError(row, "pax")} onChange={(e) => updateField(row._id, "pax", e.target.value)} className={getInputClass(row, "pax")} />
                             </td>
                             <td className={tdInputWrap}>
-                              <input type="number" min="0" step="0.01" value={row.cargoT ?? ""} onChange={(e) => updateField(row._id, "cargoT", e.target.value)} className={inputStyle} />
+                              <input type="number" min="0" step="0.01" value={row.cargoT ?? ""} title={renderCellError(row, "cargoT")} onChange={(e) => updateField(row._id, "cargoT", e.target.value)} className={getInputClass(row, "cargoT")} />
                             </td>
                             <td className={tdInputWrap}>
-                              <input type="number" min="0" step="0.01" value={row.legFare ?? ""} onChange={(e) => updateField(row._id, "legFare", e.target.value)} className={inputStyle} />
+                              <input type="number" min="0" step="0.01" value={row.legFare ?? ""} title={renderCellError(row, "legFare")} onChange={(e) => updateField(row._id, "legFare", e.target.value)} className={getInputClass(row, "legFare")} />
                             </td>
                             <td className={tdInputWrap}>
-                              <input type="number" min="0" step="0.01" value={row.legRate ?? ""} onChange={(e) => updateField(row._id, "legRate", e.target.value)} className={inputStyle} />
+                              <input type="number" min="0" step="0.01" value={row.legRate ?? ""} title={renderCellError(row, "legRate")} onChange={(e) => updateField(row._id, "legRate", e.target.value)} className={getInputClass(row, "legRate")} />
                             </td>
                             <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.legPaxRev)}</td>
                             <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.legCargoRev)}</td>
@@ -1006,16 +1023,16 @@ const PooTable = () => {
                           <td className={cn(tdStyle, "text-right")}>{formatNumber(row.maxPax, 0)}</td>
                           <td className={cn(tdStyle, "text-right")}>{formatNumber(row.maxCargoT)}</td>
                           <td className={tdInputWrap}>
-                            <input type="number" min="0" step="1" value={row.pax ?? ""} onChange={(e) => updateField(row._id, "pax", e.target.value)} className={inputStyle} />
+                            <input type="number" min="0" step="1" value={row.pax ?? ""} title={renderCellError(row, "pax")} onChange={(e) => updateField(row._id, "pax", e.target.value)} className={getInputClass(row, "pax")} />
                           </td>
                           <td className={tdInputWrap}>
-                            <input type="number" min="0" step="0.01" value={row.cargoT ?? ""} onChange={(e) => updateField(row._id, "cargoT", e.target.value)} className={inputStyle} />
+                            <input type="number" min="0" step="0.01" value={row.cargoT ?? ""} title={renderCellError(row, "cargoT")} onChange={(e) => updateField(row._id, "cargoT", e.target.value)} className={getInputClass(row, "cargoT")} />
                           </td>
                           <td className={tdInputWrap}>
-                            <input type="number" min="0" step="0.01" value={row.odFare ?? ""} onChange={(e) => updateField(row._id, "odFare", e.target.value)} className={inputStyle} />
+                            <input type="number" min="0" step="0.01" value={row.odFare ?? ""} title={renderCellError(row, "odFare")} onChange={(e) => updateField(row._id, "odFare", e.target.value)} className={getInputClass(row, "odFare")} />
                           </td>
                           <td className={tdInputWrap}>
-                            <input type="number" min="0" step="0.01" value={row.odRate ?? ""} onChange={(e) => updateField(row._id, "odRate", e.target.value)} className={inputStyle} />
+                            <input type="number" min="0" step="0.01" value={row.odRate ?? ""} title={renderCellError(row, "odRate")} onChange={(e) => updateField(row._id, "odRate", e.target.value)} className={getInputClass(row, "odRate")} />
                           </td>
                           <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.paxRevenue || row.odPaxRev)}</td>
                           <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.cargoRevenue || row.odCargoRev)}</td>
@@ -1061,10 +1078,18 @@ const PooTable = () => {
                           <td className={tdStyle}>{row.timeInclLayover || "--"}</td>
                           <td className={cn(tdStyle, "text-right")}>{formatNumber(row.maxPax, 0)}</td>
                           <td className={cn(tdStyle, "text-right")}>{formatNumber(row.maxCargoT)}</td>
-                          <td className={cn(tdStyle, "text-right")}>{formatNumber(row.pax, 0)}</td>
-                          <td className={cn(tdStyle, "text-right")}>{formatNumber(row.cargoT)}</td>
-                          <td className={cn(tdStyle, "text-right")}>{formatNumber(row.odFare)}</td>
-                          <td className={cn(tdStyle, "text-right")}>{formatNumber(row.odRate)}</td>
+                          <td className={tdInputWrap}>
+                            <input type="number" min="0" step="1" value={row.pax ?? ""} title={renderCellError(row, "pax")} onChange={(e) => updateField(row._id, "pax", e.target.value)} className={getInputClass(row, "pax")} />
+                          </td>
+                          <td className={tdInputWrap}>
+                            <input type="number" min="0" step="0.01" value={row.cargoT ?? ""} title={renderCellError(row, "cargoT")} onChange={(e) => updateField(row._id, "cargoT", e.target.value)} className={getInputClass(row, "cargoT")} />
+                          </td>
+                          <td className={tdInputWrap}>
+                            <input type="number" min="0" step="0.01" value={row.odFare ?? ""} title={renderCellError(row, "odFare")} onChange={(e) => updateField(row._id, "odFare", e.target.value)} className={getInputClass(row, "odFare")} />
+                          </td>
+                          <td className={tdInputWrap}>
+                            <input type="number" min="0" step="0.01" value={row.odRate ?? ""} title={renderCellError(row, "odRate")} onChange={(e) => updateField(row._id, "odRate", e.target.value)} className={getInputClass(row, "odRate")} />
+                          </td>
                           <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.odPaxRev)}</td>
                           <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.odCargoRev)}</td>
                           <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(row.odTotalRev)}</td>
