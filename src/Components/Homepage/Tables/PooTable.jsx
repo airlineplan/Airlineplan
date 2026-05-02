@@ -1128,7 +1128,7 @@ const PooTable = () => {
               <div className="bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
                 <div className="bg-slate-100/90 dark:bg-slate-800/90 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
                   <Layers size={16} className="text-indigo-500" />
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">OD</h3>
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Leg traffic & connecting traffic</h3>
                 </div>
                 <div className="overflow-x-auto custom-scrollbar">
                   <table className="w-full text-left border-collapse min-w-max">
@@ -1252,7 +1252,7 @@ const PooTable = () => {
               <div className="bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
                 <div className="bg-slate-100/90 dark:bg-slate-800/90 px-4 py-3 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2">
                   <Layers size={16} className="text-indigo-500" />
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Transits (same Aircraft)</h3>
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Transit traffic (same ACFT)</h3>
                 </div>
                 <div className="overflow-x-auto custom-scrollbar">
                   <table className="w-full text-left border-collapse min-w-max">
