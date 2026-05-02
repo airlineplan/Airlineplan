@@ -324,8 +324,6 @@ const METRIC_OPTIONS = [
   { label: "Leg Total Revenue", value: "legTotalRev" },
   { label: "Average Fare", value: "averageFare" },
   { label: "Average Cargo Rate", value: "averageCargoRate" },
-  { label: "Revenue per ASK", value: "revenuePerAsk" },
-  { label: "Revenue per RPK", value: "revenuePerRpk" },
 ];
 
 const REVENUE_LABEL_OPTIONS = [
@@ -516,8 +514,6 @@ const RevenuePage = () => {
           legTotalRev: Number(row.legTotalRev || 0),
           averageFare: Number(row.pax || 0) > 0 ? Number(row.fnlRccyPaxRev || 0) / Number(row.pax || 0) : 0,
           averageCargoRate: Number(row.cargoT || 0) > 0 ? Number(row.fnlRccyCargoRev || 0) / Number(row.cargoT || 0) : 0,
-          revenuePerAsk: Number(row.ask || row.ASK || 0) > 0 ? Number(row.fnlRccyTotalRev || 0) / Number(row.ask || row.ASK || 0) : 0,
-          revenuePerRpk: Number(row.rpk || row.rsk || row.RPK || 0) > 0 ? Number(row.fnlRccyTotalRev || 0) / Number(row.rpk || row.rsk || row.RPK || 0) : 0,
         },
       };
     });
@@ -637,7 +633,30 @@ const RevenuePage = () => {
         ...row.data.map((value) => formatMetricValue(row.metricKey, value)),
       ]);
 
-      const worksheetData = [headers, ...excelRows];
+      const selectedMetrics = filters.metrics?.length ? filters.metrics : [METRIC_OPTIONS[2]];
+      const selectedGroups = [level1, level2, level3]
+        .filter((level) => level && level.value !== "none")
+        .map((level) => level.label);
+      const filterRows = Object.entries(filters)
+        .filter(([key]) => key !== "metrics")
+        .map(([key, values]) => [
+          key,
+          Array.isArray(values) && values.length
+            ? values.map((item) => item.label || item.value).join(", ")
+            : "All",
+        ]);
+
+      const metadataRows = [
+        ["Applied Filters"],
+        ...filterRows,
+        [],
+        ["Periodicity", periodicity.label],
+        ["Grouping Levels", selectedGroups.length ? selectedGroups.join(" > ") : "None"],
+        ["Selected Metrics", selectedMetrics.map((metric) => metric.label).join(", ")],
+        [],
+      ];
+
+      const worksheetData = [...metadataRows, headers, ...excelRows];
       const ws = XLSX.utils.aoa_to_sheet(worksheetData);
       ws["!cols"] = [
         { wch: 42 },
