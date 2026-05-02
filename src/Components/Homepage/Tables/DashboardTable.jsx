@@ -170,6 +170,20 @@ function formatFxRate(value) {
   return raw.toFixed(2);
 }
 
+function isFxRateDraft(value) {
+  return /^\d*(?:\.\d{0,2})?$/.test(String(value ?? ""));
+}
+
+function buildSavedFxRatesFromRows(rows = []) {
+  return (Array.isArray(rows) ? rows : []).flatMap((row) =>
+    Object.entries(row.pairs || {}).map(([pair, rate]) => ({
+      pair,
+      dateKey: row.dateKey,
+      rate: Number(formatFxRate(rate)),
+    }))
+  );
+}
+
 function toNumberLike(value) {
   if (value === null || value === undefined || value === "") return 0;
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
@@ -951,13 +965,7 @@ const FxRateModal = ({
 
     const nextCurrencyCodes = uniqueCurrencyCodes(nextReportingCurrency, currencyCodes);
 
-    const nextRates = (Array.isArray(fxRows) ? fxRows : []).flatMap((row) =>
-      Object.entries(row.pairs || {}).map(([pair, rate]) => ({
-        pair,
-        dateKey: row.dateKey,
-        rate: Number(formatFxRate(rate)),
-      }))
-    );
+    const nextRates = buildSavedFxRatesFromRows(fxRows);
 
     try {
       setSaving(true);
@@ -992,8 +1000,39 @@ const FxRateModal = ({
   const getFxDateLabel = (row, rowIndex) => {
     if (fxRows.length > 0 && rowIndex === 0) return "First / earliest date";
     if (fxRows.length > 1 && rowIndex === fxRows.length - 1) return "Last / latest date";
-    if (rowIndex === selectedFxRowIndex) return "Centre row";
     return row.dateLabel;
+  };
+
+  const updateFxRateFromRow = (sourceRowKey, pair, value) => {
+    const sourceIndex = fxRows.findIndex((candidate) => candidate.key === sourceRowKey);
+    if (sourceIndex < 0) return null;
+
+    const next = [...fxRows];
+    for (let index = sourceIndex; index < next.length; index += 1) {
+      next[index] = {
+        ...next[index],
+        pairs: {
+          ...next[index].pairs,
+          [pair]: value,
+        },
+      };
+    }
+    setFxRows(next);
+    return next;
+  };
+
+  const handleFxRateChange = (row, pair, value) => {
+    const nextValue = String(value ?? "").replace(/,/g, "");
+    if (!isFxRateDraft(nextValue)) return;
+    updateFxRateFromRow(row.key, pair, nextValue);
+  };
+
+  const handleFxRateCommit = (row, pair) => {
+    const nextValue = formatFxRate(row.pairs?.[pair]);
+    const next = updateFxRateFromRow(row.key, pair, nextValue);
+    if (next) {
+      setSavedFxRates(buildSavedFxRatesFromRows(next));
+    }
   };
 
   if (!open) return null;
@@ -1073,31 +1112,9 @@ const FxRateModal = ({
                 ))}
               </div>
             </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-              <div className="font-semibold text-slate-900 dark:text-slate-50">Behavior</div>
-              <ul className="mt-3 space-y-2">
-                <li>Generated pairs use non-reporting currency / reporting currency.</li>
-                <li>Changing the reporting currency resets all rates to 1.00.</li>
-                <li>Each selected date stores its own FX rate set.</li>
-              </ul>
-            </div>
           </div>
 
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/60">
-              <div className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
-                {FX_BASIS_OPTIONS.find((option) => option.value === fxBasis)?.label || "Absolute"}
-              </div>
-              <div className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">{reportingCurrency}</div>
-              <button type="button" className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500">
-                FX rate setting
-              </button>
-              <div className="text-sm text-slate-500 dark:text-slate-400">
-                This setting becomes the reporting currency. Default is the first CCY entered.
-              </div>
-            </div>
-
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Go to date</div>
@@ -1156,30 +1173,8 @@ const FxRateModal = ({
                                 inputMode="decimal"
                                 aria-label={`${row.dateLabel} ${pair}`}
                                 value={row.pairs[pair] ?? "1.00"}
-                                onChange={(e) => {
-                                  const next = [...fxRows];
-                                  const sourceIndex = fxRows.findIndex((candidate) => candidate.key === row.key);
-                                  if (sourceIndex < 0) return;
-                                  const nextRate = formatFxRate(e.target.value);
-                                  for (let index = sourceIndex; index < next.length; index += 1) {
-                                    next[index] = {
-                                      ...next[index],
-                                      pairs: {
-                                        ...next[index].pairs,
-                                        [pair]: nextRate,
-                                      },
-                                    };
-                                  }
-                                  setFxRows(next);
-                                  const nextSavedRates = next.flatMap((item) =>
-                                    Object.entries(item.pairs || {}).map(([fxPair, rate]) => ({
-                                      pair: fxPair,
-                                      dateKey: item.dateKey,
-                                      rate: Number(formatFxRate(rate)),
-                                    }))
-                                  );
-                                  setSavedFxRates(nextSavedRates);
-                                }}
+                                onChange={(e) => handleFxRateChange(row, pair, e.target.value)}
+                                onBlur={() => handleFxRateCommit(row, pair)}
                                 className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-center text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                               />
                             </td>
