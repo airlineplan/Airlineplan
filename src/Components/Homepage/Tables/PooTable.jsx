@@ -13,7 +13,9 @@ import {
   Layers,
   AlertCircle,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Check,
+  ChevronDown
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -249,7 +251,9 @@ function buildErrorLookup(errors = []) {
 // --- COMPONENT ---
 
 const PooTable = () => {
-  const [poo, setPoo] = useState("");
+  const [selectedPoos, setSelectedPoos] = useState([]);
+  const [pooSelectionReady, setPooSelectionReady] = useState(false);
+  const [isPooDropdownOpen, setIsPooDropdownOpen] = useState(false);
   const [date, setDate] = useState("");
   const [records, setRecords] = useState([]);
   const [meta, setMeta] = useState({ stationCurrency: "", reportingCurrency: "" });
@@ -266,6 +270,7 @@ const PooTable = () => {
   const [transitDraft, setTransitDraft] = useState(blankTransitDraft);
   const [selectedRowIds, setSelectedRowIds] = useState(() => new Set());
   const requestSeqRef = useRef(0);
+  const pooDropdownRef = useRef(null);
 
   useEffect(() => {
     const loadStations = async () => {
@@ -287,14 +292,53 @@ const PooTable = () => {
       .map((station) => String(station.stationName || "").trim().toUpperCase())
       .filter(Boolean);
 
-    const uniqueNames = [...new Set(names)].sort((a, b) => a.localeCompare(b));
+    const selectedNames = selectedPoos
+      .map((station) => String(station || "").trim().toUpperCase())
+      .filter(Boolean);
 
-    if (poo && !uniqueNames.includes(poo.trim().toUpperCase())) {
-      uniqueNames.unshift(poo.trim().toUpperCase());
-    }
+    return [...new Set([...names, ...selectedNames])].sort((a, b) => a.localeCompare(b));
+  }, [stationsData, selectedPoos]);
 
-    return uniqueNames;
-  }, [stationsData, poo]);
+  useEffect(() => {
+    if (pooSelectionReady || stationOptions.length === 0) return;
+    setSelectedPoos(stationOptions);
+    setPooSelectionReady(true);
+  }, [pooSelectionReady, stationOptions]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!pooDropdownRef.current?.contains(event.target)) {
+        setIsPooDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedPooSet = useMemo(() => new Set(selectedPoos), [selectedPoos]);
+  const allPoosSelected = stationOptions.length > 0 && selectedPoos.length === stationOptions.length;
+  const selectedPooLabel = allPoosSelected
+    ? "ALL POO"
+    : selectedPoos.length > 0
+      ? selectedPoos.join(", ")
+      : "Select POO";
+  const fetchPooParam = selectedPoos.length === 1 && !allPoosSelected ? selectedPoos[0] : "";
+
+  const toggleAllPoos = () => {
+    setPooSelectionReady(true);
+    setSelectedPoos((prev) => (prev.length === stationOptions.length ? [] : stationOptions));
+  };
+
+  const togglePooOption = (station) => {
+    setPooSelectionReady(true);
+    setSelectedPoos((prev) => {
+      const current = new Set(prev);
+      if (current.has(station)) current.delete(station);
+      else current.add(station);
+      return stationOptions.filter((option) => current.has(option));
+    });
+  };
 
   const applyLoadedRows = useCallback((payload) => {
     setRecords(Array.isArray(payload?.data) ? payload.data : []);
@@ -314,15 +358,15 @@ const PooTable = () => {
     try {
       const response = await api.get("/poo", {
         params: {
-          ...(poo ? { poo } : {}),
+          ...(fetchPooParam ? { poo: fetchPooParam } : {}),
           date,
         },
       });
       if (requestSeqRef.current !== requestId) return;
 
       const rows = Array.isArray(response.data?.data) ? response.data.data : [];
-      if (populateIfEmpty && poo && rows.length === 0) {
-        const populateResponse = await api.post("/poo/populate", { poo, date });
+      if (populateIfEmpty && fetchPooParam && rows.length === 0) {
+        const populateResponse = await api.post("/poo/populate", { poo: fetchPooParam, date });
         if (requestSeqRef.current !== requestId) return;
         applyLoadedRows({
           data: populateResponse.data?.data || [],
@@ -340,11 +384,11 @@ const PooTable = () => {
         setLoading(false);
       }
     }
-  }, [applyLoadedRows, poo, date]);
+  }, [applyLoadedRows, fetchPooParam, date]);
 
   useEffect(() => {
-    if (date) fetchData({ populateIfEmpty: Boolean(poo) });
-  }, [fetchData, date, poo]);
+    if (date) fetchData({ populateIfEmpty: Boolean(fetchPooParam) });
+  }, [fetchData, date, fetchPooParam]);
 
   const refreshAllocation = async () => {
     if (!date) {
@@ -355,7 +399,7 @@ const PooTable = () => {
     setLoading(true);
     try {
       const response = await api.post("/poo/populate", {
-        ...(poo ? { poo } : {}),
+        ...(fetchPooParam ? { poo: fetchPooParam } : {}),
         date,
       });
       toast.success(response.data.message || "POO allocation refreshed");
@@ -458,8 +502,8 @@ const PooTable = () => {
   };
 
   const handleCreateTransit = async () => {
-    if (!poo || !date) {
-      toast.warn("Choose a POO station and date first");
+    if (selectedPoos.length !== 1 || allPoosSelected || !date) {
+      toast.warn("Choose exactly one POO station and date first");
       return;
     }
     if (!transitDraft.firstFlightNumber || !transitDraft.secondFlightNumber) {
@@ -469,7 +513,7 @@ const PooTable = () => {
 
     setSaving(true);
     try {
-      const response = await api.post("/poo/transit", { ...transitDraft, poo, date });
+      const response = await api.post("/poo/transit", { ...transitDraft, poo: selectedPoos[0], date });
       setTransitDraft(blankTransitDraft);
       setValidationErrors([]);
       toast.success(response.data.message || "Transit OD created");
@@ -489,8 +533,13 @@ const PooTable = () => {
   const visibleRows = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     const activeFilters = Object.entries(tableFilters).filter(([, value]) => String(value || "").trim());
+    const shouldFilterPoo = selectedPoos.length > 0 && !allPoosSelected;
 
     const filtered = records.filter((row) => {
+      if (shouldFilterPoo && !selectedPooSet.has(String(row.poo || "").trim().toUpperCase())) {
+        return false;
+      }
+
       const matchesSearch = !query || [
         row.al, row.poo, row.od, row.sector, row.flightNumber,
         row.variant, row.identifier, row.odDI, row.legDI, row.day,
@@ -515,11 +564,11 @@ const PooTable = () => {
         sortConfig.direction
       )
     );
-  }, [records, searchTerm, sortConfig, tableFilters]);
+  }, [records, searchTerm, sortConfig, tableFilters, selectedPoos, selectedPooSet, allPoosSelected]);
 
   const sections = useMemo(() => {
-    return groupPooRecordsIntoSections(visibleRows, poo);
-  }, [visibleRows, poo]);
+    return groupPooRecordsIntoSections(visibleRows, "");
+  }, [visibleRows]);
 
   const toggleSelectedRow = (rowId) => {
     setSelectedRowIds((prev) => {
@@ -827,16 +876,68 @@ const PooTable = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">POO</label>
-              <select
-                value={poo}
-                onChange={(e) => setPoo(e.target.value.toUpperCase())}
-                className="w-full h-9 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium"
-              >
-                <option value="">All POO</option>
-                {stationOptions.map((station) => (
-                  <option key={station} value={station}>{station}</option>
-                ))}
-              </select>
+              <div className="relative" ref={pooDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsPooDropdownOpen((prev) => !prev)}
+                  className="w-full h-9 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium flex items-center justify-between gap-2"
+                  aria-haspopup="listbox"
+                  aria-expanded={isPooDropdownOpen}
+                >
+                  <span className="truncate">{selectedPooLabel}</span>
+                  <ChevronDown size={15} className={cn("shrink-0 text-slate-400 transition-transform", isPooDropdownOpen && "rotate-180")} />
+                </button>
+                {isPooDropdownOpen && (
+                  <div
+                    className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 max-h-64 overflow-auto rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl py-1"
+                    role="listbox"
+                    aria-multiselectable="true"
+                  >
+                    <button
+                      type="button"
+                      onClick={toggleAllPoos}
+                      className="w-full px-3 py-2 text-left text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                    >
+                      <span className={cn(
+                        "h-4 w-4 rounded border flex items-center justify-center",
+                        allPoosSelected
+                          ? "border-indigo-500 bg-indigo-500 text-white"
+                          : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950"
+                      )}>
+                        {allPoosSelected && <Check size={12} strokeWidth={3} />}
+                      </span>
+                      <span>ALL POO</span>
+                    </button>
+                    <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                    {stationOptions.map((station) => {
+                      const checked = selectedPooSet.has(station);
+                      return (
+                        <button
+                          key={station}
+                          type="button"
+                          onClick={() => togglePooOption(station)}
+                          className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                          role="option"
+                          aria-selected={checked}
+                        >
+                          <span className={cn(
+                            "h-4 w-4 rounded border flex items-center justify-center",
+                            checked
+                              ? "border-indigo-500 bg-indigo-500 text-white"
+                              : "border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-950"
+                          )}>
+                            {checked && <Check size={12} strokeWidth={3} />}
+                          </span>
+                          <span>{station}</span>
+                        </button>
+                      );
+                    })}
+                    {stationOptions.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-slate-400">No POO options</div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Date</label>
@@ -939,7 +1040,7 @@ const PooTable = () => {
           </div>
         )}
         <div className="flex-1 overflow-auto custom-scrollbar p-5">
-          {poo ? (
+          {selectedPoos.length > 0 ? (
             <div className="space-y-8">
 
               {/* --- OD PAIRS TABLE --- */}
@@ -1145,8 +1246,7 @@ const PooTable = () => {
 
             </div>
           ) : (
-            /* Fallback: show raw flat table when no POO selected */
-            renderSheetSection({ title: "Raw POO entries", kind: "raw", rows: visibleRows })
+            renderSheetSection({ title: "Raw POO entries", kind: "raw", rows: [] })
           )}
         </div>
       </div>
