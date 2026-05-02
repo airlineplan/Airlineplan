@@ -13,18 +13,30 @@ export const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     const root = window.document.documentElement;
+    let removeInstantThemeClass;
 
-    // 1. Force remove both to be safe
+    root.classList.add("theme-changing");
+
     root.classList.remove("light", "dark");
-
-    // 2. Add the current theme
     root.classList.add(theme);
 
-    // 3. Debugging: Check your Console to see if this prints!
-    console.log("THEME CHANGED TO:", theme);
-
-    // 4. Save to storage
     localStorage.setItem("theme", theme);
+
+    const firstFrame = window.requestAnimationFrame(() => {
+      const secondFrame = window.requestAnimationFrame(() => {
+        root.classList.remove("theme-changing");
+      });
+
+      removeInstantThemeClass = () => {
+        window.cancelAnimationFrame(secondFrame);
+        root.classList.remove("theme-changing");
+      };
+    });
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      removeInstantThemeClass?.();
+    };
   }, [theme]);
 
   const toggleTheme = () => {
