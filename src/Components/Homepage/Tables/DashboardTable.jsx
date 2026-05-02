@@ -41,6 +41,14 @@ function formatPeriodDate(inputDate) {
   return `${day} ${month} ${year}`;
 }
 
+function formatMonthYear(inputDate) {
+  const date = new Date(inputDate);
+  if (Number.isNaN(date.getTime())) return "--";
+  const month = new Intl.DateTimeFormat("en-US", { month: "short" }).format(date);
+  const year = String(date.getFullYear()).slice(-2);
+  return `${month}-${year}`;
+}
+
 function formatNumber(value, digits = 0) {
   const raw = Number(String(value ?? "").replace(/,/g, ""));
   if (!Number.isFinite(raw)) {
@@ -117,7 +125,7 @@ function createFxRows(periodColumns, pairLabels, existingFxRates = []) {
     const pairs = {};
     pairLabels.forEach((pair) => {
       const savedRate = rateLookup.get(`${dateKey}::${pair}`);
-      pairs[pair] = formatFxRate(savedRate ?? "1.00");
+      pairs[pair] = formatFxRate(savedRate ?? getCarriedForwardFxRate(existingFxRates, pair, dateKey) ?? "1.00");
     });
 
     return {
@@ -429,7 +437,7 @@ const FINANCE_SECTIONS = [
           },
           {
             id: "maintenance-schmx",
-            label: "Sch. Mx.",
+            label: "Sch. Mx. not capitalized",
             key: "qualifyingSchMxEventsRCCY",
           },
           {
@@ -439,37 +447,48 @@ const FINANCE_SECTIONS = [
           },
           {
             id: "maintenance-other-maintenance",
-            label: "Other maintenance - Utilization driven",
+            label: "Other maintenance",
             key: "otherMaintenanceRCCY",
+            children: [
+              { id: "maintenance-other-maintenance-utilisation", label: "Utilisation driven", key: "otherMaintenanceUtilisationRCCY" },
+              { id: "maintenance-other-maintenance-calendar", label: "Calendar driven", key: "otherMaintenanceCalendarRCCY" },
+            ],
           },
           {
             id: "maintenance-rotable",
             label: "Rotable changes",
             key: "rotableChangesRCCY",
           },
-          {
-            id: "maintenance-other-mx-expenses",
-            label: "Other maintenance - Calendar driven",
-            key: "otherMxExpensesRCCY",
-          },
-          {
-            id: "crew-total-direct",
-            label: "Crew total direct cost",
-            key: "crewTotalDirectCostRCCY",
-            emphasize: true,
-            children: [
-              { id: "crew-allowances", label: "Allowances", key: "crewAllowancesRCCY" },
-              { id: "crew-layovers", label: "Layovers", key: "layoverCostRCCY" },
-              { id: "crew-positioning", label: "Positioning", key: "crewPositioningCostRCCY" },
-            ],
-          },
-          { id: "other-airport-cost", label: "Airport cost", key: "airportRCCY", emphasize: true },
-          { id: "other-navigation-cost", label: "Navigation cost", key: "navigationRCCY", emphasize: true },
-          { id: "other-doc", label: "Other DOC", key: "otherDocRCCY", emphasize: true },
-          { id: "total-doc", label: "Total DOC", key: "totalDocRCCY", emphasize: true },
-          { id: "gross-profit-loss", label: "Gross profit/loss", key: "grossProfitLossRCCY", emphasize: true },
         ],
       },
+    ],
+  },
+  {
+    title: "Crew",
+    icon: Gauge,
+    rows: [
+      {
+        id: "crew-total-direct",
+        label: "Crew total direct cost",
+        key: "crewTotalDirectCostRCCY",
+        emphasize: true,
+        children: [
+          { id: "crew-allowances", label: "Allowances", key: "crewAllowancesRCCY" },
+          { id: "crew-layovers", label: "Layovers", key: "layoverCostRCCY" },
+          { id: "crew-positioning", label: "Positioning", key: "crewPositioningCostRCCY" },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Other",
+    icon: Layers3,
+    rows: [
+      { id: "other-airport-cost", label: "Airport cost", key: "airportRCCY", emphasize: true },
+      { id: "other-navigation-cost", label: "Navigation cost", key: "navigationRCCY", emphasize: true },
+      { id: "other-doc", label: "Other DOC", key: "otherDocRCCY", emphasize: true },
+      { id: "total-doc", label: "Total DOC", key: "totalDocRCCY", emphasize: true },
+      { id: "gross-profit-loss", label: "Gross profit/loss", key: "grossProfitLossRCCY", emphasize: true },
     ],
   },
 ];
@@ -821,6 +840,7 @@ const FxRateModal = ({
   setSavedFxRates,
   periodColumns,
   fxBasis,
+  onSaved,
 }) => {
   const [currencyInput, setCurrencyInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -883,25 +903,33 @@ const FxRateModal = ({
     }
   };
 
-  const resetForReportingCurrency = (nextReportingCurrency) => {
+  const resetForReportingCurrency = async (nextReportingCurrency) => {
     const normalized = normalizeCurrencyCode(nextReportingCurrency);
     if (!normalized) return;
     const nextCurrencyCodes = uniqueCurrencyCodes(normalized, currencyCodes);
-    setReportingCurrency(normalized);
-    setExposureCurrency?.(normalized);
-    setCurrencyCodes(nextCurrencyCodes);
-    const nextPairs = buildCurrencyPairs(nextCurrencyCodes, normalized);
-    const resetRows = createFxRows(periodColumns, nextPairs, []);
-    setSavedFxRates(
-      resetRows.flatMap((row) =>
-        Object.entries(row.pairs || {}).map(([pair, rate]) => ({
-          pair,
-          dateKey: row.dateKey,
-          rate: Number(formatFxRate(rate)),
-        }))
-      )
-    );
-    setFxRows(resetRows);
+    try {
+      setSaving(true);
+      const response = await api.post("/revenue-config/reporting-currency", {
+        reportingCurrency: normalized,
+        currencyCodes: nextCurrencyCodes,
+      });
+      const savedConfig = response.data?.data || {};
+      const savedReportingCurrency = normalizeCurrencyCode(savedConfig.reportingCurrency) || normalized;
+      const savedCurrencyCodes = uniqueCurrencyCodes(savedReportingCurrency, savedConfig.currencyCodes || nextCurrencyCodes);
+      const savedRates = Array.isArray(savedConfig.fxRates) ? savedConfig.fxRates : [];
+      setReportingCurrency(savedReportingCurrency);
+      setExposureCurrency?.(savedReportingCurrency);
+      setCurrencyCodes(savedCurrencyCodes);
+      setSavedFxRates(savedRates);
+      setFxRows(createFxRows(periodColumns, buildCurrencyPairs(savedCurrencyCodes, savedReportingCurrency), savedRates));
+      toast.success("Reporting currency updated");
+      onSaved?.();
+    } catch (error) {
+      console.error("Error resetting reporting currency:", error);
+      toast.error("Failed to update reporting currency");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDateChange = (value) => {
@@ -933,7 +961,7 @@ const FxRateModal = ({
 
     try {
       setSaving(true);
-      const response = await api.post("/revenue/config", {
+      const response = await api.post("/revenue-config/fx-rates", {
         reportingCurrency: nextReportingCurrency,
         currencyCodes: nextCurrencyCodes,
         fxRates: nextRates,
@@ -952,6 +980,7 @@ const FxRateModal = ({
       setSavedFxRates(savedRates);
       setFxRows(createFxRows(periodColumns, buildCurrencyPairs(uniqueSavedCurrencyCodes.length ? uniqueSavedCurrencyCodes : nextCurrencyCodes, savedReportingCurrency), savedRates));
       toast.success("FX rates saved");
+      onSaved?.();
     } catch (error) {
       console.error("Error saving FX rates:", error);
       toast.error("Failed to save FX rates");
@@ -1191,6 +1220,7 @@ const RiskExposureModal = ({
   reportingCurrency,
   currencyCodes,
   savedFxRates,
+  riskExposure,
 }) => {
   const [seriesType, setSeriesType] = useState("revenue-cost");
 
@@ -1219,28 +1249,25 @@ const RiskExposureModal = ({
   const currentCurrency = normalizeCurrencyCode(exposureCurrency || reportingCurrency);
 
   const chartPoints = useMemo(() => {
-    return periodColumns.map((period, index) => {
-      const finance = financePeriods?.[index]?.finance || {};
-      if (seriesType === "fuel-requirement") {
-        return {
-          label: period.dateLabel,
-          value: finance.exposureFuelRequirement || 0,
-          unit: "ATF Kg",
-          subtitle: `${formatNumber(finance.engineFuelConsumption || 0, 0)} + ${formatNumber(finance.apuFuelConsumption || 0, 0)}`,
-        };
-      }
+    if (seriesType === "fuel-requirement") {
+      const fuelRows = Array.isArray(riskExposure?.fuel) ? riskExposure.fuel : [];
+      return fuelRows.map((row) => ({
+        label: formatMonthYear(row.dateKey),
+        value: toNumberLike(row.totalFuelKg),
+        unit: "ATF Kg",
+        subtitle: `${formatNumber(row.engineFuelKg || 0, 0)} + ${formatNumber(row.apuFuelKg || 0, 0)}`,
+      }));
+    }
 
-      return {
-        label: period.dateLabel,
-        revenue: convertRccyAmount(finance.fnlRccyTotalRev || 0, reportingCurrency, currentCurrency, savedFxRates, finance.dateKey),
-        cost: -convertRccyAmount(finance.totalDocRCCY || 0, reportingCurrency, currentCurrency, savedFxRates, finance.dateKey),
-        unit: currentCurrency,
-        subtitle: currentCurrency === reportingCurrency
-          ? `FX 1.00`
-          : `FX ${formatFxRate(getCarriedForwardFxRate(savedFxRates, `${currentCurrency}/${reportingCurrency}`, finance.dateKey))}`,
-      };
-    });
-  }, [currentCurrency, financePeriods, periodColumns, reportingCurrency, savedFxRates, seriesType]);
+    const currencyRows = riskExposure?.currencies?.[currentCurrency] || [];
+    return currencyRows.map((row) => ({
+      label: formatMonthYear(row.dateKey),
+      revenue: toNumberLike(row.revenue),
+      cost: toNumberLike(row.cost),
+      unit: currentCurrency,
+      subtitle: `Net ${formatNumber(row.net || 0, 2)}`,
+    }));
+  }, [currentCurrency, riskExposure, seriesType]);
 
   const maxMagnitude = useMemo(() => {
     if (seriesType === "fuel-requirement") {
@@ -1365,7 +1392,7 @@ const RiskExposureModal = ({
                 </div>
               </div>
               <div className="border-t border-slate-200 px-4 py-4 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
-                For non-RCCY currencies, revenue is rendered above the axis and cost below it using the saved FX rate for the selected currency/date.
+                For non-RCCY currencies, revenue is rendered above the axis and cost below it from original local-currency exposure.
               </div>
             </div>
           </div>
@@ -1423,6 +1450,8 @@ const DashboardTable = () => {
   });
   const [financePeriods, setFinancePeriods] = useState([]);
   const [financeLoading, setFinanceLoading] = useState(false);
+  const [backendPeriods, setBackendPeriods] = useState([]);
+  const [riskExposure, setRiskExposure] = useState({ fuel: [], currencies: {} });
   const [expandedFinanceNodes, setExpandedFinanceNodes] = useState(() => ({
     "revenue-total": true,
     "fuel-total": true,
@@ -1533,8 +1562,10 @@ const DashboardTable = () => {
     try {
       setLoading(true);
       const response = await api.get("/dashboard", { params: serializedFilters });
+      const periods = Array.isArray(response.data?.periods) ? response.data.periods : [];
       const payload = Array.isArray(response.data) ? response.data : Array.isArray(response.data?.data) ? response.data.data : [];
-      setData(payload);
+      setBackendPeriods(periods);
+      setData(periods.length ? periods.map((period) => ({ ...(period.data || {}), startDate: period.startDate, endDate: period.endDate, dateKey: period.dateKey, dateLabel: period.dateLabel })) : payload);
       if (response.data && !Array.isArray(response.data)) {
         const config = response.data.revenueConfig || {};
         const codes = response.data.currencyCodes || config.currencyCodes || [];
@@ -1543,11 +1574,14 @@ const DashboardTable = () => {
         if (config.reportingCurrency) setReportingCurrency(normalizeCurrencyCode(config.reportingCurrency));
         if (Array.isArray(response.data.fxRates)) setSavedFxRates(response.data.fxRates);
         if (Array.isArray(response.data.flightsForFxDates)) setFxDateColumns(buildFxDateColumns(response.data.flightsForFxDates));
+        setRiskExposure(response.data.riskExposure || response.data.riskExposureData || { fuel: [], currencies: {} });
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       toast.error("Failed to load dashboard data");
       setData([]);
+      setBackendPeriods([]);
+      setRiskExposure({ fuel: [], currencies: {} });
     } finally {
       setLoading(false);
     }
@@ -1567,21 +1601,59 @@ const DashboardTable = () => {
     }
   };
 
+  const handleReportingCurrencyChange = async (nextCurrency) => {
+    const normalized = normalizeCurrencyCode(nextCurrency);
+    if (!normalized || normalized === reportingCurrency) return;
+    try {
+      setFinanceLoading(true);
+      const response = await api.post("/revenue-config/reporting-currency", {
+        reportingCurrency: normalized,
+        currencyCodes: uniqueCurrencyCodes(normalized, currencyCodes),
+      });
+      const config = response.data?.data || {};
+      const nextReporting = normalizeCurrencyCode(config.reportingCurrency) || normalized;
+      const nextCodes = uniqueCurrencyCodes(nextReporting, config.currencyCodes || currencyCodes);
+      setReportingCurrency(nextReporting);
+      setExposureCurrency(nextReporting);
+      setCurrencyCodes(nextCodes);
+      setSavedFxRates(Array.isArray(config.fxRates) ? config.fxRates : []);
+      toast.success("Reporting currency updated");
+      await fetchData();
+    } catch (error) {
+      console.error("Error updating reporting currency:", error);
+      toast.error("Failed to update reporting currency");
+    } finally {
+      setFinanceLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serializedFilters]);
 
   const periodColumns = useMemo(() => {
+    if (backendPeriods.length) {
+      return backendPeriods.map((period, index) => ({
+        key: period.key || `${index}-${period?.endDate || "period"}`,
+        label: `Period ${index + 1}`,
+        dateLabel: period.dateLabel || formatPeriodDate(period?.endDate),
+        startDate: period.startDate || "",
+        endDate: period.endDate || "",
+        dateKey: period.dateKey || normalizeDateKey(period.endDate),
+        data: period.data || {},
+      }));
+    }
     return data.map((period, index) => ({
       key: `${index}-${period?.endDate || "period"}`,
       label: `Period ${index + 1}`,
-      dateLabel: formatPeriodDate(period?.endDate),
+      dateLabel: period?.dateLabel || formatPeriodDate(period?.endDate),
       startDate: period?.startDate || getPeriodStartDate(period?.endDate, selectedValues.periodicity)?.toISOString() || "",
       endDate: period?.endDate || "",
+      dateKey: period?.dateKey || normalizeDateKey(period?.endDate || ""),
       data: period,
     }));
-  }, [data, selectedValues.periodicity]);
+  }, [backendPeriods, data, selectedValues.periodicity]);
 
   const loadingOverlay =
     (loading || financeLoading) && typeof document !== "undefined"
@@ -1682,6 +1754,12 @@ const DashboardTable = () => {
 
   const buildDashboardExportRows = () => {
     const rows = [["", ...periodColumns.map((period) => period.dateLabel)]];
+    const filterSummary = [
+      `Label: ${selectedValues.label}`,
+      `Periodicity: ${selectedValues.periodicity}`,
+      ...Object.entries(filters).map(([key, values]) => `${key}: ${(values || []).map((item) => item.label || item.value).join(", ") || "All"}`),
+    ];
+    rows.push(["Applied filters", ...filterSummary, ...Array(Math.max(periodColumns.length - filterSummary.length, 0)).fill("")]);
     rows.push(["Financial segment", ...Array(periodColumns.length).fill("")]);
     rows.push([
       `FX rate setting`,
@@ -2020,9 +2098,13 @@ const DashboardTable = () => {
                           onChange={setFxBasis}
                         />
                       </div>
-                      <div className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
-                        <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">CCY</span>
-                        <span>{reportingCurrency}</span>
+                      <div className="w-[160px] min-w-[160px]">
+                        <SingleSelectDropdown
+                          placeholder={reportingCurrency || "CCY"}
+                          options={uniqueCurrencyCodes(reportingCurrency, currencyCodes).map((code) => ({ label: code, value: code }))}
+                          value={reportingCurrency}
+                          onChange={handleReportingCurrencyChange}
+                        />
                       </div>
                     </div>
                   </td>
@@ -2070,6 +2152,7 @@ const DashboardTable = () => {
         savedFxRates={savedFxRates}
         setSavedFxRates={setSavedFxRates}
         periodColumns={fxDateColumns}
+        onSaved={fetchData}
       />
 
       <RiskExposureModal
@@ -2082,6 +2165,7 @@ const DashboardTable = () => {
         reportingCurrency={reportingCurrency}
         currencyCodes={currencyCodes}
         savedFxRates={savedFxRates}
+        riskExposure={riskExposure}
       />
 
     </div>
