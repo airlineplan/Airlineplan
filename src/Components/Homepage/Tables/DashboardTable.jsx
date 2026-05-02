@@ -439,12 +439,8 @@ const FINANCE_SECTIONS = [
           },
           {
             id: "maintenance-other-maintenance",
-            label: "Other maintenance",
+            label: "Other maintenance - Utilization driven",
             key: "otherMaintenanceRCCY",
-            children: [
-              { id: "maintenance-other-utilisation", label: "Utilisation driven", key: "otherMaintenanceUtilisationRCCY" },
-              { id: "maintenance-other-calendar", label: "Calendar driven", key: "otherMaintenanceCalendarRCCY" },
-            ],
           },
           {
             id: "maintenance-rotable",
@@ -453,7 +449,7 @@ const FINANCE_SECTIONS = [
           },
           {
             id: "maintenance-other-mx-expenses",
-            label: "Other Mx expenses",
+            label: "Other maintenance - Calendar driven",
             key: "otherMxExpensesRCCY",
           },
           {

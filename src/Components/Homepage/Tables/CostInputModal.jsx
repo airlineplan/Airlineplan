@@ -110,10 +110,17 @@ function ensurePlfHeaderRow(rows, thresholdKeys) {
 }
 
 const APU_FUEL_ALLOCATION_CODE = "APUFUELCOST";
-const APU_FUEL_BASIS_OPTIONS = [
+const MR_MONTHLY_ALLOCATION_CODE = "MRMONTHLY";
+const OTHER_MX_ALLOCATION_CODE = "OTHERMXEXPENSES";
+const ALLOCATION_BASIS_OPTIONS = [
   { label: "Departure", value: "DEPARTURES" },
   { label: "BH", value: "BH" },
   { label: "FH", value: "FH" },
+];
+const COST_ALLOCATION_ROWS = [
+  { label: "APU fuel cost", code: APU_FUEL_ALLOCATION_CODE, defaultBasis: "DEPARTURES" },
+  { label: "Maintenance reserve contribution driven by Month", code: MR_MONTHLY_ALLOCATION_CODE, defaultBasis: "BH" },
+  { label: "Other Maintenance expenses driven by Month", code: OTHER_MX_ALLOCATION_CODE, defaultBasis: "FH" },
 ];
 const DEFAULT_NAV_MTOW_TIERS = ["73000", "77000", "78000", "79000"];
 
@@ -1854,14 +1861,17 @@ export default function CostInputModal({ isOpen, onClose }) {
     }
   };
 
-  // Allocation basis for APU fuel cost.
-  const apuAllocationRowIndex = allocationTable.findIndex((row) => {
+  const findAllocationRowIndex = (costCode) => allocationTable.findIndex((row) => {
     const code = String(row?.costCode || row?.cost || row?.label || "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
-    return code === APU_FUEL_ALLOCATION_CODE;
+    return code === costCode;
   });
-  const apuAllocationBasis = apuAllocationRowIndex >= 0
-    ? normalizeAllocationBasis(allocationTable[apuAllocationRowIndex]?.basis)
-    : "DEPARTURES";
+
+  const getAllocationBasisValue = (costCode, defaultBasis) => {
+    const rowIndex = findAllocationRowIndex(costCode);
+    return rowIndex >= 0
+      ? normalizeAllocationBasis(allocationTable[rowIndex]?.basis)
+      : defaultBasis;
+  };
 
   const applyNavMtowTiers = () => {
     const nextTiers = normalizeNavMtowTiers(navMtowTierDraft, navMtowTiers);
@@ -1871,13 +1881,18 @@ export default function CostInputModal({ isOpen, onClose }) {
     setNavMtowTierDraft(nextTiers);
   };
 
-  const updateApuAllocationBasis = (basis) => {
+  const updateAllocationBasis = (costCode, basis) => {
     setAllocationTable((prev) => {
       const next = Array.isArray(prev) ? [...prev] : [];
-      if (apuAllocationRowIndex >= 0) {
-        next[apuAllocationRowIndex] = {
-          ...next[apuAllocationRowIndex],
-          costCode: APU_FUEL_ALLOCATION_CODE,
+      const rowIndex = next.findIndex((row) => {
+        const code = String(row?.costCode || row?.cost || row?.label || "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
+        return code === costCode;
+      });
+
+      if (rowIndex >= 0) {
+        next[rowIndex] = {
+          ...next[rowIndex],
+          costCode,
           basis,
         };
         return next;
@@ -1885,7 +1900,7 @@ export default function CostInputModal({ isOpen, onClose }) {
       return [
         ...next,
         {
-          costCode: APU_FUEL_ALLOCATION_CODE,
+          costCode,
           basis,
         },
       ];
@@ -2216,22 +2231,24 @@ export default function CostInputModal({ isOpen, onClose }) {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 dark:divide-slate-700 text-slate-600 dark:text-slate-300">
-                        <tr className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                          <td className="px-4 py-2 font-medium">APU fuel cost</td>
-                          <td className="px-4 py-2">
-                            <select
-                              value={apuAllocationBasis}
-                              onChange={(e) => updateApuAllocationBasis(e.target.value)}
-                              className="w-full max-w-xs px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                            >
-                              {APU_FUEL_BASIS_OPTIONS.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                        </tr>
+                        {COST_ALLOCATION_ROWS.map((row) => (
+                          <tr key={row.code} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                            <td className="px-4 py-2 font-medium">{row.label}</td>
+                            <td className="px-4 py-2">
+                              <select
+                                value={getAllocationBasisValue(row.code, row.defaultBasis)}
+                                onChange={(e) => updateAllocationBasis(row.code, e.target.value)}
+                                className="w-full max-w-xs px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                              >
+                                {ALLOCATION_BASIS_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
