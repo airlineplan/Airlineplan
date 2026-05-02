@@ -236,6 +236,23 @@ function createSectionSummary(rows) {
   }, {});
 }
 
+function createOdSelectionSummary(rows) {
+  const summary = {
+    maxPax: rows.reduce((sum, row) => sum + numericValue(getPooTableValue(row, "maxPax")), 0),
+    maxCargoT: rows.reduce((sum, row) => sum + numericValue(getPooTableValue(row, "maxCargoT")), 0),
+    pax: rows.reduce((sum, row) => sum + numericValue(getPooTableValue(row, "pax")), 0),
+    cargoT: rows.reduce((sum, row) => sum + numericValue(getPooTableValue(row, "cargoT")), 0),
+    paxRevenue: rows.reduce((sum, row) => sum + numericValue(getPooTableValue(row, "paxRevenue")), 0),
+    cargoRevenue: rows.reduce((sum, row) => sum + numericValue(getPooTableValue(row, "cargoRevenue")), 0),
+    totalRevenue: rows.reduce((sum, row) => sum + numericValue(getPooTableValue(row, "totalRevenue")), 0),
+  };
+
+  summary.fare = summary.pax > 0 ? summary.paxRevenue / summary.pax : 0;
+  summary.rate = summary.cargoT > 0 ? summary.cargoRevenue / summary.cargoT : 0;
+
+  return summary;
+}
+
 function buildErrorLookup(errors = []) {
   const map = new Map();
   errors.forEach((issue) => {
@@ -568,6 +585,14 @@ const PooTable = () => {
     return groupPooRecordsIntoSections(visibleRows, "");
   }, [visibleRows]);
 
+  const selectedOdRows = useMemo(() => {
+    return [...sections.legs, ...sections.ods].filter((row) => selectedRowIds.has(row._id));
+  }, [sections, selectedRowIds]);
+
+  const odSelectionSummary = useMemo(() => {
+    return createOdSelectionSummary(selectedOdRows);
+  }, [selectedOdRows]);
+
   const toggleSelectedRow = (rowId) => {
     setSelectedRowIds((prev) => {
       const next = new Set(prev);
@@ -673,6 +698,61 @@ const PooTable = () => {
             ))}
           </tr>
         )}
+      </>
+    );
+  };
+
+  const renderOdSelectedSummaryRows = () => {
+    const hasSelection = selectedOdRows.length > 0;
+    const summaryLabelByKey = {
+      maxPax: "Total",
+      maxCargoT: "Total",
+      pax: "Total",
+      cargoT: "Total",
+      fare: "Wght Avg",
+      rate: "Wght Avg",
+      paxRevenue: "Total",
+      cargoRevenue: "Total",
+      totalRevenue: "Total",
+    };
+
+    return (
+      <>
+        <tr>
+          <th className={thSubStyle}></th>
+          {OD_TABLE_COLUMNS.map((column) => (
+            <th
+              key={`${column.key}-selected-label`}
+              className={cn(
+                thSubStyle,
+                summaryLabelByKey[column.key] && "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-bold"
+              )}
+            >
+              {summaryLabelByKey[column.key] || ""}
+            </th>
+          ))}
+        </tr>
+        <tr>
+          <th className={cn(thSubStyle, "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-bold")}>
+            {hasSelection ? selectedOdRows.length : ""}
+          </th>
+          {OD_TABLE_COLUMNS.map((column) => {
+            const value = odSelectionSummary[column.key];
+            const showValue = hasSelection && value !== undefined;
+            const wholeNumber = column.key === "maxPax" || column.key === "pax";
+            return (
+              <th
+                key={`${column.key}-selected-value`}
+                className={cn(
+                  thSubStyle,
+                  summaryLabelByKey[column.key] && "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-extrabold"
+                )}
+              >
+                {showValue ? formatNumber(value, wholeNumber ? 0 : 2) : ""}
+              </th>
+            );
+          })}
+        </tr>
       </>
     );
   };
@@ -1054,6 +1134,7 @@ const PooTable = () => {
                   <table className="w-full text-left border-collapse min-w-max">
                     <thead>
                       {renderFilterSortHeaderRows(OD_TABLE_COLUMNS)}
+                      {renderOdSelectedSummaryRows()}
                     </thead>
                     <tbody>
                       {sections.legs.length > 0 && (
@@ -1066,8 +1147,15 @@ const PooTable = () => {
                       {/* Legs */}
                       {sections.legs.map((row) => (
                         <React.Fragment key={row._id || row.od}>
-                          <tr className="group">
-                            <td className={cn(tdStyle, "text-center")}><input type="checkbox" className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" /></td>
+                          <tr className={cn("group", selectedRowIds.has(row._id) && "bg-indigo-50/80 dark:bg-indigo-900/20")}>
+                            <td className={cn(tdStyle, "text-center")}>
+                              <input
+                                type="checkbox"
+                                checked={selectedRowIds.has(row._id)}
+                                onChange={() => toggleSelectedRow(row._id)}
+                                className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                              />
+                            </td>
                             <td className={cn(tdStyle, "font-bold text-slate-800 dark:text-slate-100")}>{row.od}</td>
                             <td className={cn(tdStyle, "text-center")}>{row.odDI}</td>
                             <td className={cn(tdStyle, "text-center")}>{(row.flightList || [row.flightNumber]).join(", ")}</td>
@@ -1112,8 +1200,15 @@ const PooTable = () => {
                       )}
                       {/* ODs */}
                       {sections.ods.map((row) => (
-                        <tr key={row._id} className="group">
-                          <td className={cn(tdStyle, "text-center")}><input type="checkbox" className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" /></td>
+                        <tr key={row._id} className={cn("group", selectedRowIds.has(row._id) && "bg-indigo-50/80 dark:bg-indigo-900/20")}>
+                          <td className={cn(tdStyle, "text-center")}>
+                            <input
+                              type="checkbox"
+                              checked={selectedRowIds.has(row._id)}
+                              onChange={() => toggleSelectedRow(row._id)}
+                              className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            />
+                          </td>
                           <td className={cn(tdStyle, "font-bold text-slate-800 dark:text-slate-100")}>{row.od}</td>
                           <td className={cn(tdStyle, "text-center")}>{row.odDI}</td>
                           <td className={cn(tdStyle, "text-center")}>{(row.flightList || []).join(", ")}</td>
