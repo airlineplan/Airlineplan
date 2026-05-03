@@ -938,6 +938,13 @@ function PlfEffectTable({ data, setData, className }) {
 }
 
 function FuelConsumptionIndexTable({ data, setData, className }) {
+  const [fallbackMonths, setFallbackMonths] = useState({
+    month1: "",
+    month2: "",
+    month3: "",
+    month4: "",
+    month5: "",
+  });
   const monthKeys = [
     ["month1", "m1"],
     ["month2", "m2"],
@@ -946,14 +953,19 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
     ["month5", "m5"],
   ];
 
-  const getMonthLabel = (monthKey, fallback) => data.find((row) => row[monthKey])?.[monthKey] || fallback;
+  const getMonthLabel = (monthKey, fallback) => data.find((row) => row[monthKey])?.[monthKey] || fallbackMonths[monthKey] || fallback;
+  const getCurrentMonthLabels = () => Object.fromEntries(
+    monthKeys.map(([monthKey]) => [monthKey, getMonthLabel(monthKey, "")])
+  );
 
   const updateMonthLabel = (monthKey, value) => {
+    setFallbackMonths((previous) => ({ ...previous, [monthKey]: value }));
     setData(data.map((row) => ({ ...row, [monthKey]: value })));
   };
 
   const updateRow = (index, key, value) => {
-    setData(data.map((row, rowIndex) => (rowIndex === index ? { ...row, [key]: value } : row)));
+    const monthLabels = getCurrentMonthLabels();
+    setData(data.map((row, rowIndex) => (rowIndex === index ? { ...row, ...monthLabels, [key]: value } : row)));
   };
 
   const addRow = () => {
@@ -961,11 +973,7 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
       ...data,
       {
         acftRegn: "",
-        month1: getMonthLabel("month1", ""),
-        month2: getMonthLabel("month2", ""),
-        month3: getMonthLabel("month3", ""),
-        month4: getMonthLabel("month4", ""),
-        month5: getMonthLabel("month5", ""),
+        ...getCurrentMonthLabels(),
         m1: "",
         m2: "",
         m3: "",
@@ -1022,7 +1030,7 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
                       value={row.acftRegn}
                       onChange={(e) => {
                         if (disabledPlaceholder) {
-                          setData([{ acftRegn: e.target.value, m1: "", m2: "", m3: "", m4: "", m5: "" }]);
+                          setData([{ acftRegn: e.target.value, ...getCurrentMonthLabels(), m1: "", m2: "", m3: "", m4: "", m5: "" }]);
                           return;
                         }
                         updateRow(index, "acftRegn", e.target.value);
