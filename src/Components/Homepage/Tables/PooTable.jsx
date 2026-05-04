@@ -79,8 +79,6 @@ const OD_TABLE_COLUMNS = [
   { key: "paxRevenue", label: "Pax revenue", numeric: true },
   { key: "cargoRevenue", label: "Cargo revenue", numeric: true },
   { key: "totalRevenue", label: "Total revenue", numeric: true },
-  { key: "applyPaxFare", label: "Apply Pax load & Fare on Date(s)", filterable: false, sortable: false },
-  { key: "applyCargoRate", label: "Apply Cargo load & Rate on Date(s)", filterable: false, sortable: false },
 ];
 
 const INTERLINE_TABLE_COLUMNS = [
@@ -99,8 +97,6 @@ const INTERLINE_TABLE_COLUMNS = [
   { key: "paxRevenue", label: "Pax revenue", numeric: true },
   { key: "cargoRevenue", label: "Cargo revenue", numeric: true },
   { key: "totalRevenue", label: "Total revenue", numeric: true },
-  { key: "applyPaxFare", label: "Apply Pax/Fare Date(s)", filterable: false, sortable: false },
-  { key: "applyCargoRate", label: "Apply Cargo/Rate Date(s)", filterable: false, sortable: false },
 ];
 
 function formatNumber(value, maxFractionDigits = 2) {
@@ -1179,8 +1175,6 @@ const PooTable = () => {
                             <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.legPaxRev)}</td>
                             <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.legCargoRev)}</td>
                             <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(row.legTotalRev)}</td>
-                            <td className={tdStyle}>{renderApplyDateCell(row, "paxFare")}</td>
-                            <td className={tdStyle}>{renderApplyDateCell(row, "cargoRate")}</td>
                           </tr>
                           {/* Empties */}
                           {[0, 0, 0].map((_, i) => (
@@ -1232,8 +1226,6 @@ const PooTable = () => {
                           <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.paxRevenue || row.odPaxRev)}</td>
                           <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.cargoRevenue || row.odCargoRev)}</td>
                           <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(row.totalRevenue || row.odTotalRev)}</td>
-                          <td className={tdStyle}>{renderApplyDateCell(row, "paxFare")}</td>
-                          <td className={tdStyle}>{renderApplyDateCell(row, "cargoRate")}</td>
                         </tr>
                       ))}
                       {sections.legs.length === 0 && sections.ods.length === 0 && (
@@ -1288,8 +1280,6 @@ const PooTable = () => {
                           <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.odPaxRev)}</td>
                           <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.odCargoRev)}</td>
                           <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(row.odTotalRev)}</td>
-                          <td className={tdStyle}>{renderApplyDateCell(row, "paxFare")}</td>
-                          <td className={tdStyle}>{renderApplyDateCell(row, "cargoRate")}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1329,8 +1319,6 @@ const PooTable = () => {
                           <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.odPaxRev)}</td>
                           <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.odCargoRev)}</td>
                           <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(row.odTotalRev)}</td>
-                          <td className={tdStyle}>{renderApplyDateCell(row, "paxFare")}</td>
-                          <td className={tdStyle}>{renderApplyDateCell(row, "cargoRate")}</td>
                         </tr>
                       ))}
                     </tbody>
