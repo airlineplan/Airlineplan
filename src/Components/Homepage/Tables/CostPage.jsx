@@ -668,11 +668,11 @@ const CostPage = () => {
                     </table>
                 </div>
             </div>
-            
+
             {/* --- COST INPUT MODAL --- */}
-            <CostInputModal 
-                isOpen={isCostInputOpen} 
-                onClose={() => setIsCostInputOpen(false)} 
+            <CostInputModal
+                isOpen={isCostInputOpen}
+                onClose={() => setIsCostInputOpen(false)}
             />
         </div>
     );

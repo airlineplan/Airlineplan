@@ -1793,6 +1793,7 @@ export default function CostInputModal({ isOpen, onClose }) {
 
   // === MAINTENANCE STATE ===
   const [leasedReserve, setLeasedReserve] = useState([]);
+  const [maintenanceReserveSchedule, setMaintenanceReserveSchedule] = useState([]);
   const [schMxEvents, setSchMxEvents] = useState([]);
   const [transitMx, setTransitMx] = useState([]);
   const [otherMx, setOtherMx] = useState([]);
@@ -1826,6 +1827,7 @@ export default function CostInputModal({ isOpen, onClose }) {
             setAllocationTable(d.allocationTable || []);
 
             setLeasedReserve(d.leasedReserve || []);
+            setMaintenanceReserveSchedule(d.maintenanceReserveSchedule || []);
             setSchMxEvents(d.schMxEvents || []);
             setTransitMx(d.transitMx || []);
             setOtherMx(d.otherMx || []);
@@ -1865,7 +1867,7 @@ export default function CostInputModal({ isOpen, onClose }) {
       const payload = {
         allocationTable,
         fuelConsum, fuelConsumIndex, apuUsage, plfEffect, ccyFuel,
-        leasedReserve, schMxEvents, transitMx, otherMx, rotableChanges,
+        leasedReserve, maintenanceReserveSchedule, schMxEvents, transitMx, otherMx, rotableChanges,
         navMtowTiers, navEnr, navTerm, airportLanding, airportDom, airportIntl, airportAvsec, airportOther,
         otherDoc
       };
@@ -2028,6 +2030,25 @@ export default function CostInputModal({ isOpen, onClose }) {
                     { label: "Annual escl", key: "annualEscl", type: "number" },
                     { label: "Anniversary", key: "anniversary", type: "date" },
                     { label: "End date", key: "endDate", type: "date" },
+                  ]}
+                />
+                <EditableTable
+                  title="Maintenance Reserve schedule"
+                  data={maintenanceReserveSchedule}
+                  setData={setMaintenanceReserveSchedule}
+                  sortFilter
+                  columns={[
+                    { label: "MR Acc ID", key: "mrAccId" },
+                    { label: "Sch. Mx. Event account", key: "schMxEventAccount" },
+                    { label: "ACFT Regn", key: "acftRegn" },
+                    { label: "PN", key: "pn" },
+                    { label: "SN", key: "sn" },
+                    { label: "Date", key: "date", type: "date" },
+                    { label: "Rate", key: "rate", type: "number" },
+                    { label: "Driver value", key: "driverValue", type: "number" },
+                    { label: "Contribution", key: "contribution", type: "number" },
+                    { label: "Drawdown", key: "drawdown", type: "number" },
+                    { label: "Balance", key: "balance", type: "number" },
                   ]}
                 />
                 <EditableTable
