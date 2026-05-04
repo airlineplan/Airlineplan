@@ -122,6 +122,113 @@ const COST_ALLOCATION_ROWS = [
   { label: "Maintenance reserve contribution driven by Month", code: MR_MONTHLY_ALLOCATION_CODE, defaultBasis: "BH" },
   { label: "Other Maintenance expenses driven by Month", code: OTHER_MX_ALLOCATION_CODE, defaultBasis: "FH" },
 ];
+
+const normalizeText = (value) => String(value ?? "").trim().toUpperCase();
+const normalizeMaintenanceDriver = (value) => {
+  const raw = normalizeText(value);
+  if (["CYCLE", "CYCLES", "DEPARTURE", "DEPARTURES"].includes(raw)) return "DEPARTURES";
+  if (["MONTH", "MONTHLY", "DAY", "DAYS"].includes(raw)) return "MONTH";
+  if (["APUHR", "APU HR", "APUHOUR", "APU HOURS"].includes(raw)) return "APUHR";
+  if (["BH", "FH"].includes(raw)) return raw;
+  return raw;
+};
+
+const toNumeric = (value) => {
+  if (value === "" || value === null || value === undefined) return 0;
+  const parsed = Number(String(value).replace(/,/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const parseDateValue = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const formatDateKey = (date) => `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+const monthStartKey = (value) => {
+  const date = parseDateValue(value);
+  if (!date) return "";
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-01`;
+};
+
+const escalateRate = (row, scheduleDate) => {
+  const baseRate = toNumeric(row.setRate);
+  const escalation = toNumeric(row.annualEscalation ?? row.annualEscl);
+  const anniversary = parseDateValue(row.anniversaryDate || row.anniversary || row.asOnDate);
+  if (!baseRate || !escalation || !anniversary || !scheduleDate) return Number(baseRate.toFixed(2));
+  let years = scheduleDate.getUTCFullYear() - anniversary.getUTCFullYear();
+  const anniversaryThisYear = new Date(Date.UTC(scheduleDate.getUTCFullYear(), anniversary.getUTCMonth(), anniversary.getUTCDate()));
+  if (scheduleDate < anniversaryThisYear) years -= 1;
+  return Number((baseRate * ((1 + escalation / 100) ** Math.max(years, 0))).toFixed(2));
+};
+
+const generateMaintenanceReserveScheduleRows = (settingsRows = [], existingRows = []) => {
+  const byKey = new Map();
+  (Array.isArray(existingRows) ? existingRows : []).forEach((row) => {
+    const normalized = { ...row, date: monthStartKey(row.date) || row.date };
+    const key = [normalizeText(normalized.mrAccId), normalizeText(normalized.sn || normalized.msn), normalized.date].join("|");
+    byKey.set(key, normalized);
+  });
+
+  (Array.isArray(settingsRows) ? settingsRows : []).forEach((row) => {
+    const start = parseDateValue(row.asOnDate);
+    const end = parseDateValue(row.endDate || row.asOnDate);
+    if (!start || !end || !row.mrAccId) return;
+    let previousClosing = toNumeric(row.setBalance);
+    for (
+      let cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
+      cursor <= new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
+      cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1))
+    ) {
+      const date = formatDateKey(cursor);
+      const generated = {
+        date,
+        mrAccId: row.mrAccId || "",
+        schMxEvent: row.schMxEvent || "",
+        acftRegn: normalizeText(row.acftRegn || row.aircraftRegn),
+        pn: normalizeText(row.pn),
+        sn: normalizeText(row.sn),
+        driver: normalizeMaintenanceDriver(row.driver),
+        rate: escalateRate(row, cursor),
+        contribution: 0,
+        openingBalance: previousClosing,
+        drawdown: 0,
+        closingBalance: previousClosing,
+        ccy: normalizeText(row.ccy),
+        source: "generated",
+        notes: "",
+      };
+      const key = [normalizeText(generated.mrAccId), normalizeText(generated.sn), generated.date].join("|");
+      const existing = byKey.get(key);
+      if (existing && normalizeText(existing.source) !== "GENERATED") {
+        previousClosing = toNumeric(existing.closingBalance ?? existing.closingBal ?? existing.balance ?? previousClosing);
+        continue;
+      }
+      const contribution = toNumeric(existing?.contribution);
+      const drawdown = toNumeric(existing?.drawdown ?? existing?.mrDrawdown);
+      const openingBalance = toNumeric(existing?.openingBalance ?? existing?.openingBal ?? previousClosing);
+      const closingBalance = Number((openingBalance + contribution - drawdown).toFixed(2));
+      byKey.set(key, {
+        ...existing,
+        ...generated,
+        contribution,
+        drawdown,
+        openingBalance,
+        closingBalance,
+        ccy: existing?.ccy || generated.ccy,
+        notes: existing?.notes || generated.notes,
+      });
+      previousClosing = closingBalance;
+    }
+  });
+
+  return Array.from(byKey.values()).sort((a, b) => (
+    String(a.mrAccId || "").localeCompare(String(b.mrAccId || "")) ||
+    String(a.sn || "").localeCompare(String(b.sn || "")) ||
+    String(a.date || "").localeCompare(String(b.date || ""))
+  ));
+};
 const DEFAULT_NAV_MTOW_TIERS = ["73000", "77000", "78000", "79000"];
 
 function normalizeNavMtowTiers(value, fallback = DEFAULT_NAV_MTOW_TIERS) {
@@ -1794,6 +1901,7 @@ export default function CostInputModal({ isOpen, onClose }) {
   // === MAINTENANCE STATE ===
   const [leasedReserve, setLeasedReserve] = useState([]);
   const [maintenanceReserveSchedule, setMaintenanceReserveSchedule] = useState([]);
+  const [aircraftOnwing, setAircraftOnwing] = useState([]);
   const [schMxEvents, setSchMxEvents] = useState([]);
   const [transitMx, setTransitMx] = useState([]);
   const [otherMx, setOtherMx] = useState([]);
@@ -1828,6 +1936,7 @@ export default function CostInputModal({ isOpen, onClose }) {
 
             setLeasedReserve(d.leasedReserve || []);
             setMaintenanceReserveSchedule(d.maintenanceReserveSchedule || []);
+            setAircraftOnwing(d.aircraftOnwing || []);
             setSchMxEvents(d.schMxEvents || []);
             setTransitMx(d.transitMx || []);
             setOtherMx(d.otherMx || []);
@@ -1864,10 +1973,44 @@ export default function CostInputModal({ isOpen, onClose }) {
         return;
       }
 
+      const validDrivers = new Set(["BH", "FH", "DEPARTURES", "MONTH", "APUHR", ""]);
+      const settingsDriverIndex = (Array.isArray(leasedReserve) ? leasedReserve : []).findIndex((row) => !validDrivers.has(normalizeMaintenanceDriver(row?.driver)));
+      if (settingsDriverIndex >= 0) {
+        toast.error(`Maintenance Reserve Settings row ${settingsDriverIndex + 1}: enter a valid Driver.`);
+        return;
+      }
+
+      const scheduleRows = Array.isArray(maintenanceReserveSchedule) ? maintenanceReserveSchedule : [];
+      const scheduleErrorIndex = scheduleRows.findIndex((row) => {
+        if (!String(row?.mrAccId || "").trim()) return true;
+        if (!String(row?.date || "").trim()) return true;
+        if (toNumeric(row?.rate) < 0 || toNumeric(row?.contribution) < 0) return true;
+        const ccy = String(row?.ccy || "").trim();
+        if (ccy && !/^[A-Za-z]{3}$/.test(ccy)) return true;
+        if (!validDrivers.has(normalizeMaintenanceDriver(row?.driver))) return true;
+        return false;
+      });
+      if (scheduleErrorIndex >= 0) {
+        toast.error(`Maintenance Reserve Schedule row ${scheduleErrorIndex + 1}: check MR Acc ID, date, driver, CCY, and numeric values.`);
+        return;
+      }
+
+      const scheduleKeys = new Set();
+      const duplicateScheduleIndex = scheduleRows.findIndex((row) => {
+        const key = [normalizeText(row?.mrAccId), normalizeText(row?.sn || row?.msn), monthStartKey(row?.date)].join("|");
+        if (scheduleKeys.has(key)) return true;
+        scheduleKeys.add(key);
+        return false;
+      });
+      if (duplicateScheduleIndex >= 0) {
+        toast.error(`Maintenance Reserve Schedule row ${duplicateScheduleIndex + 1}: duplicate MR Acc ID/SN/date.`);
+        return;
+      }
+
       const payload = {
         allocationTable,
         fuelConsum, fuelConsumIndex, apuUsage, plfEffect, ccyFuel,
-        leasedReserve, maintenanceReserveSchedule, schMxEvents, transitMx, otherMx, rotableChanges,
+        leasedReserve, maintenanceReserveSchedule, aircraftOnwing, schMxEvents, transitMx, otherMx, rotableChanges,
         navMtowTiers, navEnr, navTerm, airportLanding, airportDom, airportIntl, airportAvsec, airportOther,
         otherDoc
       };
@@ -2027,28 +2170,56 @@ export default function CostInputModal({ isOpen, onClose }) {
                     { label: "As on date", key: "asOnDate", type: "date" },
                     { label: "CCY", key: "ccy" },
                     { label: "Driver", key: "driver" },
-                    { label: "Annual escl", key: "annualEscl", type: "number" },
-                    { label: "Anniversary", key: "anniversary", type: "date" },
+                    { label: "Annual escl", key: "annualEscalation", type: "number" },
+                    { label: "Anniversary", key: "anniversaryDate", type: "date" },
                     { label: "End date", key: "endDate", type: "date" },
                   ]}
                 />
+                <div>
+                  <div className="flex justify-end -mb-2">
+                    <button
+                      onClick={() => setMaintenanceReserveSchedule((prev) => generateMaintenanceReserveScheduleRows(leasedReserve, prev))}
+                      className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+                    >
+                      <Plus size={14} /> Generate Schedule
+                    </button>
+                  </div>
+                  <EditableTable
+                    title="Maintenance Reserve schedule"
+                    data={maintenanceReserveSchedule}
+                    setData={setMaintenanceReserveSchedule}
+                    sortFilter
+                    columns={[
+                      { label: "Date", key: "date", type: "date" },
+                      { label: "MR Acc ID", key: "mrAccId" },
+                      { label: "Sch. Mx. Event", key: "schMxEvent" },
+                      { label: "ACFT Regn", key: "acftRegn" },
+                      { label: "PN", key: "pn" },
+                      { label: "SN", key: "sn" },
+                      { label: "Driver", key: "driver" },
+                      { label: "Rate", key: "rate", type: "number" },
+                      { label: "Contribution", key: "contribution", type: "number" },
+                      { label: "Opening bal", key: "openingBalance", type: "number" },
+                      { label: "Drawdown", key: "drawdown", type: "number" },
+                      { label: "Closing bal", key: "closingBalance", type: "number" },
+                      { label: "CCY", key: "ccy" },
+                      { label: "Source", key: "source" },
+                      { label: "Notes", key: "notes" },
+                    ]}
+                  />
+                </div>
                 <EditableTable
-                  title="Maintenance Reserve schedule"
-                  data={maintenanceReserveSchedule}
-                  setData={setMaintenanceReserveSchedule}
+                  title="Aircraft On-Wing / SN mapping"
+                  data={aircraftOnwing}
+                  setData={setAircraftOnwing}
                   sortFilter
                   columns={[
-                    { label: "MR Acc ID", key: "mrAccId" },
-                    { label: "Sch. Mx. Event account", key: "schMxEventAccount" },
-                    { label: "ACFT Regn", key: "acftRegn" },
-                    { label: "PN", key: "pn" },
-                    { label: "SN", key: "sn" },
                     { label: "Date", key: "date", type: "date" },
-                    { label: "Rate", key: "rate", type: "number" },
-                    { label: "Driver value", key: "driverValue", type: "number" },
-                    { label: "Contribution", key: "contribution", type: "number" },
-                    { label: "Drawdown", key: "drawdown", type: "number" },
-                    { label: "Balance", key: "balance", type: "number" },
+                    { label: "ACFT Regn", key: "acftRegn" },
+                    { label: "MSN", key: "msn" },
+                    { label: "ENG1 ESN", key: "eng1Esn" },
+                    { label: "ENG2 ESN", key: "eng2Esn" },
+                    { label: "APUN", key: "apun" },
                   ]}
                 />
                 <EditableTable
