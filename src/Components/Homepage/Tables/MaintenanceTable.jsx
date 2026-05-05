@@ -1174,16 +1174,16 @@ const MaintenanceDashboard = () => {
                                     <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.dsr}</td>
                                     <td className={actionCellClass}>
                                         <div className="flex items-center justify-center gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => openSetResetModal({ msnEsn: row.msnEsn || row.msn, date: row.asOnDate || selectedDate })}
-                                            className="px-2 py-1 rounded text-sm font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
-                                        >
-                                            Set/Reset
-                                        </button>
-                                        <button type="button" onClick={() => handleDeleteMaintenanceRow(row)} className={deleteIconButtonClass} title="Delete Row">
-                                            <Trash2 size={14} />
-                                        </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => openSetResetModal({ msnEsn: row.msnEsn || row.msn, date: row.asOnDate || selectedDate })}
+                                                className="px-2 py-1 rounded text-sm font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
+                                            >
+                                                Set/Reset
+                                            </button>
+                                            <button type="button" onClick={() => handleDeleteMaintenanceRow(row)} className={deleteIconButtonClass} title="Delete Row">
+                                                <Trash2 size={14} />
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
