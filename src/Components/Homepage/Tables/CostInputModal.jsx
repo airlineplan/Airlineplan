@@ -1547,6 +1547,7 @@ function EditableTable({
   titleNote,
   sortFilter = false,
   highlightAutoFields = false,
+  readOnly = false,
 }) {
   const [editingIndex, setEditingIndex] = useState(null);
   const [editRow, setEditRow] = useState({});
@@ -1625,16 +1626,18 @@ function EditableTable({
           <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</h3>
           {titleNote && <span className="text-xs text-slate-500 dark:text-slate-400">{titleNote}</span>}
         </div>
-        <button
-          onClick={handleAdd}
-          className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
-        >
-          <Plus size={14} /> Add Row
-        </button>
+        {!readOnly && (
+          <button
+            onClick={handleAdd}
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+          >
+            <Plus size={14} /> Add Row
+          </button>
+        )}
       </div>
       <div className={modalTableScrollClass}>
-        <table className={modalTableClass} style={getModalTableStyle(columns.length + 1)}>
-          <EqualWidthColGroup count={columns.length + 1} />
+        <table className={modalTableClass} style={getModalTableStyle(columns.length + (readOnly ? 0 : 1))}>
+          <EqualWidthColGroup count={columns.length + (readOnly ? 0 : 1)} />
           <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
             {sortFilter && (
               <tr>
@@ -1648,7 +1651,7 @@ function EditableTable({
                     />
                   </th>
                 ))}
-                <th className="px-1 py-1" />
+                {!readOnly && <th className="px-1 py-1" />}
               </tr>
             )}
             <tr>
@@ -1670,14 +1673,14 @@ function EditableTable({
                   </span>
                 </th>
               ))}
-              <th className="px-3 py-3 text-sm font-medium text-slate-500 uppercase text-right">Actions</th>
+              {!readOnly && <th className="px-3 py-3 text-sm font-medium text-slate-500 uppercase text-right">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
             {visibleRows.length === 0 && (
               <tr>
-                <td colSpan={columns.length + 1} className="px-3 py-5 text-center text-slate-400 text-sm italic">
-                  {data.length === 0 ? 'No data. Click "Add Row" to start.' : "No rows match the filters."}
+                <td colSpan={columns.length + (readOnly ? 0 : 1)} className="px-3 py-5 text-center text-slate-400 text-sm italic">
+                  {data.length === 0 ? "No data available." : "No rows match the filters."}
                 </td>
               </tr>
             )}
@@ -1701,7 +1704,7 @@ function EditableTable({
                         highlightAutoFields && autoFields.has(col.key) && "bg-emerald-50/70 dark:bg-emerald-900/20"
                       )}
                     >
-                      {isEditing ? (
+                      {isEditing && !readOnly ? (
                         <Input
                           value={editRow[col.key]}
                           onChange={(e) => setEditRow({ ...editRow, [col.key]: e.target.value })}
@@ -1717,22 +1720,24 @@ function EditableTable({
                       )}
                     </td>
                   ))}
-                  <td className="px-3 py-2 text-right">
-                    {isEditing ? (
-                      <button onClick={() => handleSave(index)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
-                        <Check size={16} />
-                      </button>
-                    ) : (
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => handleEdit(index, row)} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded dark:text-indigo-400 dark:hover:bg-indigo-900/30">
-                          <Edit2 size={14} />
+                  {!readOnly && (
+                    <td className="px-3 py-2 text-right">
+                      {isEditing ? (
+                        <button onClick={() => handleSave(index)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
+                          <Check size={16} />
                         </button>
-                        <button onClick={() => handleDelete(index)} className="p-1 text-rose-500 hover:bg-rose-50 rounded dark:hover:bg-rose-900/30">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    )}
-                  </td>
+                      ) : (
+                        <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => handleEdit(index, row)} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded dark:text-indigo-400 dark:hover:bg-indigo-900/30">
+                            <Edit2 size={14} />
+                          </button>
+                          <button onClick={() => handleDelete(index)} className="p-1 text-rose-500 hover:bg-rose-50 rounded dark:hover:bg-rose-900/30">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -1995,7 +2000,7 @@ export default function CostInputModal({ isOpen, onClose }) {
         return;
       }
 
-      const scheduleKeys = new Set();
+      const scheduleKeys = new Set(); 0
       const duplicateScheduleIndex = scheduleRows.findIndex((row) => {
         const key = [normalizeText(row?.mrAccId), normalizeText(row?.sn || row?.msn), monthStartKey(row?.date)].join("|");
         if (scheduleKeys.has(key)) return true;
@@ -2189,6 +2194,7 @@ export default function CostInputModal({ isOpen, onClose }) {
                     data={maintenanceReserveSchedule}
                     setData={setMaintenanceReserveSchedule}
                     sortFilter
+                    readOnly
                     columns={[
                       { label: "Date", key: "date", type: "date" },
                       { label: "MR Acc ID", key: "mrAccId" },
@@ -2208,20 +2214,6 @@ export default function CostInputModal({ isOpen, onClose }) {
                     ]}
                   />
                 </div>
-                <EditableTable
-                  title="Aircraft On-Wing / SN mapping"
-                  data={aircraftOnwing}
-                  setData={setAircraftOnwing}
-                  sortFilter
-                  columns={[
-                    { label: "Date", key: "date", type: "date" },
-                    { label: "ACFT Regn", key: "acftRegn" },
-                    { label: "MSN", key: "msn" },
-                    { label: "ENG1 ESN", key: "eng1Esn" },
-                    { label: "ENG2 ESN", key: "eng2Esn" },
-                    { label: "APUN", key: "apun" },
-                  ]}
-                />
                 <EditableTable
                   title="Schedule Maintenance Events calendar table"
                   data={schMxEvents}

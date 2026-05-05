@@ -1259,12 +1259,6 @@ const PooTable = () => {
                             <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.legCargoRev)}</td>
                             <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(row.legTotalRev)}</td>
                           </tr>
-                          {/* Empties */}
-                          {[0, 0, 0].map((_, i) => (
-                            <tr key={`${row._id}-blank-${i}`}>
-                              {Array.from({ length: OD_TABLE_COLUMNS.length + 1 }).map((__, j) => <td key={j} className="h-8 border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/10"></td>)}
-                            </tr>
-                          ))}
                         </React.Fragment>
                       ))}
                       {/* Divider */}
