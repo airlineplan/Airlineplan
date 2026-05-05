@@ -25,7 +25,7 @@ const COLUMNS_CONFIG = [
   { id: 'depStn', key: 'depStn', label: 'Dep Stn', minWidth: '80px' },
   { id: 'std', key: 'std', label: 'STD (LT)', minWidth: '80px' },
   { id: 'bt', key: 'bt', label: 'BT', minWidth: '80px' },
-  { id: 'ft', key: 'fh', label: 'FT', minWidth: '80px', formatAsTime: true, masterOnly: true }, // FT configuration
+  { id: 'ft', key: 'ft', label: 'FT', minWidth: '80px', formatAsTime: true, masterOnly: true }, // FT configuration
   { id: 'sta', key: 'sta', label: 'STA (LT)', minWidth: '80px' },
   { id: 'arrStn', key: 'arrStn', label: 'Arr Stn', minWidth: '80px' },
   { id: 'sector', key: 'sector', label: 'Sector', minWidth: '100px', masterOnly: true },
@@ -299,6 +299,7 @@ const FlgtsTable = ({ isMaster = true, showCostColumns = true }) => {
 
     // Fix: Convert decimal hours (e.g. 1.5) to HH:MM (e.g. 1:30) for FT
     if (col.formatAsTime) {
+      if (typeof val === "string" && /^\d{1,2}:\d{2}$/.test(val.trim())) return val;
       const floatVal = parseFloat(val);
       if (isNaN(floatVal)) return val;
 
