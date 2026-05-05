@@ -20,6 +20,7 @@ import {
 import { toast } from "react-toastify";
 
 import api from "../../../apiConfig";
+import { buildPooCurrencyOptions, normalizePooCurrencyCode } from "./pooCurrencyOptions";
 import { groupPooRecordsIntoSections } from "./pooSummary";
 
 // --- UTILITIES ---
@@ -299,6 +300,31 @@ const PooTable = () => {
     loadStations();
   }, []);
 
+  useEffect(() => {
+    const loadRevenueConfig = async () => {
+      try {
+        const response = await api.get("/revenue/config");
+        const config = response.data?.data || {};
+        const reportingCurrency = normalizePooCurrencyCode(config.reportingCurrency);
+        const currencyCodes = Array.isArray(config.currencyCodes)
+          ? config.currencyCodes.map(normalizePooCurrencyCode).filter(Boolean)
+          : [];
+        const mergedCodes = [...new Set([reportingCurrency, ...currencyCodes].filter(Boolean))];
+
+        setMeta((prev) => ({
+          ...prev,
+          reportingCurrency: prev.reportingCurrency || reportingCurrency,
+          currencyCodes: [...new Set([...(Array.isArray(prev.currencyCodes) ? prev.currencyCodes : []), ...mergedCodes])],
+        }));
+        setSelectedPooCurrency((prev) => prev || reportingCurrency || mergedCodes[0] || "");
+      } catch (error) {
+        console.error("Failed to load revenue currency config for POO CCY", error);
+      }
+    };
+
+    loadRevenueConfig();
+  }, []);
+
   const stationOptions = useMemo(() => {
     const names = stationsData
       .map((station) => String(station.stationName || "").trim().toUpperCase())
@@ -338,17 +364,7 @@ const PooTable = () => {
   const fetchPooParam = selectedPoos.length === 1 && !allPoosSelected ? selectedPoos[0] : "";
 
   const currencyOptions = useMemo(() => {
-    const codes = [
-      selectedPooCurrency,
-      meta.stationCurrency,
-      meta.reportingCurrency,
-      ...(Array.isArray(meta.currencyCodes) ? meta.currencyCodes : []),
-      ...records.map((row) => row.pooCcy),
-    ]
-      .map((code) => String(code || "").trim().toUpperCase())
-      .filter(Boolean);
-
-    return [...new Set(codes)].sort((a, b) => a.localeCompare(b));
+    return buildPooCurrencyOptions({ selectedPooCurrency, meta, records });
   }, [meta.currencyCodes, meta.reportingCurrency, meta.stationCurrency, records, selectedPooCurrency]);
 
   const toggleAllPoos = () => {
@@ -370,12 +386,20 @@ const PooTable = () => {
     const loadedRecords = Array.isArray(payload?.data) ? payload.data : [];
     const loadedMeta = payload?.meta || { stationCurrency: "", reportingCurrency: "", currencyCodes: [] };
     const rowCurrency = loadedRecords
-      .map((row) => String(row.pooCcy || "").trim().toUpperCase())
+      .map((row) => normalizePooCurrencyCode(row.pooCcy))
       .find(Boolean);
-    const fallbackCurrency = String(loadedMeta.stationCurrency || loadedMeta.reportingCurrency || "").trim().toUpperCase();
+    const fallbackCurrency = normalizePooCurrencyCode(loadedMeta.stationCurrency || loadedMeta.reportingCurrency);
 
     setRecords(loadedRecords);
-    setMeta(loadedMeta);
+    setMeta((prev) => ({
+      ...loadedMeta,
+      currencyCodes: [
+        ...new Set([
+          ...(Array.isArray(prev.currencyCodes) ? prev.currencyCodes : []),
+          ...(Array.isArray(loadedMeta.currencyCodes) ? loadedMeta.currencyCodes.map(normalizePooCurrencyCode).filter(Boolean) : []),
+        ]),
+      ],
+    }));
     setSelectedPooCurrency(rowCurrency || fallbackCurrency);
     setDirtyMap({});
     setValidationErrors([]);
@@ -464,7 +488,7 @@ const PooTable = () => {
   };
 
   const handlePooCurrencyChange = (value) => {
-    const nextCurrency = String(value || "").trim().toUpperCase();
+    const nextCurrency = normalizePooCurrencyCode(value);
     setSelectedPooCurrency(nextCurrency);
 
     if (!nextCurrency) return;
