@@ -267,7 +267,8 @@ const PooTable = () => {
   const [isPooDropdownOpen, setIsPooDropdownOpen] = useState(false);
   const [date, setDate] = useState("");
   const [records, setRecords] = useState([]);
-  const [meta, setMeta] = useState({ stationCurrency: "", reportingCurrency: "" });
+  const [meta, setMeta] = useState({ stationCurrency: "", reportingCurrency: "", currencyCodes: [] });
+  const [selectedPooCurrency, setSelectedPooCurrency] = useState("");
   const [stationsData, setStationsData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -336,6 +337,20 @@ const PooTable = () => {
       : "Select POO";
   const fetchPooParam = selectedPoos.length === 1 && !allPoosSelected ? selectedPoos[0] : "";
 
+  const currencyOptions = useMemo(() => {
+    const codes = [
+      selectedPooCurrency,
+      meta.stationCurrency,
+      meta.reportingCurrency,
+      ...(Array.isArray(meta.currencyCodes) ? meta.currencyCodes : []),
+      ...records.map((row) => row.pooCcy),
+    ]
+      .map((code) => String(code || "").trim().toUpperCase())
+      .filter(Boolean);
+
+    return [...new Set(codes)].sort((a, b) => a.localeCompare(b));
+  }, [meta.currencyCodes, meta.reportingCurrency, meta.stationCurrency, records, selectedPooCurrency]);
+
   const toggleAllPoos = () => {
     setPooSelectionReady(true);
     setSelectedPoos((prev) => (prev.length === stationOptions.length ? [] : stationOptions));
@@ -352,8 +367,16 @@ const PooTable = () => {
   };
 
   const applyLoadedRows = useCallback((payload) => {
-    setRecords(Array.isArray(payload?.data) ? payload.data : []);
-    setMeta(payload?.meta || { stationCurrency: "", reportingCurrency: "" });
+    const loadedRecords = Array.isArray(payload?.data) ? payload.data : [];
+    const loadedMeta = payload?.meta || { stationCurrency: "", reportingCurrency: "", currencyCodes: [] };
+    const rowCurrency = loadedRecords
+      .map((row) => String(row.pooCcy || "").trim().toUpperCase())
+      .find(Boolean);
+    const fallbackCurrency = String(loadedMeta.stationCurrency || loadedMeta.reportingCurrency || "").trim().toUpperCase();
+
+    setRecords(loadedRecords);
+    setMeta(loadedMeta);
+    setSelectedPooCurrency(rowCurrency || fallbackCurrency);
     setDirtyMap({});
     setValidationErrors([]);
     setApplyDateDrafts({});
@@ -438,6 +461,32 @@ const PooTable = () => {
         [field]: value,
       },
     }));
+  };
+
+  const handlePooCurrencyChange = (value) => {
+    const nextCurrency = String(value || "").trim().toUpperCase();
+    setSelectedPooCurrency(nextCurrency);
+
+    if (!nextCurrency) return;
+
+    setRecords((prev) =>
+      prev.map((row) => ({
+        ...row,
+        pooCcy: nextCurrency,
+      }))
+    );
+
+    setDirtyMap((prev) => {
+      const next = { ...prev };
+      records.forEach((row) => {
+        next[row._id] = {
+          ...(next[row._id] || {}),
+          _id: row._id,
+          pooCcy: nextCurrency,
+        };
+      });
+      return next;
+    });
   };
 
   const addApplyDate = (row, group) => {
@@ -1077,7 +1126,17 @@ const PooTable = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
             <div className="flex flex-col p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
               <span className="text-[10px] text-slate-400 font-bold uppercase">POO CCY</span>
-              <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{meta.stationCurrency || "--"}</span>
+              <select
+                value={selectedPooCurrency}
+                onChange={(e) => handlePooCurrencyChange(e.target.value)}
+                disabled={loading || saving || currencyOptions.length === 0}
+                className="mt-1 h-8 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
+              >
+                {currencyOptions.length === 0 && <option value="">--</option>}
+                {currencyOptions.map((code) => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </select>
             </div>
 
           </div>
