@@ -259,21 +259,6 @@ const MaintenanceDashboard = () => {
         }
     };
 
-    const handleDeleteMaintenanceRow = async (row) => {
-        try {
-            setMaintenanceData(prev => prev.filter(item => item.id !== row.id));
-            if (isPersistedId(row.id)) {
-                await api.delete(`/maintenance/reset-records/${row.id}`);
-                toast.success("Maintenance reset record deleted.");
-                fetchDashboardData();
-            }
-        } catch (error) {
-            console.error("Failed to delete maintenance status row", error);
-            toast.error(error.response?.data?.message || "Failed to delete maintenance status row.");
-            fetchDashboardData();
-        }
-    };
-
     const handleDeleteTargetStatusRow = async (row) => {
         try {
             setTargetData(prev => prev.filter(item => item.id !== row.id));
@@ -1180,9 +1165,6 @@ const MaintenanceDashboard = () => {
                                                 className="px-2 py-1 rounded text-sm font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors"
                                             >
                                                 Set/Reset
-                                            </button>
-                                            <button type="button" onClick={() => handleDeleteMaintenanceRow(row)} className={deleteIconButtonClass} title="Delete Row">
-                                                <Trash2 size={14} />
                                             </button>
                                         </div>
                                     </td>
