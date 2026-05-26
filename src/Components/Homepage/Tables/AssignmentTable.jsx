@@ -45,48 +45,82 @@ const AssignmentTable = () => {
     const [assignmentsData, setAssignmentsData] = useState([]);
     const [isUploading, setIsUploading] = useState(false);
     const [isLoadingData, setIsLoadingData] = useState(false);
+    const selectedWeekEndingRef = useRef("");
 
-    const fetchWeeks = async () => {
-        try {
-            const response = await api.get("/master-weeks");
-            const weeks = response.data.weeks || [];
-            setAvailableWeeks(weeks);
-            if (weeks.length > 0 && !selectedWeekEnding) {
-                setSelectedWeekEnding(weeks[0]);
-            }
-        } catch (error) {
-            console.error("Error fetching weeks", error);
-        }
-    };
-
-    // Fetch available weeks on mount
     useEffect(() => {
-        fetchWeeks();
-    }, []);
-
-    // Fetch data when the selected week changes
-    useEffect(() => {
-        if (selectedWeekEnding) {
-            fetchAssignments();
-        }
+        selectedWeekEndingRef.current = selectedWeekEnding;
     }, [selectedWeekEnding]);
 
-    const fetchAssignments = async () => {
+    const fetchAssignments = async (weekEnding = selectedWeekEndingRef.current) => {
+        if (!weekEnding) {
+            setAssignmentsData([]);
+            return;
+        }
+
         setIsLoadingData(true);
         try {
-            const response = await api.get(`/getWeeklyAssignments?weekEnding=${selectedWeekEnding}`);
-            const rawAssignments = response.data.data;
+            const response = await api.get(`/getWeeklyAssignments?weekEnding=${weekEnding}`);
+            const rawAssignments = response.data.data || [];
 
             // Transform flat DB structure into UI grouped structure
             const transformedData = formatDataForTable(rawAssignments);
             setAssignmentsData(transformedData);
         } catch (error) {
             console.error("Error fetching assignments", error);
+            setAssignmentsData([]);
             toast.error("Failed to load assignments");
         } finally {
             setIsLoadingData(false);
         }
     };
+
+    const fetchWeeks = async () => {
+        try {
+            const response = await api.get("/master-weeks");
+            const weeks = response.data.weeks || [];
+            setAvailableWeeks(weeks);
+
+            const currentWeek = selectedWeekEndingRef.current;
+
+            if (weeks.length === 0) {
+                setSelectedWeekEnding("");
+                setAssignmentsData([]);
+                return;
+            }
+
+            if (!currentWeek || !weeks.includes(currentWeek)) {
+                setSelectedWeekEnding(weeks[0]);
+            } else {
+                await fetchAssignments(currentWeek);
+            }
+        } catch (error) {
+            console.error("Error fetching weeks", error);
+            setAvailableWeeks([]);
+            setSelectedWeekEnding("");
+            setAssignmentsData([]);
+        }
+    };
+
+    // Fetch available weeks on mount
+    useEffect(() => {
+        fetchWeeks();
+        const handleScheduleChanged = () => fetchWeeks();
+        window.addEventListener("refreshData", handleScheduleChanged);
+        window.addEventListener("assignments:updated", handleScheduleChanged);
+        return () => {
+            window.removeEventListener("refreshData", handleScheduleChanged);
+            window.removeEventListener("assignments:updated", handleScheduleChanged);
+        };
+    }, []);
+
+    // Fetch data when the selected week changes
+    useEffect(() => {
+        if (selectedWeekEnding) {
+            fetchAssignments(selectedWeekEnding);
+        } else {
+            setAssignmentsData([]);
+        }
+    }, [selectedWeekEnding]);
 
     // Groups flat Assignment documents into { rotationId: [ { flightNo, acft: { mon: 'VT', tue: '' } } ] }
     const formatDataForTable = (assignments) => {

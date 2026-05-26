@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import useEscapeKey from "../../../hooks/useEscapeKey";
 import { calculateAutoSta } from "./networkStaUtils";
+import { invalidateFleetMetricsCache } from "./fleetMetricsCache";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -296,6 +297,8 @@ const AddNetwork = ({ setAdd }) => {
 
       if (response.status === 201 || response.status === 200) {
         toast.success("Record added successfully!");
+        invalidateFleetMetricsCache();
+        window.dispatchEvent(new CustomEvent("assignments:updated"));
         setTimeout(() => window.dispatchEvent(new Event("refreshData")), 1500);
         handleClose();
       }

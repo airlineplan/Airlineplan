@@ -18,6 +18,7 @@ import useEscapeKey from "../../../hooks/useEscapeKey";
 import UpdatePopUp from "./UpdatePopUp";
 import CopyRow from "./CopyRow";
 import AddNetwork from "./AddNetwork";
+import { invalidateFleetMetricsCache } from "./fleetMetricsCache";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -259,6 +260,8 @@ export default function NetworkTable() {
 
       if (response.data && response.data.message === "Data deleted successfully") {
         toast.success("Delete Successful");
+        invalidateFleetMetricsCache();
+        window.dispatchEvent(new CustomEvent("assignments:updated"));
 
         // Clear checkboxes after successful deletion
         setCheckedRows([]);
@@ -302,12 +305,16 @@ export default function NetworkTable() {
         });
       } else {
         setIsUploadOpen(false);
+        invalidateFleetMetricsCache();
+        window.dispatchEvent(new CustomEvent("assignments:updated"));
         setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
       }
 
       if (response.data.status === 200) {
         toast.success(response.data.msg);
         setIsUploadOpen(false);
+        invalidateFleetMetricsCache();
+        window.dispatchEvent(new CustomEvent("assignments:updated"));
         setTimeout(() => window.dispatchEvent(new Event("refreshData")), 2000);
       }
 
