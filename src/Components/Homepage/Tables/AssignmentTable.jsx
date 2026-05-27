@@ -186,9 +186,13 @@ const AssignmentTable = () => {
                 headers: { "Content-Type": "multipart/form-data" }
             });
             const message = response.data?.message || "Assignments uploaded successfully!";
+            const discardedCount = Number(response.data?.diagnostics?.discardedCount || 0);
             if (response.status === 422 || response.data?.success === false) {
                 toast.error(message);
-            } else if (response.data?.diagnostics?.rejections && Object.values(response.data.diagnostics.rejections).some((count) => Number(count) > 0)) {
+            } else if (
+                discardedCount > 0 ||
+                (response.data?.diagnostics?.rejections && Object.values(response.data.diagnostics.rejections).some((count) => Number(count) > 0))
+            ) {
                 toast.warning(message);
             } else {
                 toast.success(message);

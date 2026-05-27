@@ -9,6 +9,7 @@ import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import useEscapeKey from "../../../hooks/useEscapeKey";
+import { invalidateFleetMetricsCache } from "./fleetMetricsCache";
 
 
 // --- COMPONENTS ---
@@ -1021,7 +1022,14 @@ const MaintenanceDashboard = () => {
             setIsComputing(true);
             const res = await api.post('/maintenance/compute');
             if (res.data && res.data.success) {
-                toast.success(res.data.message || "Computation successful!");
+                invalidateFleetMetricsCache();
+                window.dispatchEvent(new CustomEvent("assignments:updated"));
+                const removedAssignments = Number(res.data?.assignmentImpact?.deletedCount || 0);
+                if (removedAssignments > 0) {
+                    toast.warning(`${res.data.message || "Computation successful!"} ${removedAssignments} assignment(s) were disregarded.`);
+                } else {
+                    toast.success(res.data.message || "Computation successful!");
+                }
                 await Promise.all([
                     fetchDashboardData(),
                     fetchTargetsData(),

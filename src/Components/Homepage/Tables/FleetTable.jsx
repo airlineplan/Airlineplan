@@ -398,12 +398,18 @@ const FleetTable = () => {
                 toast.warning("No valid assets to save. Please enter at least a Serial Number.");
                 setIsSaving(false); return;
             }
-            await api.post("/fleet/bulk-save", { fleetData: validAssets });
+            const response = await api.post("/fleet/bulk-save", { fleetData: validAssets });
             metricsCacheRef.current.clear();
             invalidateFleetMetricsCache();
             if (selectedMonth) fetchScheduleMetrics(selectedMonth, { forceRefresh: true });
             fetchTodayMetrics();
-            toast.success("Fleet data saved successfully!");
+            window.dispatchEvent(new CustomEvent("assignments:updated"));
+            const discardedCount = Number(response.data?.assignmentDiagnostics?.discardedCount || 0);
+            if (discardedCount > 0) {
+                toast.warning(`Fleet data saved. ${discardedCount} assignment(s) were disregarded.`);
+            } else {
+                toast.success("Fleet data saved successfully!");
+            }
         } catch (error) {
             console.error("Error saving fleet", error);
             toast.error("Failed to save fleet data. " + (error.response?.data?.message || ""));
