@@ -1049,7 +1049,7 @@ const FxRateModal = ({
             </div>
             <h3 className="mt-3 text-xl font-semibold text-slate-900 dark:text-slate-50">CCY pair setup</h3>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Each non-reporting currency creates a CCY pair against the selected reporting currency. Changing the reporting currency resets all rates to 1.00.
+              Changing the reporting currency resets all rates to 1.00.
             </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-900 dark:hover:text-slate-200">
@@ -1117,18 +1117,18 @@ const FxRateModal = ({
           <div className="space-y-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Go to date</div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Go to date</div>
                   <input
                     type="date"
                     value={selectedFxDate}
                     onChange={(e) => handleDateChange(e.target.value)}
                     className="h-10 w-48 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   />
-                  <button type="button" onClick={saveFxRates} disabled={saving} className="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-70">
-                    {saving ? "Saving..." : "Update"}
-                  </button>
                 </div>
+                <button type="button" onClick={saveFxRates} disabled={saving} className="rounded-xl bg-cyan-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-70">
+                  {saving ? "Saving..." : "Update"}
+                </button>
               </div>
 
               <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
@@ -1191,10 +1191,6 @@ const FxRateModal = ({
                   No FX rows available for the master date range.
                 </div>
               )}
-
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-300">
-                All FX rates are user editable. The selected date keeps its own saved currency-pair values.
-              </div>
             </div>
           </div>
         </div>
@@ -1286,9 +1282,6 @@ const RiskExposureModal = ({
               Risk exposures
             </div>
             <h3 className="mt-3 text-xl font-semibold text-slate-900 dark:text-slate-50">Exposure chart</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              MMM-YY on the X axis, with the selected series rendered across the full master date range.
-            </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-900 dark:hover:text-slate-200">
             <X size={18} />
@@ -1320,19 +1313,6 @@ const RiskExposureModal = ({
                 />
               </div>
             </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
-              <div className="font-semibold text-slate-900 dark:text-slate-50">Expected behavior</div>
-              <ul className="mt-3 space-y-2">
-                <li>Fuel requirement uses engine fuel consumption plus APU fuel consumption.</li>
-                <li>Revenue and cost are converted with the saved FX rate for the selected currency.</li>
-                <li>The chart stays horizontally scrollable across the full date range.</li>
-              </ul>
-            </div>
-
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 dark:border-emerald-900/40 dark:bg-emerald-500/10 dark:text-emerald-100">
-              {currentCurrency} {currentSeries.value === "fuel-requirement" ? "fuel requirement" : "revenue and cost"}
-            </div>
           </div>
 
           <div className="space-y-4">
@@ -1342,9 +1322,6 @@ const RiskExposureModal = ({
               </div>
               <div className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
                 {currentSeries.label}
-              </div>
-              <div className="text-sm text-slate-500 dark:text-slate-400">
-                Series is derived from the currently loaded dashboard periods.
               </div>
             </div>
 
@@ -1385,9 +1362,6 @@ const RiskExposureModal = ({
                     ))}
                   </div>
                 </div>
-              </div>
-              <div className="border-t border-slate-200 px-4 py-4 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-300">
-                For non-RCCY currencies, revenue is rendered above the axis and cost below it from original local-currency exposure.
               </div>
             </div>
           </div>
@@ -2073,17 +2047,16 @@ const DashboardTable = () => {
                       <button
                         type="button"
                         onClick={() => setShowFxModal(true)}
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sky-500"
+                        className="inline-flex h-9 w-32 items-center justify-center rounded-xl bg-sky-600 px-3 text-sm font-semibold text-white transition hover:bg-sky-500"
                       >
                         FX rate setting
                       </button>
                       <button
                         type="button"
                         onClick={() => setShowRiskModal(true)}
-                        className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-sky-500"
+                        className="inline-flex h-9 w-32 items-center justify-center rounded-xl bg-sky-600 px-3 text-sm font-semibold text-white transition hover:bg-sky-500"
                       >
                         Risk Exposures
-                        <ChevronRight size={16} />
                       </button>
                       <div className="w-[220px] min-w-[220px]">
                         <SingleSelectDropdown
