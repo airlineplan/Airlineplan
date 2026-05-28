@@ -49,6 +49,13 @@ function formatMonthYear(inputDate) {
   return `${month}-${year}`;
 }
 
+function getMonthBucketKey(inputDate) {
+  const date = new Date(inputDate);
+  if (Number.isNaN(date.getTime())) return String(inputDate || "").trim();
+  const monthEnd = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0));
+  return normalizeDateKey(monthEnd);
+}
+
 function formatNumber(value, digits = 0) {
   const raw = Number(String(value ?? "").replace(/,/g, ""));
   if (!Number.isFinite(raw)) {
@@ -189,6 +196,28 @@ function toNumberLike(value) {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
   const parsed = Number(String(value).replace(/,/g, ""));
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getRiskCurrencyRows(riskExposure, currencyCode) {
+  const rawRows = riskExposure?.currencies?.[currencyCode];
+  const rows = Array.isArray(rawRows) ? rawRows : Array.isArray(rawRows?.periods) ? rawRows.periods : [];
+  const byMonth = new Map();
+
+  rows.forEach((row) => {
+    const dateKey = getMonthBucketKey(row?.dateKey || row?.date);
+    if (!dateKey) return;
+    const current = byMonth.get(dateKey) || { dateKey, revenue: 0, cost: 0 };
+    current.revenue += Math.abs(toNumberLike(row?.revenue));
+    current.cost -= Math.abs(toNumberLike(row?.cost));
+    byMonth.set(dateKey, current);
+  });
+
+  return Array.from(byMonth.values())
+    .map((row) => ({
+      ...row,
+      net: row.revenue + row.cost,
+    }))
+    .sort((a, b) => a.dateKey.localeCompare(b.dateKey));
 }
 
 function parseDateSafe(value) {
@@ -1250,7 +1279,7 @@ const RiskExposureModal = ({
       }));
     }
 
-    const currencyRows = riskExposure?.currencies?.[currentCurrency] || [];
+    const currencyRows = getRiskCurrencyRows(riskExposure, currentCurrency);
     return currencyRows.map((row) => ({
       label: formatMonthYear(row.dateKey),
       revenue: toNumberLike(row.revenue),
@@ -1354,7 +1383,7 @@ const RiskExposureModal = ({
                           <div className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
                             {seriesType === "fuel-requirement"
                               ? `${formatNumber(point.value, 0)} ${point.unit}`
-                              : `${formatNumber(point.revenue, 2)} / ${formatNumber(Math.abs(point.cost), 2)} ${point.unit}`}
+                              : `+${formatNumber(Math.abs(point.revenue), 2)} / -${formatNumber(Math.abs(point.cost), 2)} ${point.unit}`}
                           </div>
                           {point.subtitle && <div className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{point.subtitle}</div>}
                         </div>
