@@ -2,12 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
-  CalendarPlus2,
   PlusCircle,
   RefreshCw,
   Save,
   Search,
-  X,
   LayoutDashboard,
   Calculator,
   Layers,
@@ -125,6 +123,69 @@ function numericValue(value) {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
+function firstPresentNumber(values) {
+  for (const value of values) {
+    if (value === undefined || value === null || value === "") continue;
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) return numeric;
+  }
+  return 0;
+}
+
+function isLegTraffic(row) {
+  const trafficType = String(row?.trafficType || "").trim().toLowerCase();
+  if (trafficType) return trafficType === "leg";
+
+  const stop = Number(row?.displayStop ?? row?.stops ?? 0);
+  return stop === 0 && [
+    row?.legFare,
+    row?.legRate,
+    row?.legPaxRev,
+    row?.legCargoRev,
+    row?.legTotalRev,
+  ].some((value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric !== 0;
+  });
+}
+
+function getPooFareValue(row) {
+  if (isLegTraffic(row)) return firstPresentNumber([row.legFare, row.odFare]);
+  return firstPresentNumber([row.odFare, row.legFare]);
+}
+
+function getPooRateValue(row) {
+  if (isLegTraffic(row)) return firstPresentNumber([row.legRate, row.odRate]);
+  return firstPresentNumber([row.odRate, row.legRate]);
+}
+
+function getPooPaxRevenueValue(row) {
+  const pax = numericValue(row?.pax);
+  const fare = getPooFareValue(row);
+  if (pax > 0 && fare > 0) return pax * fare;
+
+  if (isLegTraffic(row)) return firstPresentNumber([row.legPaxRev, row.paxRevenue, row.odPaxRev]);
+  return firstPresentNumber([row.paxRevenue, row.odPaxRev, row.legPaxRev]);
+}
+
+function getPooCargoRevenueValue(row) {
+  const cargoT = numericValue(row?.cargoT);
+  const rate = getPooRateValue(row);
+  if (cargoT > 0 && rate > 0) return cargoT * rate;
+
+  if (isLegTraffic(row)) return firstPresentNumber([row.legCargoRev, row.cargoRevenue, row.odCargoRev]);
+  return firstPresentNumber([row.cargoRevenue, row.odCargoRev, row.legCargoRev]);
+}
+
+function getPooTotalRevenueValue(row) {
+  const paxRevenue = getPooPaxRevenueValue(row);
+  const cargoRevenue = getPooCargoRevenueValue(row);
+  if (paxRevenue || cargoRevenue) return paxRevenue + cargoRevenue;
+
+  if (isLegTraffic(row)) return firstPresentNumber([row.legTotalRev, row.totalRevenue, row.odTotalRev]);
+  return firstPresentNumber([row.totalRevenue, row.odTotalRev, row.legTotalRev]);
+}
+
 function getFlightText(row) {
   if (Array.isArray(row.flightList) && row.flightList.length) return row.flightList.join(", ");
   return row.flightNumber || row.connectedFlightNumber || "";
@@ -156,11 +217,11 @@ function getPooTableValue(row, key) {
     case "flightNumber": return getFlightText(row);
     case "stop": return row.displayStop ?? row.stops ?? 0;
     case "totalGcd": return row.totalGcd ?? row.odViaGcd ?? row.sectorGcd ?? 0;
-    case "fare": return row.trafficType === "leg" ? row.legFare : row.odFare;
-    case "rate": return row.trafficType === "leg" ? row.legRate : row.odRate;
-    case "paxRevenue": return row.paxRevenue ?? row.odPaxRev ?? row.legPaxRev ?? 0;
-    case "cargoRevenue": return row.cargoRevenue ?? row.odCargoRev ?? row.legCargoRev ?? 0;
-    case "totalRevenue": return row.totalRevenue ?? row.odTotalRev ?? row.legTotalRev ?? 0;
+    case "fare": return getPooFareValue(row);
+    case "rate": return getPooRateValue(row);
+    case "paxRevenue": return getPooPaxRevenueValue(row);
+    case "cargoRevenue": return getPooCargoRevenueValue(row);
+    case "totalRevenue": return getPooTotalRevenueValue(row);
     case "interlineCodeshare": return row.interline || row.codeshare || "";
     case "oal": return row.al !== "Own" ? row.al : "";
     case "transferStation": return row.displayStop || "";
@@ -200,17 +261,7 @@ function canSelectRow(row) {
   return Number(row.stops || 0) >= 1 || String(row.displayType || "").startsWith("Transit");
 }
 
-function getApplyCellKey(rowId, group) {
-  return `${rowId}:${group}`;
-}
-
-function getApplyFields(row, group) {
-  if (group === "paxFare") return ["pax", getEditableField(row, "fare")];
-  if (group === "cargoRate") return ["cargoT", getEditableField(row, "rate")];
-  return [];
-}
-
-function createApplyRecord(row, existing = {}) {
+function createSaveRecord(row, existing = {}) {
   return {
     _id: row._id,
     pax: row.pax ?? 0,
@@ -278,8 +329,6 @@ const PooTable = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [tableFilters, setTableFilters] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "Up" });
-  const [applyDateDrafts, setApplyDateDrafts] = useState({});
-  const [applyDateTargets, setApplyDateTargets] = useState({});
   const [transitDraft, setTransitDraft] = useState(blankTransitDraft);
   const [selectedRowIds, setSelectedRowIds] = useState(() => new Set());
   const requestSeqRef = useRef(0);
@@ -403,8 +452,6 @@ const PooTable = () => {
     setSelectedPooCurrency(rowCurrency || fallbackCurrency);
     setDirtyMap({});
     setValidationErrors([]);
-    setApplyDateDrafts({});
-    setApplyDateTargets({});
     setSelectedRowIds(new Set());
   }, []);
 
@@ -513,49 +560,12 @@ const PooTable = () => {
     });
   };
 
-  const addApplyDate = (row, group) => {
-    const key = getApplyCellKey(row._id, group);
-    const targetDate = applyDateDrafts[key];
-    if (!targetDate) return;
-    setApplyDateTargets((prev) => ({
-      ...prev,
-      [key]: {
-        sourceId: row._id,
-        group,
-        fields: getApplyFields(row, group),
-        dates: [...new Set([...(prev[key]?.dates || []), targetDate])].sort(),
-      },
-    }));
-    setApplyDateDrafts((prev) => ({ ...prev, [key]: "" }));
-  };
-
-  const removeApplyDate = (rowId, group, targetDate) => {
-    const key = getApplyCellKey(rowId, group);
-    setApplyDateTargets((prev) => {
-      const dates = (prev[key]?.dates || []).filter((item) => item !== targetDate);
-      if (!dates.length) {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      }
-      return { ...prev, [key]: { ...prev[key], dates } };
-    });
-  };
-
   const handleSave = async () => {
-    const applyTargets = Object.values(applyDateTargets).filter((target) => target.dates?.length);
-    const applySourceIds = new Set(applyTargets.map((target) => String(target.sourceId)));
     const recordsById = new Map(Object.values(dirtyMap).map((record) => [String(record._id), record]));
-
-    records.forEach((row) => {
-      if (applySourceIds.has(String(row._id)) && !recordsById.has(String(row._id))) {
-        recordsById.set(String(row._id), createApplyRecord(row));
-      }
-    });
 
     const payload = [...recordsById.values()].map((record) => {
       const row = records.find((item) => String(item._id) === String(record._id));
-      return row ? createApplyRecord(row, record) : record;
+      return row ? createSaveRecord(row, record) : record;
     });
 
     if (!payload.length) {
@@ -565,15 +575,9 @@ const PooTable = () => {
 
     setSaving(true);
     try {
-      const response = await api.post("/poo/update", { records: payload, applyTargets });
+      const response = await api.post("/poo/update", { records: payload, applyTargets: [] });
       setValidationErrors([]);
       toast.success(response.data.message || "POO traffic allocation saved");
-      if (response.data.appliedDates?.length) {
-        toast.info(`Applied to ${response.data.appliedDates.length} matching date(s)`);
-      }
-      if (response.data.skippedDates?.length) {
-        toast.warn(`Skipped ${response.data.skippedDates.length} date(s)`);
-      }
       await fetchData();
     } catch (error) {
       console.error(error);
@@ -683,7 +687,6 @@ const PooTable = () => {
   };
 
   const totalDirtyRows = Object.keys(dirtyMap).length;
-  const totalApplyTargets = Object.values(applyDateTargets).reduce((sum, target) => sum + (target.dates?.length || 0), 0);
 
   const renderCellError = (row, field) => {
     if (!row || !field) return "";
@@ -826,46 +829,6 @@ const PooTable = () => {
     );
   };
 
-  const renderApplyDateCell = (row, group) => {
-    const key = getApplyCellKey(row._id, group);
-    const dates = applyDateTargets[key]?.dates || [];
-    return (
-      <div className="flex min-h-[32px] w-full flex-col gap-1 py-1">
-        <div className="flex items-center justify-center gap-1.5">
-          <input
-            type="date"
-            value={applyDateDrafts[key] || ""}
-            onChange={(e) => setApplyDateDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
-            className="h-7 w-[110px] rounded border border-emerald-300 dark:border-emerald-700 bg-white dark:bg-slate-900 px-1.5 text-xs text-slate-700 dark:text-slate-300 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-          />
-          <button
-            type="button"
-            onClick={() => addApplyDate(row, group)}
-            className="inline-flex h-7 w-7 items-center justify-center rounded border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 transition hover:bg-emerald-100 dark:hover:bg-emerald-800"
-            title="Add apply date"
-          >
-            <CalendarPlus2 size={14} />
-          </button>
-        </div>
-        {dates.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-1 mt-1">
-            {dates.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => removeApplyDate(row._id, group, item)}
-                className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:text-emerald-100 border border-emerald-200 dark:border-emerald-700 transition hover:bg-rose-100 hover:text-rose-700 hover:border-rose-200"
-                title="Remove apply date"
-              >
-                {item} <X size={10} />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   const renderSheetCell = (row, column, isSummary = false, summaryValues = {}) => {
     const baseClass = cn(
       "border-b border-r border-slate-200 dark:border-slate-700 px-2 text-sm text-slate-700 dark:text-slate-300 transition-colors group-hover:bg-indigo-50/50 dark:group-hover:bg-slate-800/30",
@@ -889,14 +852,6 @@ const PooTable = () => {
               className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
             />
           )}
-        </td>
-      );
-    }
-
-    if (!isSummary && (column.key === "loadFare" || column.key === "loadRate")) {
-      return (
-        <td key={column.key} className={baseClass}>
-          {renderApplyDateCell(row, column.key === "loadFare" ? "paxFare" : "cargoRate")}
         </td>
       );
     }
@@ -1124,7 +1079,7 @@ const PooTable = () => {
               </button>
               <button
                 onClick={handleSave}
-                disabled={loading || saving || (totalDirtyRows === 0 && totalApplyTargets === 0)}
+                disabled={loading || saving || totalDirtyRows === 0}
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save size={14} />
@@ -1135,8 +1090,6 @@ const PooTable = () => {
               <span className="text-slate-700 dark:text-slate-200">{visibleRows.length}</span> rows
               <span className="mx-1 opacity-40">|</span>
               <span className="text-amber-600 dark:text-amber-400">{totalDirtyRows}</span> pending
-              <span className="mx-1 opacity-40">|</span>
-              <span className="text-indigo-600 dark:text-indigo-400">{totalApplyTargets}</span> targets
             </div>
           </div>
         </div>
