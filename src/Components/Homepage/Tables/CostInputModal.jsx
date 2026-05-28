@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Save, Plus, Edit2, Check, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { X, Save, Plus, Edit2, Check, Trash2, ArrowUp, ArrowDown, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import api from "../../../apiConfig";
@@ -121,6 +122,14 @@ const COST_ALLOCATION_ROWS = [
   { label: "APU fuel cost", code: APU_FUEL_ALLOCATION_CODE, defaultBasis: "DEPARTURES" },
   { label: "Maintenance reserve contribution driven by Month", code: MR_MONTHLY_ALLOCATION_CODE, defaultBasis: "BH" },
   { label: "Other Maintenance expenses driven by Month", code: OTHER_MX_ALLOCATION_CODE, defaultBasis: "FH" },
+];
+const CURRENCY_OPTIONS = ["INR", "USD", "EUR", "GBP", "AED", "JPY"].map((value) => ({ label: value, value }));
+const MAINTENANCE_DRIVER_OPTIONS = [
+  { label: "BH", value: "BH" },
+  { label: "FH", value: "FH" },
+  { label: "Departure", value: "DEPARTURES" },
+  { label: "Month", value: "MONTH" },
+  { label: "APUHR", value: "APUHR" },
 ];
 
 const normalizeText = (value) => String(value ?? "").trim().toUpperCase();
@@ -301,6 +310,28 @@ function Input({ value, onChange, placeholder, type = "text", className, ...rest
         className
       )}
     />
+  );
+}
+
+function SelectInput({ value, onChange, options = [], placeholder = "Select", className }) {
+  const safeOptions = Array.isArray(options) ? options : [];
+  const hasCurrentValue = value && safeOptions.some((option) => option.value === value);
+  return (
+    <select
+      value={value ?? ""}
+      onChange={onChange}
+      className={cn(
+        "w-full min-h-[44px] px-3 py-2.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-indigo-500",
+        "bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200",
+        className
+      )}
+    >
+      <option value="">{placeholder}</option>
+      {value && !hasCurrentValue && <option value={value}>{value}</option>}
+      {safeOptions.map((option) => (
+        <option key={option.value} value={option.value}>{option.label}</option>
+      ))}
+    </select>
   );
 }
 
@@ -1705,14 +1736,26 @@ function EditableTable({
                       )}
                     >
                       {isEditing && !readOnly ? (
-                        <Input
-                          value={editRow[col.key]}
-                          onChange={(e) => setEditRow({ ...editRow, [col.key]: e.target.value })}
-                          type={col.type || "text"}
-                          className={cn(
-                            highlightAutoFields && autoFields.has(col.key) && "bg-emerald-50 dark:bg-emerald-900/20"
-                          )}
-                        />
+                        col.type === "select" ? (
+                          <SelectInput
+                            value={editRow[col.key]}
+                            onChange={(e) => setEditRow({ ...editRow, [col.key]: e.target.value })}
+                            options={col.options}
+                            placeholder={col.placeholder || "Select"}
+                            className={cn(
+                              highlightAutoFields && autoFields.has(col.key) && "bg-emerald-50 dark:bg-emerald-900/20"
+                            )}
+                          />
+                        ) : (
+                          <Input
+                            value={editRow[col.key]}
+                            onChange={(e) => setEditRow({ ...editRow, [col.key]: e.target.value })}
+                            type={col.type || "text"}
+                            className={cn(
+                              highlightAutoFields && autoFields.has(col.key) && "bg-emerald-50 dark:bg-emerald-900/20"
+                            )}
+                          />
+                        )
                       ) : (
                         <span className="text-slate-700 dark:text-slate-300">
                           {row[col.key] !== "" && row[col.key] !== null && row[col.key] !== undefined ? row[col.key] : <span className="text-slate-400">-</span>}
@@ -1911,6 +1954,7 @@ export default function CostInputModal({ isOpen, onClose }) {
   const [transitMx, setTransitMx] = useState([]);
   const [otherMx, setOtherMx] = useState([]);
   const [rotableChanges, setRotableChanges] = useState([]);
+  const [generatingMrSchedule, setGeneratingMrSchedule] = useState(false);
 
   // === NAVIGATION & AIRPORT STATE ===
   const [navEnr, setNavEnr] = useState([]);
@@ -2076,6 +2120,59 @@ export default function CostInputModal({ isOpen, onClose }) {
     });
   };
 
+  const handleGenerateMaintenanceReserveSchedule = async () => {
+    try {
+      setGeneratingMrSchedule(true);
+      const response = await api.post("/cost-config/maintenance-reserve-schedule/generate", {
+        leasedReserve,
+        maintenanceReserveSchedule,
+        aircraftOnwing,
+      });
+      setMaintenanceReserveSchedule(response.data?.data || []);
+      toast.success("Maintenance Reserve schedule generated.");
+    } catch (error) {
+      console.error("Error generating maintenance reserve schedule", error);
+      setMaintenanceReserveSchedule((prev) => generateMaintenanceReserveScheduleRows(leasedReserve, prev));
+      toast.warn("Generated schedule locally; save to recalculate contribution amounts.");
+    } finally {
+      setGeneratingMrSchedule(false);
+    }
+  };
+
+  const downloadMaintenanceReserveSchedule = () => {
+    if (!maintenanceReserveSchedule.length) {
+      toast.warn("No Maintenance Reserve schedule to download.");
+      return;
+    }
+    const columns = [
+      ["date", "Date"],
+      ["mrAccId", "MR Acc ID"],
+      ["schMxEvent", "Sch. Mx. Event"],
+      ["acftRegn", "ACFT Regn"],
+      ["pn", "PN"],
+      ["sn", "SN"],
+      ["driver", "Driver"],
+      ["rate", "Rate"],
+      ["driverValue", "Driver value"],
+      ["contribution", "Contribution"],
+      ["openingBalance", "Opening bal"],
+      ["drawdown", "Drawdown"],
+      ["closingBalance", "Closing bal"],
+      ["ccy", "CCY"],
+      ["source", "Source"],
+      ["notes", "Notes"],
+    ];
+    const rows = maintenanceReserveSchedule.map((row) =>
+      columns.reduce((acc, [key, label]) => {
+        acc[label] = row[key] ?? "";
+        return acc;
+      }, {})
+    );
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(rows), "MR Schedule");
+    XLSX.writeFile(workbook, "maintenance-reserve-schedule.xlsx");
+  };
+
   if (!isOpen) return null;
 
   const modalContent = (
@@ -2173,20 +2270,27 @@ export default function CostInputModal({ isOpen, onClose }) {
                     { label: "Set balance", key: "setBalance", type: "number" },
                     { label: "Set rate", key: "setRate", type: "number" },
                     { label: "As on date", key: "asOnDate", type: "date" },
-                    { label: "CCY", key: "ccy" },
-                    { label: "Driver", key: "driver" },
+                    { label: "CCY", key: "ccy", type: "select", options: CURRENCY_OPTIONS, placeholder: "CCY" },
+                    { label: "Driver", key: "driver", type: "select", options: MAINTENANCE_DRIVER_OPTIONS, placeholder: "Driver" },
                     { label: "Annual escl", key: "annualEscalation", type: "number" },
                     { label: "Anniversary", key: "anniversaryDate", type: "date" },
                     { label: "End date", key: "endDate", type: "date" },
                   ]}
                 />
                 <div>
-                  <div className="flex justify-end -mb-2">
+                  <div className="flex justify-end gap-2 -mb-2">
                     <button
-                      onClick={() => setMaintenanceReserveSchedule((prev) => generateMaintenanceReserveScheduleRows(leasedReserve, prev))}
+                      onClick={downloadMaintenanceReserveSchedule}
+                      className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-800"
+                    >
+                      <Download size={14} /> Download
+                    </button>
+                    <button
+                      onClick={handleGenerateMaintenanceReserveSchedule}
+                      disabled={generatingMrSchedule}
                       className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
                     >
-                      <Plus size={14} /> Generate Schedule
+                      <Plus size={14} /> {generatingMrSchedule ? "Generating..." : "Generate Schedule"}
                     </button>
                   </div>
                   <EditableTable
@@ -2204,6 +2308,7 @@ export default function CostInputModal({ isOpen, onClose }) {
                       { label: "SN", key: "sn" },
                       { label: "Driver", key: "driver" },
                       { label: "Rate", key: "rate", type: "number" },
+                      { label: "Driver value", key: "driverValue", type: "number" },
                       { label: "Contribution", key: "contribution", type: "number" },
                       { label: "Opening bal", key: "openingBalance", type: "number" },
                       { label: "Drawdown", key: "drawdown", type: "number" },
