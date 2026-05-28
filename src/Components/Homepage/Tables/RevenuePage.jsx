@@ -124,6 +124,44 @@ const formatMetricValue = (metricKey, value) => {
   return Math.round(numeric).toLocaleString();
 };
 
+const toRevenueNumber = (value) => {
+  if (value === null || value === undefined || value === "") return 0;
+  const numeric = Number(String(value).replace(/,/g, ""));
+  return Number.isFinite(numeric) ? numeric : 0;
+};
+
+const getRowRevenueMetrics = (row) => {
+  const pax = toRevenueNumber(row.pax);
+  const cargoT = toRevenueNumber(row.cargoT);
+  const legPaxRev = toRevenueNumber(row.legPaxRev) || pax * toRevenueNumber(row.legFare);
+  const legCargoRev = toRevenueNumber(row.legCargoRev) || cargoT * toRevenueNumber(row.legRate);
+  const odPaxRev = toRevenueNumber(row.odPaxRev) || pax * (toRevenueNumber(row.odFare) || toRevenueNumber(row.legFare));
+  const odCargoRev = toRevenueNumber(row.odCargoRev) || cargoT * (toRevenueNumber(row.odRate) || toRevenueNumber(row.legRate));
+  const usesLegPricing = Boolean(row.applySSPricing);
+  const fallbackPaxRev = usesLegPricing
+    ? toRevenueNumber(row.rccyLegPaxRev) || legPaxRev
+    : toRevenueNumber(row.rccyOdPaxRev) || odPaxRev || toRevenueNumber(row.rccyLegPaxRev) || legPaxRev;
+  const fallbackCargoRev = usesLegPricing
+    ? toRevenueNumber(row.rccyLegCargoRev) || legCargoRev
+    : toRevenueNumber(row.rccyOdCargoRev) || odCargoRev || toRevenueNumber(row.rccyLegCargoRev) || legCargoRev;
+  const rccyPaxRev = toRevenueNumber(row.fnlRccyPaxRev) || fallbackPaxRev;
+  const rccyCargoRev = toRevenueNumber(row.fnlRccyCargoRev) || fallbackCargoRev;
+
+  return {
+    pax,
+    cargoT,
+    fnlRccyPaxRev: rccyPaxRev,
+    fnlRccyCargoRev: rccyCargoRev,
+    fnlRccyTotalRev: toRevenueNumber(row.fnlRccyTotalRev) || rccyPaxRev + rccyCargoRev,
+    odPaxRev,
+    odCargoRev,
+    odTotalRev: toRevenueNumber(row.odTotalRev) || odPaxRev + odCargoRev,
+    legPaxRev,
+    legCargoRev,
+    legTotalRev: toRevenueNumber(row.legTotalRev) || legPaxRev + legCargoRev,
+  };
+};
+
 const normalizeRowValue = (value) => {
   const normalized = String(value ?? "").trim();
   return normalized ? normalized : "(blank)";
@@ -497,23 +535,15 @@ const RevenuePage = () => {
       const periodKey = getPeriodSortKey(row.date, periodicity.value);
       periodSet.add(periodKey);
 
+      const metricValues = getRowRevenueMetrics(row);
+
       return {
         ...row,
         _periodKey: periodKey,
         _metricValues: {
-          pax: Number(row.pax || 0),
-          cargoT: Number(row.cargoT || 0),
-          fnlRccyPaxRev: Number(row.fnlRccyPaxRev || 0),
-          fnlRccyCargoRev: Number(row.fnlRccyCargoRev || 0),
-          fnlRccyTotalRev: Number(row.fnlRccyTotalRev || 0),
-          odPaxRev: Number(row.odPaxRev || 0),
-          odCargoRev: Number(row.odCargoRev || 0),
-          odTotalRev: Number(row.odTotalRev || 0),
-          legPaxRev: Number(row.legPaxRev || 0),
-          legCargoRev: Number(row.legCargoRev || 0),
-          legTotalRev: Number(row.legTotalRev || 0),
-          averageFare: Number(row.pax || 0) > 0 ? Number(row.fnlRccyPaxRev || 0) / Number(row.pax || 0) : 0,
-          averageCargoRate: Number(row.cargoT || 0) > 0 ? Number(row.fnlRccyCargoRev || 0) / Number(row.cargoT || 0) : 0,
+          ...metricValues,
+          averageFare: metricValues.pax > 0 ? metricValues.fnlRccyPaxRev / metricValues.pax : 0,
+          averageCargoRate: metricValues.cargoT > 0 ? metricValues.fnlRccyCargoRev / metricValues.cargoT : 0,
         },
       };
     });

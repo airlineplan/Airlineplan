@@ -491,7 +491,7 @@ const PooTable = () => {
     const nextCurrency = normalizePooCurrencyCode(value);
     setSelectedPooCurrency(nextCurrency);
 
-    if (!nextCurrency) return;
+    if (nextCurrency.length !== 3) return;
 
     setRecords((prev) =>
       prev.map((row) => ({
@@ -1150,17 +1150,19 @@ const PooTable = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
             <div className="flex flex-col p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
               <span className="text-[10px] text-slate-400 font-bold uppercase">POO CCY</span>
-              <select
+              <input
+                list="poo-currency-options"
                 value={selectedPooCurrency}
                 onChange={(e) => handlePooCurrencyChange(e.target.value)}
-                disabled={loading || saving || currencyOptions.length === 0}
+                disabled={loading || saving}
+                maxLength={3}
                 className="mt-1 h-8 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
-              >
-                {currencyOptions.length === 0 && <option value="">--</option>}
+              />
+              <datalist id="poo-currency-options">
                 {currencyOptions.map((code) => (
                   <option key={code} value={code}>{code}</option>
                 ))}
-              </select>
+              </datalist>
             </div>
 
           </div>

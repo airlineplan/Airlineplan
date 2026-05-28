@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { buildPooCurrencyOptions } from "./pooCurrencyOptions.js";
 
-test("POO currency options include reporting currency when no rows are loaded", () => {
+test("POO currency options include common currencies when no rows are loaded", () => {
   const options = buildPooCurrencyOptions({
     meta: {
       reportingCurrency: "usd",
@@ -12,7 +12,7 @@ test("POO currency options include reporting currency when no rows are loaded", 
     records: [],
   });
 
-  assert.deepEqual(options, ["USD"]);
+  assert.deepEqual(options, ["AED", "EUR", "GBP", "INR", "JPY", "USD"]);
 });
 
 test("POO currency options merge FX config, station currency, selected value, and row values", () => {
@@ -26,5 +26,16 @@ test("POO currency options merge FX config, station currency, selected value, an
     records: [{ pooCcy: "gbp" }, { pooCcy: "usd" }],
   });
 
-  assert.deepEqual(options, ["AED", "EUR", "GBP", "INR", "USD"]);
+  assert.deepEqual(options, ["AED", "EUR", "GBP", "INR", "JPY", "USD"]);
+});
+
+test("POO currency options normalize custom user-entered codes", () => {
+  const options = buildPooCurrencyOptions({
+    selectedPooCurrency: " cad ",
+    meta: {
+      reportingCurrency: "u$d",
+    },
+  });
+
+  assert.deepEqual(options, ["AED", "CAD", "EUR", "GBP", "INR", "JPY", "USD"]);
 });
