@@ -1259,11 +1259,12 @@ const RiskExposureModal = ({
   ];
 
   const currencyOptions = useMemo(() => {
-    const codes = Array.from(new Set([reportingCurrency, ...(Array.isArray(currencyCodes) ? currencyCodes : [])]))
+    const exposureCodes = Object.keys(riskExposure?.currencies || {});
+    const codes = Array.from(new Set([reportingCurrency, ...(Array.isArray(currencyCodes) ? currencyCodes : []), ...exposureCodes]))
       .map((code) => normalizeCurrencyCode(code))
       .filter(Boolean);
     return codes.map((code) => ({ label: code, value: code }));
-  }, [currencyCodes, reportingCurrency]);
+  }, [currencyCodes, reportingCurrency, riskExposure]);
 
   const currentSeries = chartSeriesOptions.find((opt) => opt.value === seriesType) || chartSeriesOptions[0];
   const currentCurrency = normalizeCurrencyCode(exposureCurrency || reportingCurrency);
