@@ -78,23 +78,10 @@ const getPeriodSortKey = (dateStr, periodicity) => {
   }
 };
 
-const formatHeaderDate = (inputDate, periodicity) => {
+const formatHeaderDate = (inputDate) => {
   if (!inputDate || inputDate === "Unknown") return "Unknown";
 
-  if (periodicity === "quarterly") {
-    const date = new Date(inputDate);
-    if (Number.isNaN(date.getTime())) return inputDate;
-    const q = Math.ceil((date.getMonth() + 1) / 3);
-    return `Q${q} ${String(date.getFullYear()).slice(-2)}`;
-  }
-
-  if (periodicity === "annually") {
-    const date = new Date(inputDate);
-    if (Number.isNaN(date.getTime())) return inputDate;
-    return String(date.getFullYear());
-  }
-
-  const date = new Date(inputDate);
+  const date = parseDateValue(inputDate) || new Date(inputDate);
   if (Number.isNaN(date.getTime())) return inputDate;
 
   const day = String(date.getDate()).padStart(2, "0");
@@ -102,6 +89,109 @@ const formatHeaderDate = (inputDate, periodicity) => {
   const year = String(date.getFullYear()).slice(-2);
 
   return `${day} ${month} ${year}`;
+};
+
+const parseDateValue = (dateStr) => {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) {
+    return Number.isNaN(dateStr.getTime())
+      ? null
+      : new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate());
+  }
+
+  if (typeof dateStr === "string") {
+    const trimmed = dateStr.trim();
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+      return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+    }
+
+    const dayFirstMatch = trimmed.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (dayFirstMatch) {
+      return new Date(Number(dayFirstMatch[3]), Number(dayFirstMatch[2]) - 1, Number(dayFirstMatch[1]));
+    }
+  }
+
+  const parsed = new Date(dateStr);
+  return Number.isNaN(parsed.getTime())
+    ? null
+    : new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+};
+
+const formatPeriodKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const buildMasterPeriodColumns = (startDateValue, endDateValue, periodicity) => {
+  const startDate = parseDateValue(startDateValue);
+  const endDate = parseDateValue(endDateValue);
+
+  if (!startDate || !endDate || startDate > endDate) return [];
+
+  const columns = [];
+  const addColumn = (date) => columns.push(getPeriodSortKey(formatPeriodKey(date), periodicity));
+
+  if (periodicity === "daily") {
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      addColumn(current);
+      current.setDate(current.getDate() + 1);
+    }
+    return [...new Set(columns)].sort();
+  }
+
+  if (periodicity === "weekly") {
+    const firstWeekEndKey = getPeriodSortKey(formatPeriodKey(startDate), "weekly");
+    const lastWeekEndKey = getPeriodSortKey(formatPeriodKey(endDate), "weekly");
+    const current = parseDateValue(firstWeekEndKey);
+    const last = parseDateValue(lastWeekEndKey);
+
+    while (current && last && current <= last) {
+      columns.push(formatPeriodKey(current));
+      current.setDate(current.getDate() + 7);
+    }
+    return columns;
+  }
+
+  if (periodicity === "monthly") {
+    const current = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+    const last = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0);
+
+    while (current <= last) {
+      columns.push(formatPeriodKey(current));
+      current.setMonth(current.getMonth() + 2, 0);
+    }
+    return columns;
+  }
+
+  if (periodicity === "quarterly") {
+    const startQuarterEndMonth = Math.ceil((startDate.getMonth() + 1) / 3) * 3;
+    const endQuarterEndMonth = Math.ceil((endDate.getMonth() + 1) / 3) * 3;
+    const current = new Date(startDate.getFullYear(), startQuarterEndMonth, 0);
+    const last = new Date(endDate.getFullYear(), endQuarterEndMonth, 0);
+
+    while (current <= last) {
+      columns.push(formatPeriodKey(current));
+      current.setMonth(current.getMonth() + 4, 0);
+    }
+    return columns;
+  }
+
+  if (periodicity === "annually") {
+    const current = new Date(startDate.getFullYear(), 11, 31);
+    const last = new Date(endDate.getFullYear(), 11, 31);
+
+    while (current <= last) {
+      columns.push(formatPeriodKey(current));
+      current.setFullYear(current.getFullYear() + 1);
+    }
+    return columns;
+  }
+
+  return [];
 };
 
 const formatMetricValue = (metricKey, value) => {
@@ -440,9 +530,27 @@ const RevenuePage = () => {
   });
   const [filters, setFilters] = useState(createInitialFilters());
   const [periodicity, setPeriodicity] = useState(PERIODICITY_OPTIONS[2]);
+  const [masterDateRange, setMasterDateRange] = useState({ minDate: "", maxDate: "" });
   const [level1, setLevel1] = useState(null);
   const [level2, setLevel2] = useState(null);
   const [level3, setLevel3] = useState(null);
+
+  useEffect(() => {
+    const loadMasterDateRange = async () => {
+      try {
+        const response = await api.get("/master-weeks");
+        setMasterDateRange({
+          minDate: response.data?.minDate || "",
+          maxDate: response.data?.maxDate || "",
+        });
+      } catch (error) {
+        console.error("Error fetching master date range:", error);
+        setMasterDateRange({ minDate: "", maxDate: "" });
+      }
+    };
+
+    loadMasterDateRange();
+  }, []);
 
   useEffect(() => {
     const loadDropdowns = async () => {
@@ -523,13 +631,11 @@ const RevenuePage = () => {
   }, [filters]);
 
   const { tableColumns, tableData } = useMemo(() => {
-    if (!rawRows.length) {
-      return { tableColumns: [], tableData: [] };
-    }
-
     const selectedMetrics = filters.metrics?.length ? filters.metrics : [METRIC_OPTIONS[2]];
     const groupLevels = [level1, level2, level3].filter((level) => level && level.value !== "none");
-    const periodSet = new Set();
+    const periodSet = new Set(
+      buildMasterPeriodColumns(masterDateRange.minDate, masterDateRange.maxDate, periodicity.value)
+    );
 
     const processedRows = rawRows.map((row) => {
       const periodKey = getPeriodSortKey(row.date, periodicity.value);
@@ -549,6 +655,10 @@ const RevenuePage = () => {
     });
 
     const sortedColumns = Array.from(periodSet).sort();
+    if (!sortedColumns.length) {
+      return { tableColumns: [], tableData: [] };
+    }
+
     const columnIndexMap = {};
 
     sortedColumns.forEach((column, index) => {
@@ -638,7 +748,7 @@ const RevenuePage = () => {
       tableColumns: sortedColumns,
       tableData: [...grandTotals, ...finalRows],
     };
-  }, [filters.metrics, level1, level2, level3, periodicity, rawRows]);
+  }, [filters.metrics, level1, level2, level3, masterDateRange, periodicity, rawRows]);
 
   const updateFilter = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -654,7 +764,7 @@ const RevenuePage = () => {
       const headers = [
         "Hierarchy / Grouping",
         "Metric",
-        ...tableColumns.map((column) => formatHeaderDate(column, periodicity.value)),
+        ...tableColumns.map((column) => formatHeaderDate(column)),
       ];
 
       const excelRows = tableData.map((row) => [
@@ -836,7 +946,7 @@ const RevenuePage = () => {
                     key={column}
                     className="bg-slate-50/90 dark:bg-slate-800/90 border-b border-r border-slate-300 dark:border-slate-700 p-3 min-w-[110px] text-center text-sm font-bold text-slate-800 dark:text-slate-200"
                   >
-                    {formatHeaderDate(column, periodicity.value)}
+                    {formatHeaderDate(column)}
                   </th>
                 ))}
               </tr>
