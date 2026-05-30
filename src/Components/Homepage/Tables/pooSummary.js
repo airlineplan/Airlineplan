@@ -178,6 +178,7 @@ export function groupPooRecordsIntoSections(records, selectedPoo) {
   const legsByOd = new Map();
   legRows.forEach((row) => {
     const key = [
+      String(row.poo || "").trim().toUpperCase(),
       String(row.od || "").trim().toUpperCase(),
       row.flightId || row.flightNumber || row.rowKey || row._id,
     ].join("|");

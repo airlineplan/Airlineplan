@@ -9,7 +9,7 @@ const baseRow = (overrides) => ({
   odGroupKey: overrides.odGroupKey,
   trafficType: overrides.trafficType,
   displayType: overrides.displayType || overrides.identifier,
-  poo: "DEL",
+  poo: overrides.poo || "DEL",
   od: overrides.od,
   odOrigin: overrides.odOrigin,
   odDestination: overrides.odDestination,
@@ -475,5 +475,56 @@ test("groupPooRecordsIntoSections keeps same-OD leg flights as separate visible 
   assert.deepEqual(
     sections.legs.map((row) => row.flightNumber).sort(),
     ["A 100", "A 200"]
+  );
+});
+
+test("groupPooRecordsIntoSections keeps same-flight leg rows for different POO stations", () => {
+  const rows = [
+    baseRow({
+      _id: "a200-del",
+      trafficType: "leg",
+      poo: "DEL",
+      od: "DEL-BOM",
+      odOrigin: "DEL",
+      odDestination: "BOM",
+      sector: "DEL-BOM",
+      identifier: "Leg",
+      odGroupKey: "leg::A200-2026-03-04",
+      flightId: "A200-2026-03-04",
+      flightNumber: "A200",
+      pax: 58,
+      cargoT: 0.2,
+      maxPax: 153,
+      maxCargoT: 0.6,
+      odViaGcd: 1160,
+      sectorGcd: 1160,
+    }),
+    baseRow({
+      _id: "a200-bom",
+      trafficType: "leg",
+      poo: "BOM",
+      od: "DEL-BOM",
+      odOrigin: "DEL",
+      odDestination: "BOM",
+      sector: "DEL-BOM",
+      identifier: "Leg",
+      odGroupKey: "leg::A200-2026-03-04",
+      flightId: "A200-2026-03-04",
+      flightNumber: "A200",
+      pax: 58,
+      cargoT: 0.2,
+      maxPax: 153,
+      maxCargoT: 0.6,
+      odViaGcd: 1160,
+      sectorGcd: 1160,
+    }),
+  ];
+
+  const sections = groupPooRecordsIntoSections(rows, "");
+
+  assert.equal(sections.legs.length, 2);
+  assert.deepEqual(
+    sections.legs.map((row) => row.poo).sort(),
+    ["BOM", "DEL"]
   );
 });
