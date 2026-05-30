@@ -12,6 +12,7 @@ import ForgatePassword from "./Pages/ForgatePassword";
 import ResetPassword from "./Pages/ResetPassword";
 import Contact from "./Pages/Contact";
 import AircraftRoute from "./Pages/AircraftRoute";
+import AdminPage from "./Pages/AdminPage";
 import { onAuthLogout } from "./auth/session";
 
 const AuthSessionListener = () => {
@@ -43,6 +44,7 @@ const App = () => {
         <Route path="/forget" element={<ForgatePassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/admin" element={<AdminPage />} />
         {SHOW_PRIVATE_PAGES && <Route path="/aircraft-route-economic" element={<AircraftRoute />} />}
       </Routes>
       <ToastContainer position="bottom-right" theme="colored" limit={1} />
