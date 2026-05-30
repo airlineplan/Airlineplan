@@ -75,7 +75,7 @@ const OD_TABLE_COLUMNS = [
   { key: "maxPax", label: "Max pax", numeric: true },
   { key: "maxCargoT", label: "Max Cargo T", numeric: true },
   { key: "pax", label: "Pax", numeric: true },
-  { key: "cargoT", label: "Cargo", numeric: true },
+  { key: "cargoT", label: "Cargo T", numeric: true },
   { key: "fare", label: "Fare (/pax)", numeric: true },
   { key: "rate", label: "Rate (/Kg)", numeric: true },
   { key: "paxRevenue", label: "Pax revenue", numeric: true },
@@ -93,7 +93,7 @@ const INTERLINE_TABLE_COLUMNS = [
   { key: "oal", label: "OAL" },
   { key: "transferStation", label: "Transfer Stn" },
   { key: "pax", label: "Pax", numeric: true },
-  { key: "cargoT", label: "Cargo", numeric: true },
+  { key: "cargoT", label: "Cargo T", numeric: true },
   { key: "fare", label: "Prorate Fare", numeric: true },
   { key: "rate", label: "Prorate Rate", numeric: true },
   { key: "paxRevenue", label: "Pax revenue", numeric: true },
@@ -127,6 +127,15 @@ function firstPresentNumber(values) {
     if (Number.isFinite(numeric)) return numeric;
   }
   return 0;
+}
+
+function hasNumericValue(value) {
+  if (value === undefined || value === null || value === "") return false;
+  return Number.isFinite(Number(value));
+}
+
+function calculateCargoRevenue(cargoT, ratePerKg) {
+  return numericValue(cargoT) * KG_PER_TONNE * numericValue(ratePerKg);
 }
 
 function isLegTraffic(row) {
@@ -168,7 +177,10 @@ function getPooPaxRevenueValue(row) {
 function getPooCargoRevenueValue(row) {
   const cargoT = numericValue(row?.cargoT);
   const rate = getPooRateValue(row);
-  if (cargoT > 0 && rate > 0) return cargoT * KG_PER_TONNE * rate;
+  const rateFields = isLegTraffic(row) ? [row?.legRate, row?.odRate] : [row?.odRate, row?.legRate];
+  if (hasNumericValue(row?.cargoT) && rateFields.some(hasNumericValue)) {
+    return calculateCargoRevenue(cargoT, rate);
+  }
 
   if (isLegTraffic(row)) return firstPresentNumber([row.legCargoRev, row.cargoRevenue, row.odCargoRev]);
   return firstPresentNumber([row.cargoRevenue, row.odCargoRev, row.legCargoRev]);
