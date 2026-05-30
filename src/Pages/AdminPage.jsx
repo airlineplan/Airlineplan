@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Server,
   Shield,
+  Trash2,
   XCircle,
 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -36,6 +37,13 @@ const statusIcon = {
   active: CheckCircle2,
   failed: XCircle,
   deactivated: AlertTriangle,
+};
+
+const isRootAdminHost = () => {
+  if (typeof window === "undefined") return true;
+  const hostname = window.location.hostname.toLowerCase();
+  const rootDomain = (import.meta.env.VITE_ROOT_DOMAIN || "airlineplan.com").toLowerCase();
+  return ["localhost", "127.0.0.1"].includes(hostname) || hostname === rootDomain;
 };
 
 const apiRequest = async (path, { method = "GET", body, token } = {}) => {
@@ -143,7 +151,10 @@ const TenantForm = ({ token, onCreated }) => {
   const [form, setForm] = useState({
     tenantName: "",
     subdomain: "",
+    adminFirstName: "",
+    adminLastName: "",
     adminEmail: "",
+    adminPassword: "",
     instanceType: "t3.small",
     region: "ap-south-1",
   });
@@ -166,7 +177,16 @@ const TenantForm = ({ token, onCreated }) => {
         body: form,
       });
       toast.success(`${data.tenant.fullDomain} provisioning started`);
-      setForm({ tenantName: "", subdomain: "", adminEmail: "", instanceType: "t3.small", region: "ap-south-1" });
+      setForm({
+        tenantName: "",
+        subdomain: "",
+        adminFirstName: "",
+        adminLastName: "",
+        adminEmail: "",
+        adminPassword: "",
+        instanceType: "t3.small",
+        region: "ap-south-1",
+      });
       onCreated(data.tenant);
     } catch (error) {
       toast.error(error.message);
@@ -183,7 +203,10 @@ const TenantForm = ({ token, onCreated }) => {
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <input className="rounded-md border border-slate-300 px-3 py-2 text-sm" required placeholder="Airline name" value={form.tenantName} onChange={(e) => update("tenantName", e.target.value)} />
+        <input className="rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Tenant admin first name" value={form.adminFirstName} onChange={(e) => update("adminFirstName", e.target.value)} />
+        <input className="rounded-md border border-slate-300 px-3 py-2 text-sm" placeholder="Tenant admin last name" value={form.adminLastName} onChange={(e) => update("adminLastName", e.target.value)} />
         <input className="rounded-md border border-slate-300 px-3 py-2 text-sm" required type="email" placeholder="Tenant admin email" value={form.adminEmail} onChange={(e) => update("adminEmail", e.target.value)} />
+        <input className="rounded-md border border-slate-300 px-3 py-2 text-sm" required type="password" placeholder="Tenant admin temporary password" value={form.adminPassword} onChange={(e) => update("adminPassword", e.target.value)} />
         <div className="flex rounded-md border border-slate-300 focus-within:border-cyan-500">
           <input className="min-w-0 flex-1 rounded-l-md px-3 py-2 text-sm outline-none" required placeholder="star" value={form.subdomain} onChange={(e) => update("subdomain", e.target.value)} />
           <span className="flex items-center border-l border-slate-300 bg-slate-50 px-3 text-xs text-slate-500">.airlineplan.com</span>
@@ -204,7 +227,7 @@ const TenantForm = ({ token, onCreated }) => {
   );
 };
 
-const TenantDetail = ({ tenant, token, onChanged }) => {
+const TenantDetail = ({ tenant, token, onChanged, onDeleted }) => {
   const logs = tenant?.logs || [];
   if (!tenant) {
     return (
@@ -219,6 +242,16 @@ const TenantDetail = ({ tenant, token, onChanged }) => {
       const data = await apiRequest(path, { method: "POST", token });
       toast.success(message);
       onChanged(data.tenant);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const deleteTenant = async () => {
+    try {
+      await apiRequest(`/admin/tenants/${tenant._id}`, { method: "DELETE", token });
+      toast.success("Tenant record deleted");
+      onDeleted(tenant._id);
     } catch (error) {
       toast.error(error.message);
     }
@@ -266,6 +299,14 @@ const TenantDetail = ({ tenant, token, onChanged }) => {
           <XCircle size={15} />
           Deactivate
         </button>
+        <button
+          onClick={deleteTenant}
+          disabled={!["failed", "pending", "deactivated"].includes(tenant.status)}
+          className="inline-flex items-center gap-2 rounded-md border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Trash2 size={15} />
+          Delete
+        </button>
       </div>
 
       <div className="border-t border-slate-200 p-4">
@@ -300,6 +341,18 @@ const InfoTile = ({ icon: Icon, label, value, detail }) => (
 );
 
 export default function AdminPage() {
+  if (!isRootAdminHost()) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-white">
+        <div className="max-w-md text-center">
+          <Shield className="mx-auto mb-4 text-cyan-300" size={36} />
+          <h1 className="text-2xl font-bold">Not found</h1>
+          <p className="mt-2 text-sm text-slate-400">Super admin is only available on the Airlineplan root domain.</p>
+        </div>
+      </main>
+    );
+  }
+
   const [token, setToken] = useState(getAdminToken());
   const [tenants, setTenants] = useState([]);
   const [selectedId, setSelectedId] = useState("");
@@ -337,6 +390,11 @@ export default function AdminPage() {
       return current.map((item) => (item._id === tenant._id ? tenant : item));
     });
     setSelectedId(tenant._id);
+  };
+
+  const removeTenant = (tenantId) => {
+    setTenants((current) => current.filter((tenant) => tenant._id !== tenantId));
+    if (selectedId === tenantId) setSelectedId("");
   };
 
   if (!token) return <AdminLogin onLogin={setToken} />;
@@ -401,7 +459,7 @@ export default function AdminPage() {
           </section>
         </div>
 
-        <TenantDetail tenant={selectedTenant} token={token} onChanged={mergeTenant} />
+        <TenantDetail tenant={selectedTenant} token={token} onChanged={mergeTenant} onDeleted={removeTenant} />
       </div>
     </main>
   );

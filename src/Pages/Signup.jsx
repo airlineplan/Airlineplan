@@ -69,7 +69,7 @@ export default function Signup() {
           navigate('/');
         }, 2000);
       } else {
-        throw new Error(data.message);
+        throw new Error(data.error || data.message || "Unable to create account");
       }
     } catch (error) {
       console.error(error);

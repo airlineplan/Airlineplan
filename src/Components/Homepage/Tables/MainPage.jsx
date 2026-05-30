@@ -11,7 +11,7 @@ import {
   LogOut, Plane, Network, Map,
   RotateCw, LayoutDashboard, Link2, Coins,
   RadioTower, TrendingUp, List, Eye, ClipboardList, Navigation, DollarSign, Users,
-  Wrench
+  UserCog, Wrench
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -33,6 +33,7 @@ import PooTable from "./PooTable";
 import CostPage from "./CostPage";
 import RevenuePage from "./RevenuePage";
 import CrewPage from "./CrewPage";
+import UserManagementPage from "./UserManagementPage";
 
 import AircraftRoute from "../../../Pages/AircraftRoute";
 
@@ -60,6 +61,7 @@ const TABS = [
   { id: 14, label: "Cost", icon: Coins, component: CostPage },
   { id: 15, label: "Crew", icon: Users, component: CrewPage },
   { id: 16, label: "Route Economics", icon: TrendingUp, component: AircraftRoute },
+  { id: 17, label: "Users", icon: UserCog, component: UserManagementPage, requiresTenantAdmin: true },
 
 ];
 
@@ -94,6 +96,7 @@ const MainPage = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
 
   useEffect(() => {
@@ -115,7 +118,19 @@ const MainPage = () => {
         return;
       }
 
-      setSessionReady(true);
+      try {
+        const response = await api.get("/auth/verify");
+        if (!isMounted) {
+          return;
+        }
+        setCurrentUser(response.data.user || null);
+        setSessionReady(true);
+      } catch (error) {
+        if (isMounted) {
+          toast.error("Could not load your user profile");
+        }
+        return;
+      }
 
       if (window.location.pathname !== "/homepage") {
         navigate("/homepage", { replace: true });
@@ -178,7 +193,15 @@ const MainPage = () => {
     toast.success("Logout successful!");
   };
 
-  const ActiveComponent = TABS[activeStep].component;
+  const visibleTabs = VISIBLE_TABS.filter((tab) => !tab.requiresTenantAdmin || currentUser?.role === "tenant_admin");
+  const activeTab = TABS.find((tab) => tab.id === activeStep) || TABS[0];
+  const ActiveComponent = activeTab.component;
+
+  useEffect(() => {
+    if (activeTab.requiresTenantAdmin && currentUser?.role !== "tenant_admin") {
+      setActiveStep(0);
+    }
+  }, [activeTab.requiresTenantAdmin, currentUser?.role]);
 
   if (!sessionReady) {
     return (
@@ -232,7 +255,7 @@ const MainPage = () => {
                   )}
                 >
                   <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
-                    {VISIBLE_TABS.map((tab) => (
+                    {visibleTabs.map((tab) => (
                       <button
                         key={tab.id}
                         onClick={() => {
@@ -276,8 +299,10 @@ const MainPage = () => {
           <div className="hidden xl:flex flex-1 items-center justify-end gap-4 min-w-fit shrink-0">
             <ThemeToggle />
             <div className="text-right hidden 2xl:block">
-              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Admin User</p>
-              <p className="text-xs text-slate-500">admin@airlineplan.com</p>
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {[currentUser?.firstName, currentUser?.lastName].filter(Boolean).join(" ") || "Airlineplan user"}
+              </p>
+              <p className="text-xs text-slate-500">{currentUser?.email || ""}</p>
             </div>
             <LogoutButton onClick={handleLogout} />
           </div>

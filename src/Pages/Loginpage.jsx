@@ -286,10 +286,7 @@ export default function Loginpage() {
 
             <div className="mt-8 text-center">
               <p className="text-sm text-indigo-100/60 drop-shadow-sm">
-                Don't have an account?{' '}
-                <Link to="/signup" className="font-semibold text-white hover:text-indigo-300 transition-colors">
-                  Sign up
-                </Link>
+                Need access? Ask your tenant admin to create an account.
               </p>
             </div>
 

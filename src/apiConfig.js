@@ -23,7 +23,6 @@ api.interceptors.request.use(
 
 const AUTH_BYPASS_PATHS = [
     '/user-login',
-    '/admin-login',
     '/user-signup',
     '/send-email',
     '/change-passowrd',
