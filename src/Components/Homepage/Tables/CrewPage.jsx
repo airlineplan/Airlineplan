@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -100,45 +101,53 @@ const ActionButton = ({ label, icon: Icon, onClick, variant = "primary" }) => {
 // --- MODAL COMPONENT ---
 const Modal = ({ isOpen, onClose, title, children, maxWidth = "max-w-4xl" }) => {
     useEscapeKey(isOpen, onClose);
+    const modalRoot = typeof document !== "undefined" ? document.body : null;
 
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <>
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 transition-opacity"
-                    />
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        className={cn("fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden", maxWidth)}
-                    >
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                            <h2 className="text-lg font-bold text-slate-800 dark:text-white">{title}</h2>
-                            <button onClick={onClose} className="p-2 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
-                            {children}
-                        </div>
-                        <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-end gap-3">
-                            <button onClick={onClose} className="px-4 py-2 text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                                Cancel
-                            </button>
-                            <button onClick={onClose} className="px-5 py-2 text-base font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm shadow-indigo-500/20 transition-colors">
-                                Update
-                            </button>
-                        </div>
-                    </motion.div>
-                </>
-            )}
-        </AnimatePresence>
+        modalRoot
+            ? createPortal(
+                <AnimatePresence>
+                    {isOpen && (
+                        <>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={onClose}
+                                className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 transition-opacity"
+                            />
+                            <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 pointer-events-none">
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    className={cn("pointer-events-auto w-full max-h-[calc(100vh-3rem)] flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden", maxWidth)}
+                                >
+                                    <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                                        <h2 className="text-lg font-bold text-slate-800 dark:text-white">{title}</h2>
+                                        <button onClick={onClose} className="p-2 rounded-lg text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                                            <X size={20} />
+                                        </button>
+                                    </div>
+                                    <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+                                        {children}
+                                    </div>
+                                    <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-end gap-3">
+                                        <button onClick={onClose} className="px-4 py-2 text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button onClick={onClose} className="px-5 py-2 text-base font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm shadow-indigo-500/20 transition-colors">
+                                            Update
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        </>
+                    )}
+                </AnimatePresence>,
+                modalRoot
+            )
+            : null
     );
 };
 
