@@ -33,6 +33,7 @@ import AddNetwork from "./AddNetwork";
 const label = { inputProps: { "aria-label": "Checkbox demo" } };
 
 const RowsPerPage = 8;
+const AUTO_CALCULATE_NETWORK_STA = false;
 
 const NetworkTable = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -315,7 +316,7 @@ const NetworkTable = () => {
               }}
             >
               <CopyRow checkedRows={checkedRows} />
-              <AddNetwork />
+              <AddNetwork autoCalculateSta={AUTO_CALCULATE_NETWORK_STA} />
             </Menu>
           </Stack>
 
@@ -361,7 +362,7 @@ const NetworkTable = () => {
               </Button>
             </Stack>
           </Dialog>
-          <UpdatePopUp checkedRows={checkedRows} />
+          <UpdatePopUp checkedRows={checkedRows} autoCalculateSta={AUTO_CALCULATE_NETWORK_STA} />
         </Stack>
         <Stack>
           <Button

@@ -60,7 +60,7 @@ const InputGroup = ({ label, error, children }) => (
 const baseInputStyles = "w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400";
 
 // --- MAIN COMPONENT ---
-const UpdatePopUp = (props) => {
+const UpdatePopUp = ({ autoCalculateSta = false, ...props }) => {
   // --- STATE ---
   const [openUpdate, setOpenUpdate] = useState(false);
   const [product, setProduct] = useState("");
@@ -109,6 +109,11 @@ const UpdatePopUp = (props) => {
 
   // --- HANDLERS ---
   useEffect(() => {
+    if (!autoCalculateSta) {
+      setStationsData([]);
+      return;
+    }
+
     const fetchStations = async () => {
       try {
         const response = await api.get("/get-stationData");
@@ -121,7 +126,7 @@ const UpdatePopUp = (props) => {
     };
 
     fetchStations();
-  }, []);
+  }, [autoCalculateSta]);
 
   const handleUpdateOpen = () => {
     setOpenUpdate(true);
@@ -237,6 +242,8 @@ const UpdatePopUp = (props) => {
 
   // --- AUTO CALCULATION LOGIC FOR STA ---
   useEffect(() => {
+    if (!autoCalculateSta) return;
+
     if (skipAutoStaOnceRef.current) {
       skipAutoStaOnceRef.current = false;
       return;
@@ -252,7 +259,7 @@ const UpdatePopUp = (props) => {
     });
 
     setSta(calculatedSTA);
-  }, [std, bt, depStn, arrStn, effFromDt, stationsData]);
+  }, [autoCalculateSta, std, bt, depStn, arrStn, effFromDt, stationsData]);
 
   // Required Field logic
   useEffect(() => {
@@ -275,7 +282,7 @@ const UpdatePopUp = (props) => {
   const fetchData = async () => {
     if (isBulkUpdate) return;
     try {
-      skipAutoStaOnceRef.current = true;
+      skipAutoStaOnceRef.current = autoCalculateSta;
       const response = await api.get(`/products/${DataId}`);
       const item = response.data;
 

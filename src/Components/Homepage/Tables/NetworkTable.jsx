@@ -119,6 +119,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
 
 // --- MAIN PAGE COMPONENT ---
 const RowsPerPage = 8;
+const AUTO_CALCULATE_NETWORK_STA = false;
 
 export default function NetworkTable() {
   // --- STATE ---
@@ -369,7 +370,7 @@ export default function NetworkTable() {
               <div className="flex items-center gap-2">
 
                 {/* Render Your Custom Update Component */}
-                <UpdatePopUp checkedRows={checkedRows} />
+                <UpdatePopUp checkedRows={checkedRows} autoCalculateSta={AUTO_CALCULATE_NETWORK_STA} />
 
                 <Button
                   variant="primary"
@@ -395,7 +396,7 @@ export default function NetworkTable() {
                     </div>
                     <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
 
-                      <AddNetwork setAdd={setAdd} />
+                      <AddNetwork setAdd={setAdd} autoCalculateSta={AUTO_CALCULATE_NETWORK_STA} />
                     </div>
                   </motion.div>
                 )}
