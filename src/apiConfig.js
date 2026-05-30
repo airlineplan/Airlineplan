@@ -37,7 +37,7 @@ api.interceptors.response.use(
         const token = error?.config?.headers?.['x-access-token'] || getAccessToken();
         const shouldIgnore = AUTH_BYPASS_PATHS.some((path) => requestUrl.includes(path));
 
-        if (token && !shouldIgnore && (status === 401 || status === 403)) {
+        if (token && !shouldIgnore && status === 401) {
             forceLogout("session_invalid", token);
         }
 

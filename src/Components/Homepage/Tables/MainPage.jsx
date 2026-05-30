@@ -67,6 +67,7 @@ const TABS = [
 
 const HIDDEN_TAB_IDS = new Set([8, 16]);
 const VISIBLE_TABS = TABS.filter((tab) => !HIDDEN_TAB_IDS.has(tab.id));
+const TENANT_ADMIN_ROLES = new Set(["tenant_admin", "admin"]);
 
 // --- COMPONENTS ---
 
@@ -193,15 +194,16 @@ const MainPage = () => {
     toast.success("Logout successful!");
   };
 
-  const visibleTabs = VISIBLE_TABS.filter((tab) => !tab.requiresTenantAdmin || currentUser?.role === "tenant_admin");
+  const hasTenantAdminAccess = TENANT_ADMIN_ROLES.has(currentUser?.role);
+  const visibleTabs = VISIBLE_TABS.filter((tab) => !tab.requiresTenantAdmin || hasTenantAdminAccess);
   const activeTab = TABS.find((tab) => tab.id === activeStep) || TABS[0];
   const ActiveComponent = activeTab.component;
 
   useEffect(() => {
-    if (activeTab.requiresTenantAdmin && currentUser?.role !== "tenant_admin") {
+    if (activeTab.requiresTenantAdmin && !hasTenantAdminAccess) {
       setActiveStep(0);
     }
-  }, [activeTab.requiresTenantAdmin, currentUser?.role]);
+  }, [activeTab.requiresTenantAdmin, hasTenantAdminAccess]);
 
   if (!sessionReady) {
     return (
