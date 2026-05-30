@@ -13,7 +13,8 @@ import {
   ArrowUp,
   ArrowDown,
   Check,
-  ChevronDown
+  ChevronDown,
+  Trash2
 } from "lucide-react";
 import { toast } from "react-toastify";
 
@@ -671,6 +672,10 @@ const PooTable = () => {
     return [...sections.legs, ...sections.ods].filter((row) => selectedRowIds.has(row._id));
   }, [sections, selectedRowIds]);
 
+  const selectedTransitRows = useMemo(() => {
+    return sections.transits.filter((row) => selectedRowIds.has(row._id));
+  }, [sections.transits, selectedRowIds]);
+
   const odSelectionSummary = useMemo(() => {
     return createOdSelectionSummary(selectedOdRows);
   }, [selectedOdRows]);
@@ -693,6 +698,41 @@ const PooTable = () => {
       key,
       direction: prev.key === key && prev.direction === "Up" ? "Down" : "Up",
     }));
+  };
+
+  const handleDeleteTransit = async () => {
+    if (selectedTransitRows.length === 0) {
+      toast.warn("Select a transit row to remove");
+      return;
+    }
+
+    const transitGroupKeys = [...new Set(selectedTransitRows.map((row) => row.odGroupKey).filter(Boolean))];
+    if (transitGroupKeys.length === 0) {
+      toast.warn("Selected transit row is missing a group key");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await Promise.all(
+        transitGroupKeys.map((odGroupKey) => api.delete(`/poo/transit/${encodeURIComponent(odGroupKey)}`))
+      );
+      setSelectedRowIds((prev) => {
+        const next = new Set(prev);
+        selectedTransitRows.forEach((row) => next.delete(row._id));
+        return next;
+      });
+      setValidationErrors([]);
+      toast.success("Transit OD removed");
+      await fetchData();
+    } catch (error) {
+      console.error(error);
+      const issues = error.response?.data?.errors || [];
+      setValidationErrors(issues);
+      toast.error(error.response?.data?.message || "Failed to remove transit OD");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const totalDirtyRows = Object.keys(dirtyMap).length;
@@ -979,10 +1019,10 @@ const PooTable = () => {
     <div className="w-full h-full p-6 space-y-6 flex flex-col min-h-[calc(100vh-180px)] bg-slate-50 dark:bg-slate-950">
 
       {/* --- TOP PANELS --- */}
-      <div className="flex flex-col xl:flex-row gap-6 relative z-50">
+      <div className="flex flex-col xl:flex-row gap-4 relative z-50">
 
         {/* Filters */}
-        <div className="w-full xl:w-[60%] p-5 rounded-xl border-2 border-emerald-400/40 dark:border-emerald-500/30 bg-emerald-50/30 dark:bg-emerald-900/10 shadow-sm relative">
+        <div className="w-full xl:w-[60%] p-4 rounded-xl border-2 border-emerald-400/40 dark:border-emerald-500/30 bg-emerald-50/30 dark:bg-emerald-900/10 shadow-sm relative">
           <div className="absolute -top-3 left-4 bg-slate-50 dark:bg-slate-950 px-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
             <LayoutDashboard size={14} /> Allocation Filters
           </div>
@@ -1075,7 +1115,7 @@ const PooTable = () => {
             </div>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-emerald-200/60 dark:border-emerald-800/50 flex flex-wrap items-center justify-between gap-4">
+          <div className="mt-4 pt-4 border-t border-emerald-200/60 dark:border-emerald-800/50 flex flex-wrap items-center gap-2">
             <div className="flex gap-2">
               <button
                 onClick={refreshAllocation}
@@ -1094,22 +1134,17 @@ const PooTable = () => {
                 {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>
-            <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700">
-              <span className="text-slate-700 dark:text-slate-200">{visibleRows.length}</span> rows
-              <span className="mx-1 opacity-40">|</span>
-              <span className="text-amber-600 dark:text-amber-400">{totalDirtyRows}</span> pending
-            </div>
           </div>
         </div>
 
         {/* Stats & Transit */}
-        <div className="w-full xl:w-[40%] p-5 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white/50 dark:bg-slate-800/30 shadow-sm relative flex flex-col justify-between">
+        <div className="w-full xl:w-[40%] p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white/50 dark:bg-slate-800/30 shadow-sm relative flex flex-col gap-3">
           <div className="absolute -top-3 left-4 bg-slate-50 dark:bg-slate-950 px-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             <Calculator size={14} /> Summary & Transits
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
-            <div className="flex flex-col p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
+          <div className="flex flex-wrap items-start gap-3 mt-2">
+            <div className="flex w-24 flex-col p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
               <span className="text-[10px] text-slate-400 font-bold uppercase">POO CCY</span>
               <input
                 list="poo-currency-options"
@@ -1125,10 +1160,9 @@ const PooTable = () => {
                 ))}
               </datalist>
             </div>
-
           </div>
 
-          <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-2">
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center gap-2">
             <input value={transitDraft.firstFlightNumber} onChange={(e) => setTransitDraft((prev) => ({ ...prev, firstFlightNumber: e.target.value }))} placeholder="First FLGT" className="h-8 w-24 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs font-medium outline-none focus:border-indigo-500" />
             <input value={transitDraft.secondFlightNumber} onChange={(e) => setTransitDraft((prev) => ({ ...prev, secondFlightNumber: e.target.value }))} placeholder="Second FLGT" className="h-8 w-24 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-xs font-medium outline-none focus:border-indigo-500" />
             <button
@@ -1137,6 +1171,13 @@ const PooTable = () => {
               className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 text-white rounded-lg text-xs font-bold hover:bg-rose-600 transition-colors shadow-lg shadow-rose-500/20 disabled:opacity-50"
             >
               <PlusCircle size={14} /> Add Transit
+            </button>
+            <button
+              onClick={handleDeleteTransit}
+              disabled={saving || loading || selectedTransitRows.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-500 text-white rounded-lg text-xs font-bold hover:bg-sky-600 transition-colors shadow-lg shadow-sky-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 size={14} /> Remove Transit
             </button>
           </div>
         </div>
@@ -1295,8 +1336,15 @@ const PooTable = () => {
                       {sections.transits.length === 0 ? (
                         <tr>{Array.from({ length: OD_TABLE_COLUMNS.length + 1 }).map((_, i) => <td key={i} className="h-10 border-b border-r border-slate-200 dark:border-slate-700"></td>)}</tr>
                       ) : sections.transits.map((row) => (
-                        <tr key={row._id} className="group">
-                          <td className={cn(tdStyle, "text-center")}><input type="checkbox" className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer" /></td>
+                        <tr key={row._id} className={cn("group", selectedRowIds.has(row._id) && "bg-indigo-50/80 dark:bg-indigo-900/20")}>
+                          <td className={cn(tdStyle, "text-center")}>
+                            <input
+                              type="checkbox"
+                              checked={selectedRowIds.has(row._id)}
+                              onChange={() => toggleSelectedRow(row._id)}
+                              className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            />
+                          </td>
                           <td className={cn(tdStyle, "font-bold text-slate-800 dark:text-slate-100")}>{row.od}</td>
                           <td className={cn(tdStyle, "text-center")}>{row.odDI}</td>
                           <td className={tdStyle}>{(row.flightList || []).join(", ")}</td>
