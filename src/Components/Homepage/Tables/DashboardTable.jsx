@@ -94,7 +94,7 @@ function uniqueCurrencyCodes(...groups) {
     .filter((code, index, list) => list.indexOf(code) === index);
 }
 
-const DEFAULT_CURRENCIES = ["EUR", "USD", "GBP", "INR", "AED", "JPY"];
+const DEFAULT_CURRENCIES = ["INR", "USD", "EUR", "GBP", "AED", "JPY"];
 
 const FX_BASIS_OPTIONS = [
   { label: "Absolute", value: "absolute" },
@@ -1118,7 +1118,7 @@ const FxRateModal = ({
                       addCurrency();
                     }
                   }}
-                  placeholder="USD"
+                  placeholder="INR"
                   className="h-11 flex-1 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 />
                 <button type="button" onClick={addCurrency} className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-slate-800">

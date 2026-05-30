@@ -380,7 +380,7 @@ const CrewPage = () => {
                                     <td className="p-2"><select className="w-full bg-white dark:bg-slate-900 border rounded px-2 py-1"><option>All Roles</option></select></td>
                                     <td className="p-2"><input type="text" placeholder="HH:MM" className="w-full px-2 py-1 border rounded text-center dark:bg-slate-900 dark:border-slate-700" /></td>
                                     <td className="p-2"><input type="text" placeholder="Amount" className="w-full px-2 py-1 border rounded text-center dark:bg-slate-900 dark:border-slate-700" /></td>
-                                    <td className="p-2"><select className="w-full bg-white dark:bg-slate-900 border rounded px-2 py-1"><option>USD</option></select></td>
+                                    <td className="p-2"><select className="w-full bg-white dark:bg-slate-900 border rounded px-2 py-1"><option>INR</option></select></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -405,7 +405,7 @@ const CrewPage = () => {
                                     <td className="p-2"><select className="w-full bg-white dark:bg-slate-900 border rounded px-2 py-1"><option>All Roles</option></select></td>
                                     <td className="p-2"><input type="text" placeholder="HH:MM" className="w-full px-2 py-1 border rounded text-center dark:bg-slate-900 dark:border-slate-700" /></td>
                                     <td className="p-2"><input type="text" placeholder="Amount" className="w-full px-2 py-1 border rounded text-center dark:bg-slate-900 dark:border-slate-700" /></td>
-                                    <td className="p-2"><select className="w-full bg-white dark:bg-slate-900 border rounded px-2 py-1"><option>USD</option></select></td>
+                                    <td className="p-2"><select className="w-full bg-white dark:bg-slate-900 border rounded px-2 py-1"><option>INR</option></select></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -432,7 +432,7 @@ const CrewPage = () => {
                             </td>
                             <td className="p-2"><select className="w-full bg-white dark:bg-slate-900 border rounded px-2 py-1"><option>All Roles</option></select></td>
                             <td className="p-2"><input type="text" placeholder="Amount" className="w-full px-2 py-1 border rounded text-center dark:bg-slate-900 dark:border-slate-700" /></td>
-                            <td className="p-2"><select className="w-full bg-white dark:bg-slate-900 border rounded px-2 py-1"><option>USD</option></select></td>
+                            <td className="p-2"><select className="w-full bg-white dark:bg-slate-900 border rounded px-2 py-1"><option>INR</option></select></td>
                         </tr>
                     </tbody>
                 </table>

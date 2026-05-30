@@ -108,7 +108,10 @@ const StationsTable = () => {
       try {
         const response = await api.get("/get-stationData");
         if (response.data?.data) {
-          setData(response.data.data);
+          setData(response.data.data.map((station) => ({
+            ...station,
+            currencyCode: station.currencyCode || "INR",
+          })));
           if (response.data.hometimeZone) setSelectedHomeTimeZone(response.data.hometimeZone);
         }
       } catch (error) {
@@ -247,7 +250,7 @@ const StationsTable = () => {
                       <StyledInput
                         value={row.currencyCode || ""}
                         onChange={(e) => handleInputChange(e, index, 'currencyCode')}
-                        placeholder="USD"
+                        placeholder="INR"
                         maxLength={3}
                       />
                     </td>

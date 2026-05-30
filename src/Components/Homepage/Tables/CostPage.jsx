@@ -76,7 +76,7 @@ const normalizeCurrencyCode = (value) => String(value ?? "")
     .slice(0, 3);
 
 const formatCurrencyAmount = (value, currencyCode) => {
-    const normalizedCurrency = normalizeCurrencyCode(currencyCode) || "USD";
+    const normalizedCurrency = normalizeCurrencyCode(currencyCode) || "INR";
     try {
         return new Intl.NumberFormat("en-US", {
             style: "currency",
@@ -283,7 +283,7 @@ const CostPage = () => {
     const [loading, setLoading] = useState(false);
     const [rawFlights, setRawFlights] = useState([]);
     const [isCostInputOpen, setIsCostInputOpen] = useState(false);
-    const [reportingCurrency, setReportingCurrency] = useState("USD");
+    const [reportingCurrency, setReportingCurrency] = useState("INR");
 
     const [dropdownOptions, setDropdownOptions] = useState({
         from: [], to: [], sector: [], sn: [], flight: [], variant: [], userTag1: [], userTag2: []
@@ -351,10 +351,10 @@ const CostPage = () => {
             try {
                 const response = await api.get("/revenue/config");
                 const nextCurrency = normalizeCurrencyCode(response.data?.data?.reportingCurrency);
-                setReportingCurrency(nextCurrency || "USD");
+                setReportingCurrency(nextCurrency || "INR");
             } catch (error) {
                 console.error("Error fetching revenue config:", error);
-                setReportingCurrency("USD");
+                setReportingCurrency("INR");
             }
         };
 
@@ -500,7 +500,7 @@ const CostPage = () => {
         if (!tableData || tableData.length === 0) return toast.warn("No data available to export.");
         try {
             const prettyHeaders = tableColumns.map(c => formatHeaderDate(c));
-            const headers = [`Hierarchy / Grouping (RCCY ${reportingCurrency || "USD"})`, ...prettyHeaders];
+            const headers = [`Hierarchy / Grouping (RCCY ${reportingCurrency || "INR"})`, ...prettyHeaders];
             const excelRows = tableData.map((row) => {
                 const indent = "    ".repeat(row.level);
                 const label = row.isTotalRow ? `${indent}${row.label}` : `${indent}${row.label}`;
