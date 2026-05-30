@@ -10,6 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 import useEscapeKey from "../../../hooks/useEscapeKey";
 import { calculateAutoSta } from "./networkStaUtils";
 import { invalidateFleetMetricsCache } from "./fleetMetricsCache";
+import DateInput from "./DateInput";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -19,36 +20,41 @@ function cn(...inputs) {
 // --- REUSABLE COMPONENTS ---
 
 // Standard Input
-const InputField = ({ label, error, icon: Icon, ...props }) => (
-  <div className="flex flex-col space-y-1.5 w-full">
-    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-      {label} {props.required && <span className="text-red-500">*</span>}
-    </label>
-    <div className="relative group">
-      {Icon && (
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
-          <Icon size={16} />
+const InputField = ({ label, error, icon: Icon, type, ...props }) => {
+  const Field = type === "date" ? DateInput : "input";
+
+  return (
+    <div className="flex flex-col space-y-1.5 w-full">
+      <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+        {label} {props.required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative group">
+        {Icon && (
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
+            <Icon size={16} />
+          </div>
+        )}
+        <Field
+          type={type}
+          className={cn(
+            "flex h-10 w-full rounded-lg border bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 disabled:opacity-60 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed",
+            Icon ? "pl-9" : "",
+            error
+              ? "border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-900/10"
+              : "border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600"
+          )}
+          {...props}
+        />
+      </div>
+      {error && (
+        <div className="flex items-center gap-1 text-xs text-red-500 mt-1 animate-in slide-in-from-top-1">
+          <AlertCircle size={12} />
+          <span>{error}</span>
         </div>
       )}
-      <input
-        className={cn(
-          "flex h-10 w-full rounded-lg border bg-slate-50 dark:bg-slate-800/50 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 disabled:opacity-60 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed",
-          Icon ? "pl-9" : "",
-          error
-            ? "border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-900/10"
-            : "border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600"
-        )}
-        {...props}
-      />
     </div>
-    {error && (
-      <div className="flex items-center gap-1 text-xs text-red-500 mt-1 animate-in slide-in-from-top-1">
-        <AlertCircle size={12} />
-        <span>{error}</span>
-      </div>
-    )}
-  </div>
-);
+  );
+};
 
 // Combobox Field for Stations and Times
 const ComboboxField = ({ label, name, value, onChange, error, options = [], disabled = false, required, placeholder, className }) => {

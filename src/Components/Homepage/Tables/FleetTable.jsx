@@ -3,6 +3,7 @@ import { Search, Plus, Save, Trash2 } from "lucide-react";
 import moment from "moment";
 import api from "../../../apiConfig";
 import { toast } from "react-toastify";
+import DateInput from "./DateInput";
 import {
     METRICS_CACHE_KEY_PREFIX,
     METRICS_CACHE_TTL_MS,
@@ -682,10 +683,10 @@ const FleetTable = () => {
                                         <input type="text" value={asset.regn} onChange={e => handleInputChange(asset.id, "regn", e.target.value.toUpperCase())} className="w-full h-full bg-transparent outline-none px-1 uppercase font-semibold" placeholder="VT-XXX" />
                                     </div>
                                     <div className="w-28 p-1 border-r">
-                                        <input type="date" value={asset.entry} onChange={e => handleInputChange(asset.id, "entry", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 text-sm cursor-text" />
+                                        <DateInput value={asset.entry} onValueChange={(value) => handleInputChange(asset.id, "entry", value)} className="w-full h-full bg-transparent outline-none px-1 text-sm cursor-text" />
                                     </div>
                                     <div className="w-28 p-1 border-r">
-                                        <input type="date" value={asset.exit} onChange={e => handleInputChange(asset.id, "exit", e.target.value)} className="w-full h-full bg-transparent outline-none px-1 text-sm cursor-text" />
+                                        <DateInput value={asset.exit} onValueChange={(value) => handleInputChange(asset.id, "exit", value)} className="w-full h-full bg-transparent outline-none px-1 text-sm cursor-text" />
                                     </div>
                                     <div className="w-24 p-1 border-r">
                                         <input

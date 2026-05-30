@@ -20,6 +20,8 @@ import { toast } from "react-toastify";
 import api from "../../../apiConfig";
 import { buildPooCurrencyOptions, normalizePooCurrencyCode } from "./pooCurrencyOptions";
 import { groupPooRecordsIntoSections } from "./pooSummary";
+import DateInput from "./DateInput";
+import { formatDateForDisplay, toIsoDate } from "./dateUtils";
 
 // --- UTILITIES ---
 
@@ -109,13 +111,7 @@ function formatNumber(value, maxFractionDigits = 2) {
 
 function formatSheetDate(value) {
   if (!value) return "--";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "--";
-  return parsed.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "2-digit",
-  });
+  return toIsoDate(value) ? formatDateForDisplay(value) : "--";
 }
 
 function numericValue(value) {
@@ -1046,10 +1042,9 @@ const PooTable = () => {
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Date</label>
-              <input
-                type="date"
+              <DateInput
                 value={date}
-                onChange={(e) => setDate(e.target.value)}
+                onValueChange={setDate}
                 className="w-full h-9 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/50 text-slate-700 dark:text-slate-300 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               />
             </div>

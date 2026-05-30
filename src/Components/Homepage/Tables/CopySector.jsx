@@ -8,6 +8,7 @@ import { X, Copy } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import useEscapeKey from "../../../hooks/useEscapeKey";
+import DateInput from "./DateInput";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -447,10 +448,10 @@ const CopySector = (props) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="From Dt" error={fromDtError}>
-                    <input className={baseInputStyles} type="date" required value={fromDt} onChange={handleFromDt} />
+                    <DateInput className={baseInputStyles} required value={fromDt} onChange={handleFromDt} />
                   </InputGroup>
                   <InputGroup label="To Dt" error={toDtError}>
-                    <input className={baseInputStyles} type="date" min={fromDt} required value={toDt} onChange={handleToDt} />
+                    <DateInput className={baseInputStyles} min={fromDt} required value={toDt} onChange={handleToDt} />
                   </InputGroup>
                 </div>
 

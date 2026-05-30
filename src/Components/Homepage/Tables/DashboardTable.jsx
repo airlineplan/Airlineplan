@@ -27,18 +27,15 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import DateInput from "./DateInput";
+import { formatDateForDisplay, toIsoDate } from "./dateUtils";
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
 function formatPeriodDate(inputDate) {
-  const date = new Date(inputDate);
-  if (Number.isNaN(date.getTime())) return "--";
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = new Intl.DateTimeFormat("en-US", { month: "short" }).format(date);
-  const year = String(date.getFullYear()).slice(-2);
-  return `${day} ${month} ${year}`;
+  return toIsoDate(inputDate) ? formatDateForDisplay(inputDate) : "--";
 }
 
 function formatMonthYear(inputDate) {
@@ -1148,10 +1145,9 @@ const FxRateModal = ({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="text-sm font-semibold text-slate-900 dark:text-slate-50">Go to date</div>
-                  <input
-                    type="date"
+                  <DateInput
                     value={selectedFxDate}
-                    onChange={(e) => handleDateChange(e.target.value)}
+                    onValueChange={handleDateChange}
                     className="h-10 w-48 rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   />
                 </div>

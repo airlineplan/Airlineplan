@@ -8,6 +8,7 @@ import { twMerge } from "tailwind-merge";
 import api from "../../../apiConfig";
 import { toast } from "react-toastify";
 import useEscapeKey from "../../../hooks/useEscapeKey";
+import DateInput from "./DateInput";
 
 // --- Helper Components ---
 function cn(...inputs) {
@@ -297,8 +298,10 @@ function normalizeAllocationBasis(value) {
 }
 
 function Input({ value, onChange, placeholder, type = "text", className, ...rest }) {
+  const Field = type === "date" ? DateInput : "input";
+
   return (
-    <input
+    <Field
       type={type}
       value={value ?? ""}
       onChange={onChange}

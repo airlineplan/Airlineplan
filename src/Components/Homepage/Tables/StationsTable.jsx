@@ -6,6 +6,7 @@ import { Save, Clock } from "lucide-react";
 import { clsx } from "clsx";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import DateInput from "./DateInput";
 
 // --- CONSTANTS ---
 const TIMEZONES = [
@@ -17,24 +18,28 @@ function cn(...inputs) {
 }
 
 // --- UI COMPONENTS ---
-const StyledInput = ({ value, onChange, error, placeholder, type = "text", ...props }) => (
-  <div className="flex flex-col w-full">
-    <input
-      type={type}
-      value={value || ""}
-      onChange={onChange}
-      placeholder={placeholder}
-      className={twMerge(cn(
-        "w-full px-2.5 py-1 text-sm bg-slate-50 dark:bg-slate-900/50 border rounded focus:outline-none focus:ring-2 transition-all",
-        error
-          ? "border-red-400 focus:ring-red-400 bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-300"
-          : "border-slate-300 dark:border-slate-700 focus:border-indigo-500 focus:ring-indigo-500 text-slate-700 dark:text-slate-200"
-      ))}
-      {...props}
-    />
-    {error && <span className="text-sm text-red-500 mt-0.5 leading-tight">{error}</span>}
-  </div>
-);
+const StyledInput = ({ value, onChange, error, placeholder, type = "text", ...props }) => {
+  const Field = type === "date" ? DateInput : "input";
+
+  return (
+    <div className="flex flex-col w-full">
+      <Field
+        type={type}
+        value={value || ""}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={twMerge(cn(
+          "w-full px-2.5 py-1 text-sm bg-slate-50 dark:bg-slate-900/50 border rounded focus:outline-none focus:ring-2 transition-all",
+          error
+            ? "border-red-400 focus:ring-red-400 bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-300"
+            : "border-slate-300 dark:border-slate-700 focus:border-indigo-500 focus:ring-indigo-500 text-slate-700 dark:text-slate-200"
+        ))}
+        {...props}
+      />
+      {error && <span className="text-sm text-red-500 mt-0.5 leading-tight">{error}</span>}
+    </div>
+  );
+};
 
 const StyledSelect = ({ value, onChange, options }) => (
   <div className="relative">

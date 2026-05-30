@@ -10,6 +10,7 @@ import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { calculateAutoSta } from "./networkStaUtils";
 import useEscapeKey from "../../../hooks/useEscapeKey";
+import DateInput from "./DateInput";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -487,10 +488,10 @@ export default function CopyRow(props) {
                     <input className={baseInputStyles} required value={variant} onChange={handleVariant} placeholder="Variant" />
                   </InputGroup>
                   <InputGroup label="Eff From Dt" error={effFromDtError}>
-                    <input className={baseInputStyles} type="date" required value={effFromDt} onChange={handleEffFromDt} />
+                    <DateInput className={baseInputStyles} required value={effFromDt} onChange={handleEffFromDt} />
                   </InputGroup>
                   <InputGroup label="Eff To Dt" error={effToDtError}>
-                    <input className={baseInputStyles} type="date" required min={effFromDt} value={effToDt} onChange={handleEffToDt} />
+                    <DateInput className={baseInputStyles} required min={effFromDt} value={effToDt} onChange={handleEffToDt} />
                   </InputGroup>
                 </div>
 

@@ -11,6 +11,7 @@ import { twMerge } from "tailwind-merge";
 import { calculateAutoSta } from "./networkStaUtils";
 import useEscapeKey from "../../../hooks/useEscapeKey";
 import { invalidateFleetMetricsCache } from "./fleetMetricsCache";
+import DateInput from "./DateInput";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -487,11 +488,11 @@ const UpdatePopUp = (props) => {
                     <input className={baseInputStyles} required={!isBulkUpdate} value={variant} onChange={handleVariant} placeholder="Variant" />
                   </InputGroup>
                   <InputGroup label="Eff From Dt" error={effFromDtError}>
-                    <input className={baseInputStyles} type="date" required={!isBulkUpdate} value={effFromDt} onChange={handleEffFromDt} />
+                    <DateInput className={baseInputStyles} required={!isBulkUpdate} value={effFromDt} onChange={handleEffFromDt} />
                   </InputGroup>
                   <InputGroup label="Eff To Dt" error={effToDtError}>
                     {/* Note: Native min restriction relies on Eff From Date being filled */}
-                    <input className={baseInputStyles} type="date" required={!isBulkUpdate} min={effFromDt} value={effToDt} onChange={handleEffToDt} />
+                    <DateInput className={baseInputStyles} required={!isBulkUpdate} min={effFromDt} value={effToDt} onChange={handleEffToDt} />
                   </InputGroup>
                 </div>
 

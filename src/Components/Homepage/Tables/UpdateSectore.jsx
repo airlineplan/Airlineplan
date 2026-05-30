@@ -8,6 +8,7 @@ import { X, PenLine } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import useEscapeKey from "../../../hooks/useEscapeKey";
+import DateInput from "./DateInput";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -462,11 +463,11 @@ const UpdateSectore = (props) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   <InputGroup label="From Dt" error={fromDtError}>
-                    <input className={baseInputStyles} type="date" disabled required={isRequired} value={fromDt} onChange={handleFromDt} />
+                    <DateInput className={baseInputStyles} disabled required={isRequired} value={fromDt} onChange={handleFromDt} />
                   </InputGroup>
 
                   <InputGroup label="To Dt" error={toDtError}>
-                    <input className={baseInputStyles} type="date" disabled required={isRequired} value={toDt} onChange={handleToDt} min={fromDt} />
+                    <DateInput className={baseInputStyles} disabled required={isRequired} value={toDt} onChange={handleToDt} min={fromDt} />
                   </InputGroup>
                 </div>
 

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import DateInput from "./DateInput";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -36,18 +37,23 @@ const Label = ({ children, required }) => (
   </label>
 );
 
-const StyledInput = ({ className, error, ...props }) => (
-  <input
-    className={cn(
-      "w-full h-9 px-3 text-sm bg-white dark:bg-slate-800/50 border rounded-lg focus:outline-none focus:ring-2 transition-all shadow-sm",
-      error
-        ? "border-red-400 focus:ring-red-400 bg-red-50 dark:bg-red-900/10"
-        : "border-slate-300 dark:border-slate-700 focus:ring-indigo-500 focus:border-indigo-500 text-slate-700 dark:text-slate-200",
-      className
-    )}
-    {...props}
-  />
-);
+const StyledInput = ({ className, error, type, ...props }) => {
+  const Field = type === "date" ? DateInput : "input";
+
+  return (
+    <Field
+      type={type}
+      className={cn(
+        "w-full h-9 px-3 text-sm bg-white dark:bg-slate-800/50 border rounded-lg focus:outline-none focus:ring-2 transition-all shadow-sm",
+        error
+          ? "border-red-400 focus:ring-red-400 bg-red-50 dark:bg-red-900/10"
+          : "border-slate-300 dark:border-slate-700 focus:ring-indigo-500 focus:border-indigo-500 text-slate-700 dark:text-slate-200",
+        className
+      )}
+      {...props}
+    />
+  );
+};
 
 const StyledSelect = ({ options, value, onChange, placeholder, className, ...props }) => (
   <div className="relative">

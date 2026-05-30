@@ -10,6 +10,8 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import useEscapeKey from "../../../hooks/useEscapeKey";
 import { invalidateFleetMetricsCache } from "./fleetMetricsCache";
+import DateInput from "./DateInput";
+import { formatDateForDisplay, toIsoDate } from "./dateUtils";
 
 
 // --- COMPONENTS ---
@@ -79,99 +81,12 @@ const targetTableStatusHeaderClass = "p-2 border border-slate-200 dark:border-sl
 const modalStatusHeaderClass = "p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[220px] whitespace-normal leading-tight";
 const targetStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[220px] whitespace-normal leading-tight";
 const targetLastStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm text-center min-w-[220px] whitespace-normal leading-tight";
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const MONTH_INDEX = MONTHS.reduce((acc, month, index) => {
-    acc[month.toLowerCase()] = index;
-    return acc;
-}, {});
-
-const pad2 = (value) => String(value).padStart(2, "0");
-
-const toIsoDate = (value) => {
-    if (!value) return "";
-    const text = String(value).trim();
-    const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (isoMatch) return text;
-
-    const displayMatch = text.match(/^(\d{1,2})[-\s/]([A-Za-z]{3})[-\s/](\d{2}|\d{4})$/);
-    if (!displayMatch) return "";
-
-    const day = Number(displayMatch[1]);
-    const month = MONTH_INDEX[displayMatch[2].toLowerCase()];
-    const yearPart = displayMatch[3];
-    const year = yearPart.length === 2 ? 2000 + Number(yearPart) : Number(yearPart);
-    const parsed = new Date(Date.UTC(year, month, day));
-
-    if (
-        month === undefined ||
-        parsed.getUTCFullYear() !== year ||
-        parsed.getUTCMonth() !== month ||
-        parsed.getUTCDate() !== day
-    ) {
-        return "";
-    }
-
-    return `${year}-${pad2(month + 1)}-${pad2(day)}`;
-};
-
-const formatDateForDisplay = (value) => {
-    const isoDate = toIsoDate(value);
-    if (!isoDate) return value || "";
-    const [, month, day] = isoDate.split("-");
-    return `${day}-${MONTHS[Number(month) - 1]}-${isoDate.slice(2, 4)}`;
-};
-
 const DateTextInput = ({ value, onChange, className = "", placeholder = "dd-mmm-yy" }) => {
-    const [displayValue, setDisplayValue] = useState(formatDateForDisplay(value));
-
-    useEffect(() => {
-        setDisplayValue(formatDateForDisplay(value));
-    }, [value]);
-
-    const commitValue = (nextValue) => {
-        if (!nextValue.trim()) {
-            onChange("");
-            setDisplayValue("");
-            return;
-        }
-
-        const isoDate = toIsoDate(nextValue);
-        if (isoDate) {
-            onChange(isoDate);
-            setDisplayValue(formatDateForDisplay(isoDate));
-        }
-    };
-
-    return (
-        <input
-            type="text"
-            value={displayValue}
-            onChange={(e) => {
-                const nextValue = e.target.value;
-                setDisplayValue(nextValue);
-                if (!nextValue.trim()) {
-                    onChange("");
-                    return;
-                }
-                const isoDate = toIsoDate(nextValue);
-                if (isoDate) {
-                    onChange(isoDate);
-                }
-            }}
-            onBlur={(e) => commitValue(e.target.value)}
-            placeholder={placeholder}
-            className={className}
-        />
-    );
+    <DateInput value={value} onValueChange={onChange} placeholder={placeholder} className={className} />
 };
 
 const DatePickerInput = ({ value, onChange, className = "" }) => (
-    <input
-        type="date"
-        value={toIsoDate(value)}
-        onChange={(e) => onChange(e.target.value)}
-        className={className}
-    />
+    <DateInput value={toIsoDate(value)} onValueChange={onChange} className={className} />
 );
 
 const MaintenanceDashboard = () => {
