@@ -220,13 +220,15 @@ const toRevenueNumber = (value) => {
   return Number.isFinite(numeric) ? numeric : 0;
 };
 
+const calculateCargoRevenue = (cargoT, rate) => cargoT * 1000 * rate;
+
 const getRowRevenueMetrics = (row) => {
   const pax = toRevenueNumber(row.pax);
   const cargoT = toRevenueNumber(row.cargoT);
   const legPaxRev = toRevenueNumber(row.legPaxRev) || pax * toRevenueNumber(row.legFare);
-  const legCargoRev = toRevenueNumber(row.legCargoRev) || cargoT * toRevenueNumber(row.legRate);
+  const legCargoRev = toRevenueNumber(row.legCargoRev) || calculateCargoRevenue(cargoT, toRevenueNumber(row.legRate));
   const odPaxRev = toRevenueNumber(row.odPaxRev) || pax * (toRevenueNumber(row.odFare) || toRevenueNumber(row.legFare));
-  const odCargoRev = toRevenueNumber(row.odCargoRev) || cargoT * (toRevenueNumber(row.odRate) || toRevenueNumber(row.legRate));
+  const odCargoRev = toRevenueNumber(row.odCargoRev) || calculateCargoRevenue(cargoT, toRevenueNumber(row.odRate) || toRevenueNumber(row.legRate));
   const usesLegPricing = Boolean(row.applySSPricing);
   const fallbackPaxRev = usesLegPricing
     ? toRevenueNumber(row.rccyLegPaxRev) || legPaxRev

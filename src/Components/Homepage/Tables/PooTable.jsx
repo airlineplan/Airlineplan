@@ -63,6 +63,7 @@ const GRID_COLUMNS = [
 
 const NUMERIC_TOTAL_FIELDS = ["maxPax", "maxCargoT", "pax", "cargoT"];
 const NUMERIC_AVG_FIELDS = [];
+const KG_PER_TONNE = 1000;
 
 const OD_TABLE_COLUMNS = [
   { key: "od", label: "OD" },
@@ -167,7 +168,7 @@ function getPooPaxRevenueValue(row) {
 function getPooCargoRevenueValue(row) {
   const cargoT = numericValue(row?.cargoT);
   const rate = getPooRateValue(row);
-  if (cargoT > 0 && rate > 0) return cargoT * rate;
+  if (cargoT > 0 && rate > 0) return cargoT * KG_PER_TONNE * rate;
 
   if (isLegTraffic(row)) return firstPresentNumber([row.legCargoRev, row.cargoRevenue, row.odCargoRev]);
   return firstPresentNumber([row.cargoRevenue, row.odCargoRev, row.legCargoRev]);
@@ -292,7 +293,7 @@ function createOdSelectionSummary(rows) {
   };
 
   summary.fare = summary.pax > 0 ? summary.paxRevenue / summary.pax : 0;
-  summary.rate = summary.cargoT > 0 ? summary.cargoRevenue / summary.cargoT : 0;
+  summary.rate = summary.cargoT > 0 ? summary.cargoRevenue / (summary.cargoT * KG_PER_TONNE) : 0;
 
   return summary;
 }
@@ -1205,9 +1206,9 @@ const PooTable = () => {
                             <td className={tdInputWrap}>
                               <input type="number" min="0" step="0.01" value={row.legRate ?? ""} title={renderCellError(row, "legRate")} onChange={(e) => updateField(row._id, "legRate", e.target.value)} className={getInputClass(row, "legRate")} />
                             </td>
-                            <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.legPaxRev)}</td>
-                            <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.legCargoRev)}</td>
-                            <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(row.legTotalRev)}</td>
+                            <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(getPooPaxRevenueValue(row))}</td>
+                            <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(getPooCargoRevenueValue(row))}</td>
+                            <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(getPooTotalRevenueValue(row))}</td>
                           </tr>
                         </React.Fragment>
                       ))}
@@ -1250,9 +1251,9 @@ const PooTable = () => {
                           <td className={tdInputWrap}>
                             <input type="number" min="0" step="0.01" value={row.odRate ?? ""} title={renderCellError(row, "odRate")} onChange={(e) => updateField(row._id, "odRate", e.target.value)} className={getInputClass(row, "odRate")} />
                           </td>
-                          <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.paxRevenue || row.odPaxRev)}</td>
-                          <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.cargoRevenue || row.odCargoRev)}</td>
-                          <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(row.totalRevenue || row.odTotalRev)}</td>
+                          <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(getPooPaxRevenueValue(row))}</td>
+                          <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(getPooCargoRevenueValue(row))}</td>
+                          <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(getPooTotalRevenueValue(row))}</td>
                         </tr>
                       ))}
                       {sections.legs.length === 0 && sections.ods.length === 0 && (
@@ -1304,9 +1305,9 @@ const PooTable = () => {
                           <td className={tdInputWrap}>
                             <input type="number" min="0" step="0.01" value={row.odRate ?? ""} title={renderCellError(row, "odRate")} onChange={(e) => updateField(row._id, "odRate", e.target.value)} className={getInputClass(row, "odRate")} />
                           </td>
-                          <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.odPaxRev)}</td>
-                          <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.odCargoRev)}</td>
-                          <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(row.odTotalRev)}</td>
+                          <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(getPooPaxRevenueValue(row))}</td>
+                          <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(getPooCargoRevenueValue(row))}</td>
+                          <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(getPooTotalRevenueValue(row))}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1343,9 +1344,9 @@ const PooTable = () => {
                           <td className={cn(tdStyle, "text-right")}>{formatNumber(row.cargoT)}</td>
                           <td className={cn(tdStyle, "text-right")}>{formatNumber(row.odFare)}</td>
                           <td className={cn(tdStyle, "text-right")}>{formatNumber(row.odRate)}</td>
-                          <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.odPaxRev)}</td>
-                          <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(row.odCargoRev)}</td>
-                          <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(row.odTotalRev)}</td>
+                          <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(getPooPaxRevenueValue(row))}</td>
+                          <td className={cn(tdStyle, "text-right font-medium")}>{formatNumber(getPooCargoRevenueValue(row))}</td>
+                          <td className={cn(tdStyle, "text-right font-bold text-emerald-600 dark:text-emerald-400")}>{formatNumber(getPooTotalRevenueValue(row))}</td>
                         </tr>
                       ))}
                     </tbody>
