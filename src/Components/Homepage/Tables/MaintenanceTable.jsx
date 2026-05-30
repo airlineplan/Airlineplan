@@ -81,12 +81,12 @@ const targetTableStatusHeaderClass = "p-2 border border-slate-200 dark:border-sl
 const modalStatusHeaderClass = "p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[220px] whitespace-normal leading-tight";
 const targetStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[220px] whitespace-normal leading-tight";
 const targetLastStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm text-center min-w-[220px] whitespace-normal leading-tight";
-const DateTextInput = ({ value, onChange, className = "", placeholder = "dd-mmm-yy" }) => {
+const DateTextInput = ({ value, onChange, className = "", placeholder = "dd-mmm-yy" }) => (
     <DateInput value={value} onValueChange={onChange} placeholder={placeholder} className={className} />
-};
+);
 
-const DatePickerInput = ({ value, onChange, className = "" }) => (
-    <DateInput value={toIsoDate(value)} onValueChange={onChange} className={className} />
+const DatePickerInput = ({ value, onChange, className = "", ...props }) => (
+    <DateInput value={toIsoDate(value)} onValueChange={onChange} className={className} {...props} />
 );
 
 const MaintenanceDashboard = () => {
@@ -1582,7 +1582,7 @@ const MaintenanceDashboard = () => {
                                     Utilisation assumptions (/day)
                                 </h2>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                    This is applied on days rotations are not assigned to Aircraft.
+                                    This is applied on days flights are not assigned to aircraft.
                                 </p>
                             </div>
                             <div className="flex gap-2">
@@ -1630,10 +1630,10 @@ const MaintenanceDashboard = () => {
                                                         ) : row.msn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingUtilisation || row.isNew ? <DateTextInput value={row.fromDate || ""} onChange={(value) => handleUtilisationFieldChange(row.id, "fromDate", value)} className={`${modalEditableInputClass} text-center`} /> : formatDateForDisplay(row.fromDate)}
+                                                        {isEditingUtilisation || row.isNew ? <DatePickerInput value={row.fromDate || ""} onChange={(value) => handleUtilisationFieldChange(row.id, "fromDate", value)} className={`${modalEditableInputClass} text-center`} /> : formatDateForDisplay(row.fromDate)}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingUtilisation || row.isNew ? <DateTextInput value={row.toDate || ""} onChange={(value) => handleUtilisationFieldChange(row.id, "toDate", value)} className={`${modalEditableInputClass} text-center`} /> : formatDateForDisplay(row.toDate)}
+                                                        {isEditingUtilisation || row.isNew ? <DatePickerInput value={row.toDate || ""} onChange={(value) => handleUtilisationFieldChange(row.id, "toDate", value)} className={`${modalEditableInputClass} text-center`} min={row.fromDate || undefined} /> : formatDateForDisplay(row.toDate)}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
                                                         {isEditingUtilisation || row.isNew ? <input type="number" step="0.01" value={row.hours || ""} onChange={(e) => handleUtilisationFieldChange(row.id, "hours", e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.hours}
