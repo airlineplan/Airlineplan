@@ -1806,7 +1806,7 @@ const DashboardTable = () => {
         <tr key={node.id} className="group hover:bg-indigo-50/40 dark:hover:bg-indigo-500/5">
           <td
             className={cn(
-              "sticky left-0 z-20 w-[340px] min-w-[340px] max-w-[340px] border-b border-r border-slate-200 bg-white px-4 py-3 text-sm shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] dark:border-slate-800 dark:bg-slate-900",
+              "sticky left-0 z-20 w-[340px] min-w-[340px] max-w-[340px] border-b border-r border-slate-200 bg-slate-50/95 px-4 py-3 text-sm shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] group-hover:bg-indigo-50/80 dark:border-slate-800 dark:bg-slate-950/80 dark:group-hover:bg-slate-900",
               node.emphasize ? "font-semibold text-slate-900 dark:text-slate-50" : "text-slate-700 dark:text-slate-200"
             )}
           >
@@ -2041,7 +2041,7 @@ const DashboardTable = () => {
                       </tr>
                       {section.rows.map((row) => (
                         <tr key={`${section.title}-${row.label}`} className="group hover:bg-indigo-50/40 dark:hover:bg-indigo-500/5">
-                          <td className="sticky left-0 z-20 w-[340px] min-w-[340px] max-w-[340px] border-b border-r border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                          <td className="sticky left-0 z-20 w-[340px] min-w-[340px] max-w-[340px] border-b border-r border-slate-200 bg-slate-50/95 px-4 py-3 text-sm font-medium text-slate-700 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] group-hover:bg-indigo-50/80 dark:border-slate-800 dark:bg-slate-950/80 dark:group-hover:bg-slate-900 dark:text-slate-200">
                             {row.label}
                           </td>
                           {periodColumns.map((period, index) => (
