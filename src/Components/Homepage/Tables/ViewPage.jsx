@@ -135,6 +135,8 @@ const TimelineGrid = () => (
 const ViewPage = () => {
   const [mode, setMode] = useState("Rotations");
   const [stationCode, setStationCode] = useState("DEL");
+  const [stationsData, setStationsData] = useState([]);
+  const [stationsLoading, setStationsLoading] = useState(false);
   const [timezone, setTimezone] = useState("UTC+5:30");
 
   const [weeks, setWeeks] = useState([]);
@@ -222,6 +224,41 @@ const ViewPage = () => {
     setFilters({});
     setSortConfig({ key: null, direction: "Up" });
   }, [mode]);
+
+  useEffect(() => {
+    if (mode !== "Station" || stationsData.length > 0) return;
+
+    const fetchStations = async () => {
+      setStationsLoading(true);
+      try {
+        const response = await api.get("/get-stationData");
+        const stations = Array.isArray(response.data?.data) ? response.data.data : [];
+        setStationsData(stations);
+      } catch (error) {
+        console.error("Failed to fetch stations for View Page", error);
+        setStationsData([]);
+      } finally {
+        setStationsLoading(false);
+      }
+    };
+
+    fetchStations();
+  }, [mode, stationsData.length]);
+
+  const stationOptions = useMemo(() => {
+    const stations = stationsData
+      .map((station) => String(station.stationName || station.station || station.code || "").trim().toUpperCase())
+      .filter(Boolean);
+
+    return [...new Set(stations)].sort((a, b) => a.localeCompare(b));
+  }, [stationsData]);
+
+  useEffect(() => {
+    if (mode !== "Station" || stationOptions.length === 0) return;
+    if (!stationOptions.includes(stationCode)) {
+      setStationCode(stationOptions[0]);
+    }
+  }, [mode, stationCode, stationOptions]);
 
   useEffect(() => {
     if (!weekStart || !formattedTimelineStart) return;
@@ -334,12 +371,25 @@ const ViewPage = () => {
 
         {mode === "Station" && (
           <div className="flex items-center gap-2">
-            <input
-              type="text"
+            <label className="text-base font-semibold">Station</label>
+            <select
               value={stationCode}
-              onChange={(e) => setStationCode(e.target.value.toUpperCase())}
-              className="bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-base rounded px-2 py-1 w-20 uppercase"
-            />
+              onChange={(e) => setStationCode(e.target.value)}
+              className="appearance-none bg-white dark:bg-slate-800 border border-slate-400 dark:border-slate-600 text-base rounded px-2 py-1 w-24 cursor-pointer uppercase"
+              disabled={stationsLoading || stationOptions.length === 0}
+            >
+              {stationsLoading ? (
+                <option value={stationCode}>Loading...</option>
+              ) : stationOptions.length > 0 ? (
+                stationOptions.map((station) => (
+                  <option key={station} value={station}>
+                    {station}
+                  </option>
+                ))
+              ) : (
+                <option value={stationCode}>{stationCode || "No stations"}</option>
+              )}
+            </select>
           </div>
         )}
 
