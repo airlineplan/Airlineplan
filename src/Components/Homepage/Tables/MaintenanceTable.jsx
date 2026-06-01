@@ -509,8 +509,13 @@ const MaintenanceDashboard = () => {
             setIsEditingRotables(true);
             if (isPersistedId(row.id)) {
                 await api.delete(`/maintenance/rotables/${row.id}`);
+                invalidateFleetMetricsCache();
+                window.dispatchEvent(new CustomEvent("assignments:updated"));
                 toast.success("Rotable movement deleted.");
-                fetchDashboardData();
+                await Promise.all([
+                    fetchDashboardData(),
+                    fetchTargetsData()
+                ]);
             }
         } catch (error) {
             console.error("Failed to delete rotable movement", error);
@@ -532,9 +537,14 @@ const MaintenanceDashboard = () => {
     const handleUpdateRotables = async () => {
         try {
             await api.post('/maintenance/rotables', { rotablesData: rotablesData });
+            invalidateFleetMetricsCache();
+            window.dispatchEvent(new CustomEvent("assignments:updated"));
             setIsEditingRotables(false);
             setShowRotablesModal(false);
-            fetchDashboardData();
+            await Promise.all([
+                fetchDashboardData(),
+                fetchTargetsData()
+            ]);
         } catch (error) {
             console.error("Failed to update rotables", error);
         }
