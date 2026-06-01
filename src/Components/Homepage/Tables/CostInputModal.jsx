@@ -9,6 +9,7 @@ import api from "../../../apiConfig";
 import { toast } from "react-toastify";
 import useEscapeKey from "../../../hooks/useEscapeKey";
 import DateInput from "./DateInput";
+import { formatDateForDisplay, toIsoDate } from "./dateUtils";
 
 // --- Helper Components ---
 function cn(...inputs) {
@@ -164,6 +165,11 @@ const toNumeric = (value) => {
 
 const parseDateValue = (value) => {
   if (!value) return null;
+  const isoDate = toIsoDate(value);
+  if (isoDate) {
+    const [year, month, day] = isoDate.split("-").map(Number);
+    return new Date(Date.UTC(year, month - 1, day));
+  }
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 };
@@ -182,15 +188,22 @@ const escalateRate = (row, scheduleDate) => {
   if (!baseRate || !escalation || !anniversary || !scheduleDate) return Number(baseRate.toFixed(2));
   let years = scheduleDate.getUTCFullYear() - anniversary.getUTCFullYear();
   const anniversaryThisYear = new Date(Date.UTC(scheduleDate.getUTCFullYear(), anniversary.getUTCMonth(), anniversary.getUTCDate()));
-  if (scheduleDate < anniversaryThisYear) years -= 1;
+  if (scheduleDate > anniversaryThisYear) years += 1;
   return Number((baseRate * ((1 + escalation / 100) ** Math.max(years, 0))).toFixed(2));
 };
 
 const generateMaintenanceReserveScheduleRows = (settingsRows = [], existingRows = []) => {
   const byKey = new Map();
+  const activeSettingKeys = new Set((Array.isArray(settingsRows) ? settingsRows : []).map((row) => [
+    normalizeText(row?.mrAccId),
+    normalizeText(row?.sn || row?.msn),
+  ].join("|")));
+
   (Array.isArray(existingRows) ? existingRows : []).forEach((row) => {
     const normalized = { ...row, date: monthStartKey(row.date) || row.date };
     const key = [normalizeText(normalized.mrAccId), normalizeText(normalized.sn || normalized.msn), normalized.date].join("|");
+    const settingKey = [normalizeText(normalized.mrAccId), normalizeText(normalized.sn || normalized.msn)].join("|");
+    if (!activeSettingKeys.has(settingKey)) return;
     byKey.set(key, normalized);
   });
 
@@ -251,6 +264,14 @@ const generateMaintenanceReserveScheduleRows = (settingsRows = [], existingRows 
     String(a.sn || "").localeCompare(String(b.sn || "")) ||
     String(a.date || "").localeCompare(String(b.date || ""))
   ));
+};
+
+const applyMasterStartDateToLeasedReserve = (rows = [], masterStartDate = "") => {
+  if (!masterStartDate) return Array.isArray(rows) ? rows : [];
+  return (Array.isArray(rows) ? rows : []).map((row) => ({
+    ...row,
+    asOnDate: masterStartDate,
+  }));
 };
 const DEFAULT_NAV_MTOW_TIERS = ["73000", "77000", "78000", "79000"];
 
@@ -329,7 +350,7 @@ function Input({ value, onChange, placeholder, type = "text", className, ...rest
   );
 }
 
-function SelectInput({ value, onChange, options = [], placeholder = "Select", className, allowEmpty = true, preserveUnknownOption = true }) {
+function SelectInput({ value, onChange, options = [], placeholder = "Select", className, allowEmpty = true, preserveUnknownOption = true, disabled = false }) {
   const safeOptions = Array.isArray(options) ? options : [];
   const hasCurrentValue = value && safeOptions.some((option) => option.value === value);
   const selectedValue = hasCurrentValue || preserveUnknownOption ? (value ?? "") : (safeOptions[0]?.value ?? "");
@@ -337,6 +358,7 @@ function SelectInput({ value, onChange, options = [], placeholder = "Select", cl
     <select
       value={selectedValue}
       onChange={onChange}
+      disabled={disabled}
       className={cn(
         "w-full min-h-[44px] px-3 py-2.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-indigo-500",
         "bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200",
@@ -1765,28 +1787,39 @@ function EditableTable({
                         col.type === "select" ? (
                           <SelectInput
                             value={editRow[col.key]}
-                            onChange={(e) => setEditRow({ ...editRow, [col.key]: e.target.value })}
+                            onChange={(e) => {
+                              if (!col.readOnly) setEditRow({ ...editRow, [col.key]: e.target.value });
+                            }}
                             options={col.options}
                             placeholder={col.placeholder || "Select"}
                             allowEmpty={col.allowEmpty !== false}
                             preserveUnknownOption={col.preserveUnknownOption !== false}
+                            disabled={col.readOnly}
                             className={cn(
+                              col.readOnly && "cursor-not-allowed opacity-70",
                               highlightAutoFields && autoFields.has(col.key) && "bg-emerald-50 dark:bg-emerald-900/20"
                             )}
                           />
                         ) : (
                           <Input
                             value={editRow[col.key]}
-                            onChange={(e) => setEditRow({ ...editRow, [col.key]: e.target.value })}
+                            onChange={(e) => {
+                              if (!col.readOnly) setEditRow({ ...editRow, [col.key]: e.target.value });
+                            }}
                             type={col.type || "text"}
+                            readOnly={col.readOnly}
+                            disabled={col.readOnly}
                             className={cn(
+                              col.readOnly && "cursor-not-allowed opacity-70",
                               highlightAutoFields && autoFields.has(col.key) && "bg-emerald-50 dark:bg-emerald-900/20"
                             )}
                           />
                         )
                       ) : (
                         <span className="text-slate-700 dark:text-slate-300">
-                          {row[col.key] !== "" && row[col.key] !== null && row[col.key] !== undefined ? row[col.key] : <span className="text-slate-400">-</span>}
+                          {row[col.key] !== "" && row[col.key] !== null && row[col.key] !== undefined
+                            ? (col.type === "date" ? formatDateForDisplay(row[col.key]) : row[col.key])
+                            : <span className="text-slate-400">-</span>}
                         </span>
                       )}
                     </td>
@@ -1984,6 +2017,7 @@ export default function CostInputModal({ isOpen, onClose }) {
   const [rotableChanges, setRotableChanges] = useState([]);
   const [generatingMrSchedule, setGeneratingMrSchedule] = useState(false);
   const [fxCurrencyOptions, setFxCurrencyOptions] = useState(DEFAULT_CURRENCY_OPTIONS);
+  const [masterDateRange, setMasterDateRange] = useState({ minDate: "", maxDate: "" });
 
   // === NAVIGATION & AIRPORT STATE ===
   const [navEnr, setNavEnr] = useState([]);
@@ -1999,6 +2033,15 @@ export default function CostInputModal({ isOpen, onClose }) {
   // === OTHER DOC STATE ===
   const [otherDoc, setOtherDoc] = useState([]);
 
+  const updateLeasedReserve = (nextValue) => {
+    setLeasedReserve((prevRows) => {
+      const rawRows = typeof nextValue === "function" ? nextValue(prevRows) : nextValue;
+      const nextRows = applyMasterStartDateToLeasedReserve(rawRows, masterDateRange.minDate);
+      setMaintenanceReserveSchedule((prevSchedule) => generateMaintenanceReserveScheduleRows(nextRows, prevSchedule));
+      return nextRows;
+    });
+  };
+
   useEffect(() => {
     if (isOpen) {
       api.get("/cost-config")
@@ -2012,7 +2055,7 @@ export default function CostInputModal({ isOpen, onClose }) {
             setCcyFuel(d.ccyFuel || []);
             setAllocationTable(d.allocationTable || []);
 
-            setLeasedReserve(d.leasedReserve || []);
+            setLeasedReserve(applyMasterStartDateToLeasedReserve(d.leasedReserve || [], masterDateRange.minDate));
             setMaintenanceReserveSchedule(d.maintenanceReserveSchedule || []);
             setAircraftOnwing(d.aircraftOnwing || []);
             setSchMxEvents(d.schMxEvents || []);
@@ -2044,8 +2087,36 @@ export default function CostInputModal({ isOpen, onClose }) {
           console.error("Error fetching FX currency config", err);
           setFxCurrencyOptions(DEFAULT_CURRENCY_OPTIONS);
         });
+
+      const loadMasterDateRange = () => {
+        api.get("/master-weeks")
+          .then((response) => {
+            setMasterDateRange({
+              minDate: response.data?.minDate || "",
+              maxDate: response.data?.maxDate || "",
+            });
+          })
+          .catch((err) => {
+            console.error("Error fetching master date range", err);
+            setMasterDateRange({ minDate: "", maxDate: "" });
+          });
+      };
+
+      loadMasterDateRange();
+      window.addEventListener("refreshData", loadMasterDateRange);
+      window.addEventListener("assignments:updated", loadMasterDateRange);
+
+      return () => {
+        window.removeEventListener("refreshData", loadMasterDateRange);
+        window.removeEventListener("assignments:updated", loadMasterDateRange);
+      };
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !masterDateRange.minDate) return;
+    updateLeasedReserve((rows) => rows);
+  }, [isOpen, masterDateRange.minDate]);
 
   const handleSave = async () => {
     try {
@@ -2061,13 +2132,18 @@ export default function CostInputModal({ isOpen, onClose }) {
       }
 
       const validDrivers = new Set(["BH", "FH", "DEPARTURES", "MONTH", "APUHR", ""]);
-      const settingsDriverIndex = (Array.isArray(leasedReserve) ? leasedReserve : []).findIndex((row) => !validDrivers.has(normalizeMaintenanceDriver(row?.driver)));
+      const effectiveLeasedReserve = applyMasterStartDateToLeasedReserve(leasedReserve, masterDateRange.minDate);
+      const effectiveMaintenanceReserveSchedule = generateMaintenanceReserveScheduleRows(
+        effectiveLeasedReserve,
+        maintenanceReserveSchedule
+      );
+      const settingsDriverIndex = (Array.isArray(effectiveLeasedReserve) ? effectiveLeasedReserve : []).findIndex((row) => !validDrivers.has(normalizeMaintenanceDriver(row?.driver)));
       if (settingsDriverIndex >= 0) {
         toast.error(`Maintenance Reserve Settings row ${settingsDriverIndex + 1}: enter a valid Driver.`);
         return;
       }
 
-      const scheduleRows = Array.isArray(maintenanceReserveSchedule) ? maintenanceReserveSchedule : [];
+      const scheduleRows = Array.isArray(effectiveMaintenanceReserveSchedule) ? effectiveMaintenanceReserveSchedule : [];
       const scheduleErrorIndex = scheduleRows.findIndex((row) => {
         if (!String(row?.mrAccId || "").trim()) return true;
         if (!String(row?.date || "").trim()) return true;
@@ -2082,7 +2158,7 @@ export default function CostInputModal({ isOpen, onClose }) {
         return;
       }
 
-      const scheduleKeys = new Set(); 0
+      const scheduleKeys = new Set();
       const duplicateScheduleIndex = scheduleRows.findIndex((row) => {
         const key = [normalizeText(row?.mrAccId), normalizeText(row?.sn || row?.msn), monthStartKey(row?.date)].join("|");
         if (scheduleKeys.has(key)) return true;
@@ -2097,7 +2173,9 @@ export default function CostInputModal({ isOpen, onClose }) {
       const payload = {
         allocationTable,
         fuelConsum, fuelConsumIndex, apuUsage, plfEffect, ccyFuel,
-        leasedReserve, maintenanceReserveSchedule, aircraftOnwing, schMxEvents, transitMx, otherMx, rotableChanges,
+        leasedReserve: effectiveLeasedReserve,
+        maintenanceReserveSchedule: effectiveMaintenanceReserveSchedule,
+        aircraftOnwing, schMxEvents, transitMx, otherMx, rotableChanges,
         navMtowTiers, navEnr, navTerm, airportLanding, airportDom, airportIntl, airportAvsec, airportOther,
         otherDoc
       };
@@ -2161,8 +2239,9 @@ export default function CostInputModal({ isOpen, onClose }) {
   const handleGenerateMaintenanceReserveSchedule = async () => {
     try {
       setGeneratingMrSchedule(true);
+      const effectiveLeasedReserve = applyMasterStartDateToLeasedReserve(leasedReserve, masterDateRange.minDate);
       const response = await api.post("/cost-config/maintenance-reserve-schedule/generate", {
-        leasedReserve,
+        leasedReserve: effectiveLeasedReserve,
         maintenanceReserveSchedule,
         aircraftOnwing,
       });
@@ -2170,7 +2249,10 @@ export default function CostInputModal({ isOpen, onClose }) {
       toast.success("Maintenance Reserve schedule generated.");
     } catch (error) {
       console.error("Error generating maintenance reserve schedule", error);
-      setMaintenanceReserveSchedule((prev) => generateMaintenanceReserveScheduleRows(leasedReserve, prev));
+      setMaintenanceReserveSchedule((prev) => generateMaintenanceReserveScheduleRows(
+        applyMasterStartDateToLeasedReserve(leasedReserve, masterDateRange.minDate),
+        prev
+      ));
       toast.warn("Generated schedule locally; save to recalculate contribution amounts.");
     } finally {
       setGeneratingMrSchedule(false);
@@ -2211,7 +2293,9 @@ export default function CostInputModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const defaultFxCurrency = fxCurrencyOptions[0]?.value || DEFAULT_CURRENCY_CODE;
+  const defaultFxCurrency = fxCurrencyOptions.some((option) => option.value === DEFAULT_CURRENCY_CODE)
+    ? DEFAULT_CURRENCY_CODE
+    : (fxCurrencyOptions[0]?.value || DEFAULT_CURRENCY_CODE);
 
   const modalContent = (
     <AnimatePresence>
@@ -2298,7 +2382,7 @@ export default function CostInputModal({ isOpen, onClose }) {
                     </span>
                   }
                   data={leasedReserve}
-                  setData={setLeasedReserve}
+                  setData={updateLeasedReserve}
                   columns={[
                     { label: "MR Acc ID", key: "mrAccId" },
                     { label: "Sch. Mx. Event", key: "schMxEvent" },
@@ -2307,7 +2391,7 @@ export default function CostInputModal({ isOpen, onClose }) {
                     { label: "SN", key: "sn" },
                     { label: "Set balance", key: "setBalance", type: "number" },
                     { label: "Set rate", key: "setRate", type: "number" },
-                    { label: "As on date", key: "asOnDate", type: "date" },
+                    { label: "As on date", key: "asOnDate", type: "date", defaultValue: masterDateRange.minDate, readOnly: true },
                     {
                       label: "CCY",
                       key: "ccy",
