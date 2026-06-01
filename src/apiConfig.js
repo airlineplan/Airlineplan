@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'react-toastify';
 import { forceLogout, getAccessToken } from './auth/session';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://airlineplan.com';
@@ -28,6 +29,7 @@ const AUTH_BYPASS_PATHS = [
     '/change-passowrd',
     '/send-contactEmail',
 ];
+let lastForbiddenToast = { message: '', at: 0 };
 
 api.interceptors.response.use(
     (response) => response,
@@ -39,6 +41,15 @@ api.interceptors.response.use(
 
         if (token && !shouldIgnore && status === 401) {
             forceLogout("session_invalid", token);
+        }
+
+        if (!shouldIgnore && status === 403) {
+            const message = error?.response?.data?.error || error?.response?.data?.message || 'You do not have access to perform this action.';
+            const now = Date.now();
+            if (message !== lastForbiddenToast.message || now - lastForbiddenToast.at > 1500) {
+                toast.error(message);
+                lastForbiddenToast = { message, at: now };
+            }
         }
 
         return Promise.reject(error);

@@ -47,7 +47,7 @@ const App = () => {
         <Route path="/admin" element={<AdminPage />} />
         {SHOW_PRIVATE_PAGES && <Route path="/aircraft-route-economic" element={<AircraftRoute />} />}
       </Routes>
-      <ToastContainer position="bottom-right" theme="colored" limit={1} />
+      <ToastContainer position="bottom-right" theme="colored" limit={1} style={{ zIndex: 100000 }} />
     </>
   );
 };

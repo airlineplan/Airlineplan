@@ -14,6 +14,7 @@ import {
   UserCog, Wrench
 } from "lucide-react";
 import { toast } from "react-toastify";
+import { hasPageAccess } from "../../../permissions/pageAccess";
 
 // Child Components
 import NetworkTable from "./NetworkTable";
@@ -87,6 +88,17 @@ const LogoutButton = ({ onClick }) => (
 LogoutButton.propTypes = {
   onClick: PropTypes.func.isRequired,
 };
+
+const NoAccessiblePages = () => (
+  <div className="flex min-h-[calc(100vh-180px)] items-center justify-center p-6 text-center">
+    <div className="max-w-md rounded-xl border border-slate-200 bg-white/80 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+      <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">No page access assigned</h2>
+      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+        Please contact your tenant admin to enable access for your account.
+      </p>
+    </div>
+  </div>
+);
 
 // --- MAIN PAGE ---
 
@@ -240,12 +252,14 @@ const MainPage = () => {
           const feature = tenantAdminFeatureMap.get(tab.featureId);
           return feature?.isAllowed === true || feature?.isAlllowed === true;
         })
-        : VISIBLE_TABS.filter((tab) => !tab.requiresTenantAdmin)
+        : VISIBLE_TABS.filter((tab) => (
+          !tab.requiresTenantAdmin && hasPageAccess(currentUser?.pageAccess, tab.featureId, "read")
+        ))
     ),
-    [hasTenantAdminAccess, tenantAdminFeatureMap]
+    [currentUser?.pageAccess, hasTenantAdminAccess, tenantAdminFeatureMap]
   );
-  const activeTab = visibleTabs.find((tab) => tab.id === activeStep) || visibleTabs[0] || TABS[0];
-  const ActiveComponent = activeTab.component;
+  const activeTab = visibleTabs.find((tab) => tab.id === activeStep) || visibleTabs[0] || null;
+  const ActiveComponent = activeTab?.component;
 
   useEffect(() => {
     const isActiveStepVisible = visibleTabs.some((tab) => tab.id === activeStep);
@@ -373,9 +387,13 @@ const MainPage = () => {
               className="h-full"
             >
               <div className="bg-white/50 dark:bg-slate-900/40 backdrop-blur-sm border border-slate-200/60 dark:border-slate-800/60 rounded-2xl shadow-xl overflow-hidden min-h-[calc(100vh-180px)]">
-                <ActiveComponent
-                  {...(activeStep === 4 ? { flightsData, isMaster: true } : {})}
-                />
+                {ActiveComponent ? (
+                  <ActiveComponent
+                    {...(activeTab?.id === 4 ? { flightsData, isMaster: true } : {})}
+                  />
+                ) : (
+                  <NoAccessiblePages />
+                )}
               </div>
             </motion.div>
           </AnimatePresence>
