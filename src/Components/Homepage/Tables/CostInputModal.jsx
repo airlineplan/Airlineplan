@@ -124,7 +124,20 @@ const COST_ALLOCATION_ROWS = [
   { label: "Maintenance reserve contribution driven by Month", code: MR_MONTHLY_ALLOCATION_CODE, defaultBasis: "BH" },
   { label: "Other Maintenance expenses driven by Month", code: OTHER_MX_ALLOCATION_CODE, defaultBasis: "FH" },
 ];
-const CURRENCY_OPTIONS = ["INR", "USD", "EUR", "GBP", "AED", "JPY"].map((value) => ({ label: value, value }));
+const DEFAULT_CURRENCY_CODE = "INR";
+const normalizeCurrencyCode = (value) => String(value ?? "").trim().toUpperCase();
+const buildFxCurrencyOptions = (config = {}) => {
+  const currencyCodes = [
+    config.reportingCurrency,
+    ...(Array.isArray(config.currencyCodes) ? config.currencyCodes : []),
+  ]
+    .map(normalizeCurrencyCode)
+    .filter(Boolean);
+  const uniqueCodes = [...new Set(currencyCodes)];
+  const options = uniqueCodes.length ? uniqueCodes : [DEFAULT_CURRENCY_CODE];
+  return options.map((value) => ({ label: value, value }));
+};
+const DEFAULT_CURRENCY_OPTIONS = buildFxCurrencyOptions();
 const MAINTENANCE_DRIVER_OPTIONS = [
   { label: "BH", value: "BH" },
   { label: "FH", value: "FH" },
@@ -316,12 +329,13 @@ function Input({ value, onChange, placeholder, type = "text", className, ...rest
   );
 }
 
-function SelectInput({ value, onChange, options = [], placeholder = "Select", className }) {
+function SelectInput({ value, onChange, options = [], placeholder = "Select", className, allowEmpty = true, preserveUnknownOption = true }) {
   const safeOptions = Array.isArray(options) ? options : [];
   const hasCurrentValue = value && safeOptions.some((option) => option.value === value);
+  const selectedValue = hasCurrentValue || preserveUnknownOption ? (value ?? "") : (safeOptions[0]?.value ?? "");
   return (
     <select
-      value={value ?? ""}
+      value={selectedValue}
       onChange={onChange}
       className={cn(
         "w-full min-h-[44px] px-3 py-2.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-indigo-500",
@@ -329,8 +343,8 @@ function SelectInput({ value, onChange, options = [], placeholder = "Select", cl
         className
       )}
     >
-      <option value="">{placeholder}</option>
-      {value && !hasCurrentValue && <option value={value}>{value}</option>}
+      {allowEmpty && <option value="">{placeholder}</option>}
+      {value && preserveUnknownOption && !hasCurrentValue && <option value={value}>{value}</option>}
       {safeOptions.map((option) => (
         <option key={option.value} value={option.value}>{option.label}</option>
       ))}
@@ -1588,20 +1602,29 @@ function EditableTable({
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "Up" });
   const [filters, setFilters] = useState({});
 
+  const normalizeSelectRow = (row) => {
+    return columns.reduce((acc, col) => {
+      if (col.type !== "select" || col.preserveUnknownOption !== false) return acc;
+      const optionValues = (Array.isArray(col.options) ? col.options : []).map((option) => option.value);
+      if (optionValues.includes(acc[col.key])) return acc;
+      return { ...acc, [col.key]: col.defaultValue ?? optionValues[0] ?? "" };
+    }, { ...row });
+  };
+
   const handleEdit = (index, row) => {
     setEditingIndex(index);
-    setEditRow({ ...row });
+    setEditRow(normalizeSelectRow(row));
   };
 
   const handleSave = (index) => {
     const newData = [...data];
-    newData[index] = editRow;
+    newData[index] = normalizeSelectRow(editRow);
     setData(newData);
     setEditingIndex(null);
   };
 
   const handleAdd = () => {
-    const newRow = columns.reduce((acc, col) => ({ ...acc, [col.key]: "" }), {});
+    const newRow = columns.reduce((acc, col) => ({ ...acc, [col.key]: col.defaultValue ?? "" }), {});
     setData([...data, newRow]);
     setEditingIndex(data.length);
     setEditRow(newRow);
@@ -1745,6 +1768,8 @@ function EditableTable({
                             onChange={(e) => setEditRow({ ...editRow, [col.key]: e.target.value })}
                             options={col.options}
                             placeholder={col.placeholder || "Select"}
+                            allowEmpty={col.allowEmpty !== false}
+                            preserveUnknownOption={col.preserveUnknownOption !== false}
                             className={cn(
                               highlightAutoFields && autoFields.has(col.key) && "bg-emerald-50 dark:bg-emerald-900/20"
                             )}
@@ -1958,6 +1983,7 @@ export default function CostInputModal({ isOpen, onClose }) {
   const [otherMx, setOtherMx] = useState([]);
   const [rotableChanges, setRotableChanges] = useState([]);
   const [generatingMrSchedule, setGeneratingMrSchedule] = useState(false);
+  const [fxCurrencyOptions, setFxCurrencyOptions] = useState(DEFAULT_CURRENCY_OPTIONS);
 
   // === NAVIGATION & AIRPORT STATE ===
   const [navEnr, setNavEnr] = useState([]);
@@ -2009,6 +2035,15 @@ export default function CostInputModal({ isOpen, onClose }) {
           }
         })
         .catch(err => console.error("Error fetching cost config", err));
+
+      api.get("/revenue-config")
+        .then((response) => {
+          setFxCurrencyOptions(buildFxCurrencyOptions(response.data?.data));
+        })
+        .catch((err) => {
+          console.error("Error fetching FX currency config", err);
+          setFxCurrencyOptions(DEFAULT_CURRENCY_OPTIONS);
+        });
     }
   }, [isOpen]);
 
@@ -2162,8 +2197,6 @@ export default function CostInputModal({ isOpen, onClose }) {
       ["drawdown", "Drawdown"],
       ["closingBalance", "Closing bal"],
       ["ccy", "CCY"],
-      ["source", "Source"],
-      ["notes", "Notes"],
     ];
     const rows = maintenanceReserveSchedule.map((row) =>
       columns.reduce((acc, [key, label]) => {
@@ -2177,6 +2210,8 @@ export default function CostInputModal({ isOpen, onClose }) {
   };
 
   if (!isOpen) return null;
+
+  const defaultFxCurrency = fxCurrencyOptions[0]?.value || DEFAULT_CURRENCY_CODE;
 
   const modalContent = (
     <AnimatePresence>
@@ -2273,7 +2308,16 @@ export default function CostInputModal({ isOpen, onClose }) {
                     { label: "Set balance", key: "setBalance", type: "number" },
                     { label: "Set rate", key: "setRate", type: "number" },
                     { label: "As on date", key: "asOnDate", type: "date" },
-                    { label: "CCY", key: "ccy", type: "select", options: CURRENCY_OPTIONS, placeholder: "CCY" },
+                    {
+                      label: "CCY",
+                      key: "ccy",
+                      type: "select",
+                      options: fxCurrencyOptions,
+                      placeholder: "CCY",
+                      defaultValue: defaultFxCurrency,
+                      allowEmpty: false,
+                      preserveUnknownOption: false,
+                    },
                     { label: "Driver", key: "driver", type: "select", options: MAINTENANCE_DRIVER_OPTIONS, placeholder: "Driver" },
                     { label: "Annual escl", key: "annualEscalation", type: "number" },
                     { label: "Anniversary", key: "anniversaryDate", type: "date" },
@@ -2317,8 +2361,6 @@ export default function CostInputModal({ isOpen, onClose }) {
                       { label: "Drawdown", key: "drawdown", type: "number" },
                       { label: "Closing bal", key: "closingBalance", type: "number" },
                       { label: "CCY", key: "ccy" },
-                      { label: "Source", key: "source" },
-                      { label: "Notes", key: "notes" },
                     ]}
                   />
                 </div>

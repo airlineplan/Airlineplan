@@ -1970,9 +1970,6 @@ const DashboardTable = () => {
                 value={filters.userTag2}
                 onChange={(value) => setFilters((prev) => ({ ...prev, userTag2: value }))}
               />
-              <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-300 px-4 py-3 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                Select one or more values in each filter.
-              </div>
             </div>
           </section>
 

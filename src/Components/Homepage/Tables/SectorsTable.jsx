@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import api from "../../../apiConfig";
 import moment from "moment";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
-  Trash2, Plus, ArrowUp, ArrowDown, Search,
+  Trash2, ArrowUp, ArrowDown, Search,
   Map, RefreshCw, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -13,8 +13,6 @@ import "react-toastify/dist/ReactToastify.css";
 
 // --- IMPORT YOUR MODERNIZED MODAL COMPONENTS ---
 import UpdateSectore from "./UpdateSectore";
-import AddSector from "./AddSector";
-import CopySector from "./CopySector";
 
 // --- UTILITIES ---
 function cn(...inputs) {
@@ -85,10 +83,6 @@ const SectorsTable = () => {
   const [checkedRows, setCheckedRows] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Modals & Menus
-  const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
-  const [add, setAdd] = useState(true); // Passed to modals
-
   // Sorting & Filters
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [filters, setFilters] = useState({
@@ -96,19 +90,6 @@ const SectorsTable = () => {
     paxCapacity: "", CargoCapT: "", paxLF: "", cargoLF: "",
     fromDt: "", toDt: ""
   });
-
-  const menuRef = useRef(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsAddMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   // --- API CALLS ---
   useEffect(() => {
@@ -278,37 +259,6 @@ const SectorsTable = () => {
 
           {/* Actual Update Component Mounted Here */}
           <UpdateSectore checkedRows={checkedRows} />
-
-          {/* Add / Copy Dropdown */}
-          <div className="relative" ref={menuRef}>
-            <Button
-              variant="primary"
-              icon={Plus}
-              onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
-            >
-              Add
-            </Button>
-
-            <AnimatePresence>
-              {isAddMenuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute right-0 top-full mt-2 w-24 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl py-2 z-50 flex flex-col"
-                >
-                  <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                    {/* Actual Copy Sector Component */}
-                    <CopySector checkedRows={checkedRows} setAdd={setAdd} />
-                  </div>
-                  <div className="px-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                    {/* Actual Add Sector Component */}
-                    <AddSector setAdd={setAdd} />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
 
           {checkedRows.length > 0 && (
             <Button variant="danger" icon={Trash2} onClick={handleDeleteData}>
