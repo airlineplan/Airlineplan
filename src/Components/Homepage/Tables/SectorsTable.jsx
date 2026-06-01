@@ -69,10 +69,18 @@ const TableInput = ({ value, onChange, placeholder }) => (
 
 // --- MAIN COMPONENT ---
 const ROWS_PER_PAGE = 8;
+const UNMATCHED_NETWORK_ORDER = Number.MAX_SAFE_INTEGER;
+
+const normalizeId = (value) => (value === null || value === undefined ? "" : String(value));
+const getSourceOrder = (row) => {
+  const value = Number(row?.sourceSerialNo);
+  return Number.isFinite(value) ? value : null;
+};
 
 const SectorsTable = () => {
   // --- STATE ---
   const [sectorsTableData, setSectorsTableData] = useState([]);
+  const [networkRowOrder, setNetworkRowOrder] = useState([]);
   const [loading, setLoading] = useState(true);
   const [checkedRows, setCheckedRows] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -107,7 +115,21 @@ const SectorsTable = () => {
     const fetchData = async () => {
       try {
         const response = await api.get("/sectors");
-        setSectorsTableData(response.data || []);
+        const sectors = response.data || [];
+        setSectorsTableData(sectors);
+
+        const needsNetworkOrderFallback = sectors.some((row) => getSourceOrder(row) === null && row.networkId);
+        if (needsNetworkOrderFallback) {
+          try {
+            const networkResponse = await api.get("/get-data");
+            setNetworkRowOrder(networkResponse.data || []);
+          } catch (error) {
+            console.warn("Could not load network row order for sectors:", error);
+            setNetworkRowOrder([]);
+          }
+        } else {
+          setNetworkRowOrder([]);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Failed to load sector data");
@@ -152,8 +174,17 @@ const SectorsTable = () => {
     }));
   };
 
+  const networkOrderById = useMemo(() => {
+    const order = new Map();
+    networkRowOrder.forEach((row, index) => {
+      const id = normalizeId(row?._id);
+      if (id && !order.has(id)) order.set(id, index);
+    });
+    return order;
+  }, [networkRowOrder]);
+
   const processedData = useMemo(() => {
-    let data = [...sectorsTableData];
+    let data = sectorsTableData.map((row, originalIndex) => ({ ...row, originalIndex }));
 
     // 1. Filter logic mirroring your original structure exactly
     data = data.filter(row => {
@@ -185,10 +216,20 @@ const SectorsTable = () => {
           ? valA.localeCompare(valB)
           : valB.localeCompare(valA);
       });
+    } else {
+      data.sort((a, b) => {
+        const sourceOrderA = getSourceOrder(a);
+        const sourceOrderB = getSourceOrder(b);
+        const orderA = sourceOrderA ?? networkOrderById.get(normalizeId(a.networkId)) ?? UNMATCHED_NETWORK_ORDER;
+        const orderB = sourceOrderB ?? networkOrderById.get(normalizeId(b.networkId)) ?? UNMATCHED_NETWORK_ORDER;
+
+        if (orderA !== orderB) return orderA - orderB;
+        return a.originalIndex - b.originalIndex;
+      });
     }
 
     return data;
-  }, [sectorsTableData, filters, sortConfig]);
+  }, [sectorsTableData, filters, sortConfig, networkOrderById]);
 
   // --- PAGINATION ---
   const totalPages = Math.ceil(processedData.length / ROWS_PER_PAGE);

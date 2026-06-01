@@ -56,6 +56,14 @@ const MAINTENANCE_STATUS_COLUMNS = [
     STATUS_LABELS.dsr
 ];
 const FORECAST_STATUS_COLUMNS = MAINTENANCE_STATUS_COLUMNS;
+const PLANNED_POST_EVENT_COLUMNS = [
+    { key: "postTso", label: STATUS_LABELS.tso.code },
+    { key: "postCso", label: STATUS_LABELS.cso.code },
+    { key: "postDso", label: STATUS_LABELS.dso.code },
+    { key: "postTsr", label: STATUS_LABELS.tsr.code },
+    { key: "postCsr", label: STATUS_LABELS.csr.code },
+    { key: "postDsr", label: STATUS_LABELS.dsr.code }
+];
 const TARGET_STATUS_FIELD_MAP = [
     { column: STATUS_LABELS.tsn, valueKey: "tsn", highlightKey: "tsn", forecastKey: "fTsn" },
     { column: STATUS_LABELS.csn, valueKey: "csn", highlightKey: "csn", forecastKey: "fCsn" },
@@ -77,6 +85,7 @@ const StatusHeaderLabel = ({ column }) => (
     </span>
 );
 const statusHeaderClass = "p-2 border border-slate-200 dark:border-slate-700 min-w-[220px] whitespace-normal leading-tight";
+const calendarHeaderClass = "p-2 border border-slate-200 dark:border-slate-700 min-w-[140px] whitespace-normal leading-tight text-center";
 const targetTableStatusHeaderClass = "p-2 border border-slate-200 dark:border-slate-700 min-w-[220px] whitespace-normal leading-tight text-center";
 const modalStatusHeaderClass = "p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[220px] whitespace-normal leading-tight";
 const targetStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[220px] whitespace-normal leading-tight";
@@ -197,7 +206,8 @@ const MaintenanceDashboard = () => {
             isNew: true,
             calLabel: "", lineBase: "", calMsn: "", schEvent: "", calPn: "", snBn: "",
             eTsn: "", eCsn: "", eDsn: "", eTso: "", eCso: "", eDso: "", eTsr: "", eCsr: "", eDsr: "",
-            lastOccurre: "", nextEstima: "", downDays: "", avgDownda: "", occurrence: "", soTsr: ""
+            lastOccurre: "", nextEstima: "", downDays: "", avgDownda: "", occurrence: "",
+            postTso: "", postCso: "", postDso: "", postTsr: "", postCsr: "", postDsr: "", soTsr: ""
         };
         setCalendarData([...calendarData, newRow]);
         setIsEditingCalendar(true);
@@ -206,8 +216,14 @@ const MaintenanceDashboard = () => {
     const handleUpdateCalendar = async () => {
         try {
             await api.post('/maintenance/calendar', { calendarData: calendarData });
+            invalidateFleetMetricsCache();
+            window.dispatchEvent(new CustomEvent("assignments:updated"));
             setIsEditingCalendar(false);
-            fetchCalendarData();
+            await Promise.all([
+                fetchDashboardData(),
+                fetchTargetsData(),
+                fetchCalendarData()
+            ]);
         } catch (error) {
             console.error("Failed to update calendar", error);
         }
@@ -558,8 +574,6 @@ const MaintenanceDashboard = () => {
     const [utilisationFilters, setUtilisationFilters] = useState({ msn: "", fromDate: "", toDate: "", hours: "", cycles: "", avgDowndays: "" });
 
     useEffect(() => {
-        if (!showSetResetModal && !showTargetsModal && !showUtilisationModal) return;
-
         let isActive = true;
 
         const fetchFleetOptions = async () => {
@@ -588,7 +602,7 @@ const MaintenanceDashboard = () => {
         return () => {
             isActive = false;
         };
-    }, [showSetResetModal, showTargetsModal, showUtilisationModal]);
+    }, []);
 
     useEscapeKey(
         showSetResetModal || showRotablesModal || showTargetsModal || showUtilisationModal,
@@ -1207,9 +1221,10 @@ const MaintenanceDashboard = () => {
                                     </div>
                                 </th>
                                 <th colSpan={9} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-green-100/50 dark:bg-green-900/20">Earliest of, every</th>
-                                <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center">Date</th>
-                                <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Next occurrence</th>
+                                <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Date</th>
+                                <th colSpan={1} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Next occurrence</th>
                                 <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-[#f4e6fa] dark:bg-fuchsia-900/30">Beyond next occurrence</th>
+                                <th colSpan={PLANNED_POST_EVENT_COLUMNS.length} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-green-100/50 dark:bg-green-900/20">Planned post event condition</th>
                                 <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center min-w-[70px]">Action</th>
                             </tr>
                             <tr className="bg-slate-50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400">
@@ -1218,12 +1233,16 @@ const MaintenanceDashboard = () => {
                                         <StatusHeaderLabel column={column} />
                                     </th>
                                 ))}
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[140px]">Last occurre</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[140px]">Next estima</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">Down days</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">Avg Downda</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">Occurrence</th>
-                                <th className="p-2 border border-slate-200 dark:border-slate-700 min-w-[110px]">SO/TSRtrt</th>
+                                <th className={calendarHeaderClass}>Last occurrence</th>
+                                <th className={calendarHeaderClass}>Next estimated</th>
+                                <th className={calendarHeaderClass}>Down days</th>
+                                <th className={calendarHeaderClass}>Avg Downdays</th>
+                                <th className={calendarHeaderClass}>Occurrences till ext</th>
+                                {PLANNED_POST_EVENT_COLUMNS.map((column) => (
+                                    <th key={`calendar-post-${column.key}`} className={calendarHeaderClass}>
+                                        {column.label}
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
@@ -1240,7 +1259,21 @@ const MaintenanceDashboard = () => {
                                             {isEditingCalendar || row.isNew ? <input type="text" value={row.lineBase || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'lineBase', e.target.value)} className={`${calendarEditableInputClass} text-center`} /> : row.lineBase}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.calMsn || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'calMsn', e.target.value)} className={`${calendarEditableInputClass} text-center`} /> : row.calMsn}
+                                            {isEditingCalendar || row.isNew ? (
+                                                <select
+                                                    value={row.calMsn || ""}
+                                                    onChange={(e) => handleCalendarFieldChange(row.id, 'calMsn', e.target.value)}
+                                                    className={`${calendarEditableInputClass} text-center appearance-none cursor-pointer`}
+                                                >
+                                                    <option value="">Select MSN/ESN</option>
+                                                    {row.calMsn && !assetSnOptions.includes(row.calMsn) && (
+                                                        <option value={row.calMsn}>{row.calMsn}</option>
+                                                    )}
+                                                    {assetSnOptions.map((opt) => (
+                                                        <option key={opt} value={opt}>{opt}</option>
+                                                    ))}
+                                                </select>
+                                            ) : row.calMsn}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">
                                             {isEditingCalendar || row.isNew ? <input type="text" value={row.schEvent || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'schEvent', e.target.value)} className={`${calendarEditableInputClass} text-center`} /> : row.schEvent}
@@ -1281,10 +1314,10 @@ const MaintenanceDashboard = () => {
                                         </td>
 
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed min-w-[140px]">
-                                            {isEditingCalendar || row.isNew ? <DateTextInput value={row.lastOccurre || ""} onChange={(value) => handleCalendarFieldChange(row.id, 'lastOccurre', value)} className={`${calendarEditableInputClass} text-left`} /> : formatDateForDisplay(row.lastOccurre)}
+                                            {formatDateForDisplay(row.lastOccurre)}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed min-w-[140px]">
-                                            {isEditingCalendar || row.isNew ? <DateTextInput value={row.nextEstima || ""} onChange={(value) => handleCalendarFieldChange(row.id, 'nextEstima', value)} className={`${calendarEditableInputClass} text-left`} /> : formatDateForDisplay(row.nextEstima)}
+                                            {formatDateForDisplay(row.nextEstima)}
                                         </td>
 
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-bold text-emerald-600 dark:text-emerald-400">
@@ -1294,11 +1327,22 @@ const MaintenanceDashboard = () => {
                                             {isEditingCalendar || row.isNew ? <input type="text" value={row.avgDownda || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'avgDownda', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.avgDownda}</div>}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.occurrence || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'occurrence', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.occurrence}</div>}
+                                            <div className="text-right">{row.occurrence}</div>
                                         </td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-700">
-                                            {isEditingCalendar || row.isNew ? <input type="text" value={row.soTsr || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'soTsr', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.soTsr}</div>}
-                                        </td>
+                                        {PLANNED_POST_EVENT_COLUMNS.map((column) => (
+                                            <td key={`calendar-post-${row.id}-${column.key}`} className="p-2 border-r border-slate-200 dark:border-slate-700">
+                                                {isEditingCalendar || row.isNew ? (
+                                                    <input
+                                                        type="text"
+                                                        value={row[column.key] ?? ""}
+                                                        onChange={(e) => handleCalendarFieldChange(row.id, column.key, e.target.value)}
+                                                        className={`${calendarEditableInputClass} text-right`}
+                                                    />
+                                                ) : (
+                                                    <div className="text-right">{row[column.key]}</div>
+                                                )}
+                                            </td>
+                                        ))}
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-center bg-white dark:bg-slate-800">
                                             <button type="button" onClick={() => handleDeleteCalendarRow(row)} className={deleteIconButtonClass} title="Delete Row">
                                                 <Trash2 size={14} />
