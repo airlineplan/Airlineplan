@@ -90,7 +90,7 @@ const DatePickerInput = ({ value, onChange, className = "", ...props }) => (
 );
 
 const MaintenanceDashboard = () => {
-    const [selectedDate, setSelectedDate] = useState("2025-10-12");
+    const [selectedDate, setSelectedDate] = useState(() => toIsoDate(new Date()));
     const [selectedMsn, setSelectedMsn] = useState("");
 
     // Dynamic State for Main Tables

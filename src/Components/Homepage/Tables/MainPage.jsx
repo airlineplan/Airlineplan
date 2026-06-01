@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../../apiConfig";
 import { forceLogout } from "../../../auth/session";
@@ -8,7 +8,7 @@ import PropTypes from "prop-types";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
-  LogOut, Plane, Network, Map,
+  LogOut, Plane, Network, Map as MapIcon,
   RotateCw, LayoutDashboard, Link2, Coins,
   RadioTower, TrendingUp, List, Eye, ClipboardList, Navigation, DollarSign, Users,
   UserCog, Wrench
@@ -44,30 +44,31 @@ function cn(...inputs) {
 
 // --- CONSTANTS ---
 const TABS = [
-  { id: 0, label: "Network", icon: Network, component: NetworkTable },
-  { id: 1, label: "Sectors", icon: Map, component: SectorsTable },
-  { id: 2, label: "Stations", icon: RadioTower, component: StationsTable },
-  { id: 3, label: "Rotations", icon: RotateCw, component: Rotations },
-  { id: 4, label: "FLGTs", icon: Plane, component: (props) => <FlgtsTable {...props} showCostColumns={false} /> },
-  { id: 5, label: "View", icon: Eye, component: ViewPage },
-  { id: 6, label: "Dashboard", icon: LayoutDashboard, component: DashboardTable },
-  { id: 7, label: "List", icon: List, component: ListTable },
-  { id: 8, label: "Connections", icon: Link2, component: ConnectionTable },
-  { id: 9, label: "Assignment", icon: ClipboardList, component: AssignmentTable },
-  { id: 10, label: "Fleet", icon: Navigation, component: FleetTable },
-  { id: 11, label: "Maintenance", icon: Wrench, component: MaintenanceTable },
-  { id: 12, label: "POO", icon: Map, component: PooTable },
-  { id: 13, label: "Revenue", icon: DollarSign, component: RevenuePage },
-  { id: 14, label: "Cost", icon: Coins, component: CostPage },
-  { id: 15, label: "Crew", icon: Users, component: CrewPage },
-  { id: 16, label: "Route Economics", icon: TrendingUp, component: AircraftRoute },
-  { id: 17, label: "Users", icon: UserCog, component: UserManagementPage, requiresTenantAdmin: true },
+  { id: 0, featureId: "network", label: "Network", icon: Network, component: NetworkTable },
+  { id: 1, featureId: "sectors", label: "Sectors", icon: MapIcon, component: SectorsTable },
+  { id: 2, featureId: "stations", label: "Stations", icon: RadioTower, component: StationsTable },
+  { id: 3, featureId: "rotations", label: "Rotations", icon: RotateCw, component: Rotations },
+  { id: 4, featureId: "flgts", label: "FLGTs", icon: Plane, component: (props) => <FlgtsTable {...props} showCostColumns={false} /> },
+  { id: 5, featureId: "view", label: "View", icon: Eye, component: ViewPage },
+  { id: 6, featureId: "dashboard", label: "Dashboard", icon: LayoutDashboard, component: DashboardTable },
+  { id: 7, featureId: "list", label: "List", icon: List, component: ListTable },
+  { id: 8, featureId: "connections", label: "Connections", icon: Link2, component: ConnectionTable },
+  { id: 9, featureId: "assignment", label: "Assignment", icon: ClipboardList, component: AssignmentTable },
+  { id: 10, featureId: "fleet", label: "Fleet", icon: Navigation, component: FleetTable },
+  { id: 11, featureId: "maintenance", label: "Maintenance", icon: Wrench, component: MaintenanceTable },
+  { id: 12, featureId: "poo", label: "POO", icon: MapIcon, component: PooTable },
+  { id: 13, featureId: "revenue", label: "Revenue", icon: DollarSign, component: RevenuePage },
+  { id: 14, featureId: "cost", label: "Cost", icon: Coins, component: CostPage },
+  { id: 15, featureId: "crew", label: "Crew", icon: Users, component: CrewPage },
+  { id: 16, featureId: "routeEconomics", label: "Route Economics", icon: TrendingUp, component: AircraftRoute },
+  { id: 17, featureId: "users", label: "Users", icon: UserCog, component: UserManagementPage, requiresTenantAdmin: true },
 
 ];
 
 const HIDDEN_TAB_IDS = new Set([8, 16]);
 const VISIBLE_TABS = TABS.filter((tab) => !HIDDEN_TAB_IDS.has(tab.id));
 const TENANT_ADMIN_ROLES = new Set(["tenant_admin", "admin"]);
+const DEFAULT_TENANT_ADMIN_FEATURES = [{ id: "users", isAllowed: true }];
 
 // --- COMPONENTS ---
 
@@ -98,6 +99,7 @@ const MainPage = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [tenantAdminFeatures, setTenantAdminFeatures] = useState(DEFAULT_TENANT_ADMIN_FEATURES);
 
 
   useEffect(() => {
@@ -152,6 +154,38 @@ const MainPage = () => {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+    const hasTenantAdminAccess = TENANT_ADMIN_ROLES.has(currentUser?.role);
+
+    if (!hasTenantAdminAccess) {
+      setTenantAdminFeatures(DEFAULT_TENANT_ADMIN_FEATURES);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const loadTenantAdminFeatures = async () => {
+      try {
+        const response = await api.get("/tenant-admin/features");
+        if (isMounted) {
+          setTenantAdminFeatures(response.data.features || DEFAULT_TENANT_ADMIN_FEATURES);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setTenantAdminFeatures(DEFAULT_TENANT_ADMIN_FEATURES);
+          toast.error(error.response?.data?.error || "Could not load tenant admin features");
+        }
+      }
+    };
+
+    loadTenantAdminFeatures();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser?.role]);
+
+  useEffect(() => {
     const handleOutsideClick = (event) => {
       if (!event.target.closest("[data-menu-root='main-nav']")) {
         setMenuOpen(false);
@@ -195,15 +229,31 @@ const MainPage = () => {
   };
 
   const hasTenantAdminAccess = TENANT_ADMIN_ROLES.has(currentUser?.role);
-  const visibleTabs = VISIBLE_TABS.filter((tab) => !tab.requiresTenantAdmin || hasTenantAdminAccess);
-  const activeTab = TABS.find((tab) => tab.id === activeStep) || TABS[0];
+  const tenantAdminFeatureMap = useMemo(
+    () => new Map(tenantAdminFeatures.map((feature) => [feature.id, feature])),
+    [tenantAdminFeatures]
+  );
+  const visibleTabs = useMemo(
+    () => (
+      hasTenantAdminAccess
+        ? TABS.filter((tab) => {
+          const feature = tenantAdminFeatureMap.get(tab.featureId);
+          return feature?.isAllowed === true || feature?.isAlllowed === true;
+        })
+        : VISIBLE_TABS.filter((tab) => !tab.requiresTenantAdmin)
+    ),
+    [hasTenantAdminAccess, tenantAdminFeatureMap]
+  );
+  const activeTab = visibleTabs.find((tab) => tab.id === activeStep) || visibleTabs[0] || TABS[0];
   const ActiveComponent = activeTab.component;
 
   useEffect(() => {
-    if (activeTab.requiresTenantAdmin && !hasTenantAdminAccess) {
-      setActiveStep(0);
+    const isActiveStepVisible = visibleTabs.some((tab) => tab.id === activeStep);
+
+    if (!isActiveStepVisible) {
+      setActiveStep(visibleTabs[0]?.id ?? 0);
     }
-  }, [activeTab.requiresTenantAdmin, hasTenantAdminAccess]);
+  }, [activeStep, visibleTabs]);
 
   if (!sessionReady) {
     return (

@@ -1825,13 +1825,10 @@ const DashboardTable = () => {
               <span>{node.label}</span>
             </div>
           </td>
-          {periodColumns.map((period, index) => (
+          {periodColumns.map((period) => (
             <td
               key={`${node.id}-${period.key}`}
-              className={cn(
-                "w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 px-3 py-3 text-center text-sm tabular-nums text-slate-700 dark:border-slate-800 dark:text-slate-300",
-                index === 0 && "bg-indigo-50/70 dark:bg-indigo-500/10"
-              )}
+              className="w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 px-3 py-3 text-center text-sm tabular-nums text-slate-700 dark:border-slate-800 dark:text-slate-300"
             >
               <span className={cn(node.emphasize && "font-semibold text-slate-900 dark:text-slate-50")}>
                 {formatFinanceDisplayValue(
@@ -2008,13 +2005,10 @@ const DashboardTable = () => {
                   <th className="sticky left-0 z-20 w-[340px] min-w-[340px] max-w-[340px] border-b border-r border-slate-200 bg-slate-50/95 px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80 dark:text-slate-400">
                     Metric
                   </th>
-                  {periodColumns.map((period, index) => (
+                  {periodColumns.map((period) => (
                     <th
                       key={period.key}
-                      className={cn(
-                        "w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 px-3 py-3 text-center text-sm font-semibold text-slate-800 dark:border-slate-800 dark:text-slate-200",
-                        index === 0 && "bg-indigo-50/70 dark:bg-indigo-500/10"
-                      )}
+                      className="w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 px-3 py-3 text-center text-sm font-semibold text-slate-800 dark:border-slate-800 dark:text-slate-200"
                     >
                       <div className="text-sm font-semibold leading-tight text-slate-800 dark:text-slate-200">{period.dateLabel}</div>
                     </th>
@@ -2040,13 +2034,10 @@ const DashboardTable = () => {
                           <td className="sticky left-0 z-20 w-[340px] min-w-[340px] max-w-[340px] border-b border-r border-slate-200 bg-slate-50/95 px-4 py-3 text-sm font-medium text-slate-700 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.05)] group-hover:bg-indigo-50/80 dark:border-slate-800 dark:bg-slate-950/80 dark:group-hover:bg-slate-900 dark:text-slate-200">
                             {row.label}
                           </td>
-                          {periodColumns.map((period, index) => (
+                          {periodColumns.map((period) => (
                             <td
                               key={`${row.label}-${period.key}`}
-                              className={cn(
-                                "w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 px-3 py-3 text-center text-sm tabular-nums text-slate-700 dark:border-slate-800 dark:text-slate-300",
-                                index === 0 && "bg-indigo-50/70 dark:bg-indigo-500/10"
-                              )}
+                              className="w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 px-3 py-3 text-center text-sm tabular-nums text-slate-700 dark:border-slate-800 dark:text-slate-300"
                             >
                               <span className={cn(row.emphasize && "font-semibold text-slate-900 dark:text-slate-50")}>
                                 {cnTableValue(row, period.data)}

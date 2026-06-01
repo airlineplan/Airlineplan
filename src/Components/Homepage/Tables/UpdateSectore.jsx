@@ -55,6 +55,7 @@ const InputGroup = ({ label, error, children }) => (
 );
 
 const baseInputStyles = "w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400 disabled:opacity-60 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed";
+const AUTO_CALCULATE_SECTOR_STA = false;
 
 // --- MAIN COMPONENT ---
 const UpdateSectore = (props) => {
@@ -105,6 +106,8 @@ const UpdateSectore = (props) => {
 
   // --- API: Fetch Stations for Timezone Logic ---
   useEffect(() => {
+    if (!AUTO_CALCULATE_SECTOR_STA) return;
+
     const fetchStations = async () => {
       try {
         const response = await api.get("/get-stationData");
@@ -120,6 +123,8 @@ const UpdateSectore = (props) => {
 
   // --- ENGINE: Auto-Calculate STA ---
   useEffect(() => {
+    if (!AUTO_CALCULATE_SECTOR_STA) return;
+
     // Only calculate if all required variables and stations are present
     if (std && bt && sector1 && sector2 && stationsList.length > 0) {
 
@@ -208,10 +213,9 @@ const UpdateSectore = (props) => {
     }
   };
 
-  // Ensure STD and BT map correctly to state to trigger the Auto-Calculation
   const handleSTD = (event) => setStd(event.target.value);
   const handleBlockTime = (event) => setBlockTime(event.target.value);
-  const handleSTA = (event) => setSta(event.target.value); // Allow manual override if needed
+  const handleSTA = (event) => setSta(event.target.value);
 
   const handlePaxCapacity = (event) => {
     const parsedValue = parseInt(event.target.value, 10);
@@ -428,8 +432,14 @@ const UpdateSectore = (props) => {
                   <InputGroup label="Block Time (BT)" error={btError}>
                     <input className={baseInputStyles} type="time" name="bt" disabled required={isRequired} value={bt} onChange={handleBlockTime} />
                   </InputGroup>
-                  <InputGroup label="STA (LT) - Auto Calculated">
-                    <input className={cn(baseInputStyles, "bg-indigo-50/50 dark:bg-indigo-900/20 font-bold")} type="time" value={sta} onChange={handleSTA} disabled />
+                  <InputGroup label={AUTO_CALCULATE_SECTOR_STA ? "STA (LT) - Auto Calculated" : "STA (LT)"}>
+                    <input
+                      className={cn(baseInputStyles, AUTO_CALCULATE_SECTOR_STA && "bg-indigo-50/50 dark:bg-indigo-900/20 font-bold")}
+                      type="time"
+                      value={sta}
+                      onChange={handleSTA}
+                      disabled={AUTO_CALCULATE_SECTOR_STA}
+                    />
                   </InputGroup>
                 </div>
 

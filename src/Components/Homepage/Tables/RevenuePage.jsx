@@ -474,7 +474,7 @@ const GROUPING_OPTIONS = [
   { label: "Flight #", value: "flightNumber" },
   { label: "User Tag 1", value: "userTag1" },
   { label: "User Tag 2", value: "userTag2" },
-  { label: "Stop", value: "stops" },
+  { label: "Stop", value: "displayStop" },
   { label: "AL", value: "al" },
   { label: "OD DI", value: "odDI" },
   { label: "Leg DI", value: "legDI" },
