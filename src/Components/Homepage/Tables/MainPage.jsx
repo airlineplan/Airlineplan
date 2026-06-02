@@ -66,7 +66,7 @@ const TABS = [
 
 ];
 
-const HIDDEN_TAB_IDS = new Set([8, 16]);
+const HIDDEN_TAB_IDS = new Set([]);
 const VISIBLE_TABS = TABS.filter((tab) => !HIDDEN_TAB_IDS.has(tab.id));
 const TENANT_ADMIN_ROLES = new Set(["tenant_admin", "admin"]);
 const DEFAULT_TENANT_ADMIN_FEATURES = [{ id: "users", isAllowed: true }];

@@ -23,6 +23,7 @@ export const ASSIGNABLE_PAGE_FEATURES = [
   { id: "revenue", label: "Revenue" },
   { id: "cost", label: "Cost" },
   { id: "crew", label: "Crew" },
+  { id: "routeEconomics", label: "Route Economics" },
 ];
 
 const ACCESS_RANK = {
@@ -31,12 +32,12 @@ const ACCESS_RANK = {
   edit: 2,
 };
 
-export const createPageAccess = (level = "none", features = ASSIGNABLE_PAGE_FEATURES) => (
+export const createPageAccess = (level = "edit", features = ASSIGNABLE_PAGE_FEATURES) => (
   Object.fromEntries(features.map((feature) => [feature.id, level]))
 );
 
 export const normalizePageAccess = (pageAccess = {}, features = ASSIGNABLE_PAGE_FEATURES) => {
-  const normalized = createPageAccess("none", features);
+  const normalized = createPageAccess("edit", features);
   features.forEach((feature) => {
     if (PAGE_ACCESS_LEVELS.includes(pageAccess?.[feature.id])) {
       normalized[feature.id] = pageAccess[feature.id];
@@ -46,6 +47,6 @@ export const normalizePageAccess = (pageAccess = {}, features = ASSIGNABLE_PAGE_
 };
 
 export const hasPageAccess = (pageAccess, featureId, requiredLevel = "read") => {
-  const level = pageAccess?.[featureId] || "none";
+  const level = pageAccess?.[featureId] || "edit";
   return ACCESS_RANK[level] >= ACCESS_RANK[requiredLevel];
 };

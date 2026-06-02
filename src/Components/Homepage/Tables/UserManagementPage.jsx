@@ -29,7 +29,7 @@ const createEmptyForm = (features = ASSIGNABLE_PAGE_FEATURES) => ({
   email: "",
   password: "",
   role: "user",
-  pageAccess: createPageAccess("none", features),
+  pageAccess: createPageAccess("edit", features),
 });
 
 const UserManagementPage = () => {
