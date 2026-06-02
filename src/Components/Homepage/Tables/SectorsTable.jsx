@@ -6,7 +6,7 @@ import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
   Trash2, ArrowUp, ArrowDown, Search,
-  Map, RefreshCw, ChevronLeft, ChevronRight
+  RefreshCw, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
