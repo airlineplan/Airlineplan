@@ -1825,7 +1825,7 @@ const DashboardTable = () => {
               <span>{node.label}</span>
             </div>
           </td>
-          {periodColumns.map((period) => (
+          {periodColumns.map((period, index) => (
             <td
               key={`${node.id}-${period.key}`}
               className="w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 px-3 py-3 text-center text-sm tabular-nums text-slate-700 dark:border-slate-800 dark:text-slate-300"
