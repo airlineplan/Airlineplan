@@ -43,9 +43,9 @@ const FeatureItem = ({ text, delay }) => (
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay, duration: 0.5 }}
     // Removed background, just text and icon
-    className="flex items-start gap-3 p-2 transition-colors group"
+    className="flex h-full items-start gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3 transition-colors group hover:bg-white/[0.07]"
   >
-    <div className="mt-0.5 p-1 bg-indigo-500/20 rounded-full border border-indigo-500/30 flex-shrink-0 group-hover:bg-indigo-500/40 transition-colors">
+    <div className="mt-0.5 p-1 bg-indigo-500/25 rounded-full border border-indigo-400/40 flex-shrink-0 group-hover:bg-indigo-500/40 transition-colors">
       <CheckCircle2 size={14} className="text-indigo-200" />
     </div>
     <span className="text-sm font-medium text-white leading-snug drop-shadow-md">
@@ -130,16 +130,17 @@ export default function Loginpage() {
   };
 
   const features = [
-    "Develop flight schedules from scratch or upload existing schedules",
-    "Change flights, add flights, delete flights effortlessly",
-    "Add capacities and input loads for precise planning",
-    "Get commercial and schedule operational metrics (Sector/Station level)",
-    "Automatic connection identification based on station windows",
-    "Build Rotations to assign flights to fleet & track utilisation"
+    "Integrate network planning, schedule development, crew planning & rostering, aircraft assignment, fleet and maintenance management, asset visibility, major rotables tracking and more.",
+    "Get commercial, operational and financial forecasts and implications of the plan while validating it's operational feasibility and financial viability.",
+    "Evaluate implications of different operational alternatives while taking decisions in real time, based on the outcomes forecast.",
+    "Track actual performance from completed operations.",
+    "Load competition's schedule, fleet and other data to understand strengths, weaknesses and likely trajectory.",
+    "Access the expertise of seasoned industry professionals for hands on support to line staff, department heads and leadership teams towards achieving favorable business outcomes by leveraging our capabilities.",
+    "Airlineplan is a manifestation of the airline integrated management framework envisaged by its creators who are also the practitioners of this management framework."
   ];
 
   return (
-    <div className="min-h-screen w-full relative font-sans flex items-center justify-center p-4 lg:p-8 overflow-hidden bg-black">
+    <div className="min-h-screen w-full relative font-sans flex items-center justify-center p-4 sm:p-6 xl:p-10 overflow-x-hidden bg-black">
       {checkingSession && localStorage.getItem('accessToken') && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm">
           <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-center text-white shadow-2xl">
@@ -173,17 +174,17 @@ export default function Loginpage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
         // Removed background color, removed blur, just layout
-        className="relative z-20 w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 min-h-[650px]"
+        className="relative z-20 grid min-h-[720px] w-full max-w-[1540px] grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(430px,0.85fr)] xl:gap-10 2xl:max-w-[1640px]"
       >
 
         {/* LEFT PANEL: Features & Info */}
-        <div className="p-8 lg:p-12 text-white flex flex-col justify-between relative">
+        <div className="p-4 sm:p-6 lg:p-8 xl:p-10 text-white flex flex-col justify-between relative">
 
           <div className="relative z-10">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-3 mb-8"
+              className="flex items-center gap-3 mb-8 xl:mb-10"
             >
               <div className="h-10 w-10 bg-indigo-600/80 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg border border-indigo-400/30">
                 <Plane className="text-white" size={20} />
@@ -195,22 +196,18 @@ export default function Loginpage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="mb-8"
+              className="mb-8 max-w-4xl"
             >
-              <h1 className="text-3xl font-bold mb-3 text-white drop-shadow-lg">
-                Plan and Operationalize with complete visibility of all commercial, operational and financial factors. <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 to-cyan-200 drop-shadow-sm">
-                  Review and analyze historical data for insights.
-                </span>
+              <h1 className="text-3xl lg:text-4xl xl:text-[42px] font-bold mb-3 text-white drop-shadow-lg leading-tight">
+                Plan, Operate and Analyze with complete visibility of all commercial, operational and financial factors.
               </h1>
-              <p className="text-indigo-100 text-sm drop-shadow-md">
-                Network planning, Scheduling, Aircraft rotations, Commercial planning and more
-              </p>
             </motion.div>
 
-            <div className="space-y-3">
+            <div className="grid auto-rows-fr gap-3 xl:grid-cols-2">
               {features.map((text, idx) => (
-                <FeatureItem key={idx} text={text} delay={0.3 + (idx * 0.1)} />
+                <div key={idx} className={idx === features.length - 1 ? "h-full xl:col-span-2" : "h-full"}>
+                  <FeatureItem text={text} delay={0.3 + (idx * 0.08)} />
+                </div>
               ))}
             </div>
           </div>
@@ -224,9 +221,9 @@ export default function Loginpage() {
 
         {/* RIGHT PANEL: Login Form */}
         {/* Added a very subtle background tint just to group the form elements visually */}
-        <div className="p-8 lg:p-12 flex flex-col justify-center bg-black/20 lg:bg-transparent rounded-3xl lg:backdrop-blur-none border border-white/10 lg:border-none m-4 lg:m-0">
+        <div className="flex items-center justify-center p-4 sm:p-6 lg:p-8 xl:p-10">
 
-          <div className="max-w-md mx-auto w-full">
+          <div className="w-full max-w-[520px] rounded-2xl border border-white/15 bg-slate-950/25 p-6 shadow-2xl shadow-black/25 backdrop-blur-sm sm:p-8 lg:p-10">
             <div className="mb-8 text-center lg:text-left">
               <h2 className="text-2xl font-bold text-white tracking-tight flex items-center justify-center lg:justify-start gap-2 drop-shadow-lg">
                 <Globe className="text-indigo-300 hidden lg:block" size={24} />
