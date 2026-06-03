@@ -1219,7 +1219,6 @@ const MaintenanceDashboard = () => {
                                             )}
                                         </div>
                                         <TableInput name="calPn" value={filters.calPn} onChange={handleFilterChange} placeholder="Filter..." />
-                                        <span className="text-xs font-normal text-slate-500 mt-1">Checkbox (apply to all SN)</span>
                                     </div>
                                 </th>
                                 <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-semibold align-bottom min-w-[140px]">
