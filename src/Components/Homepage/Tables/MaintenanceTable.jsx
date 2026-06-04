@@ -106,6 +106,7 @@ const MaintenanceDashboard = () => {
     const [maintenanceData, setMaintenanceData] = useState([]);
     const [targetData, setTargetData] = useState([]);
     const [calendarData, setCalendarData] = useState([]);
+    const [groundDays, setGroundDays] = useState([]);
     const [isEditingCalendar, setIsEditingCalendar] = useState(false);
 
     const isPersistedId = (id) => id && !String(id).startsWith("temp-");
@@ -154,10 +155,26 @@ const MaintenanceDashboard = () => {
         }
     };
 
+    const fetchGroundDays = async () => {
+        try {
+            const res = await api.get('/maintenance/ground-days', {
+                params: {
+                    msn: selectedMsn || undefined
+                }
+            });
+            if (res.data && res.data.success) {
+                setGroundDays(Array.isArray(res.data.data) ? res.data.data : []);
+            }
+        } catch (error) {
+            console.error("Failed to fetch ground days:", error);
+        }
+    };
+
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             fetchDashboardData();
             fetchTargetsData();
+            fetchGroundDays();
         }, 300);
 
         fetchCalendarData();
@@ -222,10 +239,12 @@ const MaintenanceDashboard = () => {
             await Promise.all([
                 fetchDashboardData(),
                 fetchTargetsData(),
-                fetchCalendarData()
+                fetchCalendarData(),
+                fetchGroundDays()
             ]);
         } catch (error) {
             console.error("Failed to update calendar", error);
+            toast.error(error.response?.data?.message || "Failed to update calendar inputs.");
         }
     };
 
@@ -955,6 +974,13 @@ const MaintenanceDashboard = () => {
     const filteredMaintenanceData = useMemo(() => getProcessedData(maintenanceData), [maintenanceData, filters, sortConfig]);
     const filteredTargetData = useMemo(() => getProcessedData(targetData), [targetData, filters, sortConfig]);
     const filteredCalendarData = useMemo(() => getProcessedData(calendarData), [calendarData, filters, sortConfig]);
+    const filteredGroundDays = useMemo(() => getProcessedData(groundDays), [groundDays, filters, sortConfig]);
+    const formatOptionalCalendarDate = (value) => value ? formatDateForDisplay(value) : "None";
+    const formatOccurrencesTillExit = (row) => {
+        const occurrenceCount = Number(row?.occurrence || 0);
+        const tillExit = Number(row?.occurrencesTillExit || 0);
+        return occurrenceCount > 1 && tillExit > 0 ? tillExit : "None";
+    };
 
     const handleCompute = async () => {
         try {
@@ -972,7 +998,8 @@ const MaintenanceDashboard = () => {
                 await Promise.all([
                     fetchDashboardData(),
                     fetchTargetsData(),
-                    fetchCalendarData()
+                    fetchCalendarData(),
+                    fetchGroundDays()
                 ]);
             }
         } catch (error) {
@@ -1230,9 +1257,9 @@ const MaintenanceDashboard = () => {
                                     </div>
                                 </th>
                                 <th colSpan={9} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-green-100/50 dark:bg-green-900/20">Earliest of, every</th>
-                                <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Date</th>
-                                <th colSpan={1} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Next occurrence</th>
-                                <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-[#f4e6fa] dark:bg-fuchsia-900/30">Beyond next occurrence</th>
+                                <th colSpan={1} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">Last occurrence</th>
+                                <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-200/50 dark:bg-slate-700/50">First occurrence</th>
+                                <th colSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-[#f4e6fa] dark:bg-fuchsia-900/30">Beyond first occurrence</th>
                                 <th colSpan={PLANNED_POST_EVENT_COLUMNS.length} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-green-100/50 dark:bg-green-900/20">Planned post event condition</th>
                                 <th rowSpan={2} className="p-2 border border-slate-200 dark:border-slate-700 font-bold text-center min-w-[70px]">Action</th>
                             </tr>
@@ -1242,11 +1269,11 @@ const MaintenanceDashboard = () => {
                                         <StatusHeaderLabel column={column} />
                                     </th>
                                 ))}
-                                <th className={calendarHeaderClass}>Last occurrence</th>
-                                <th className={calendarHeaderClass}>Next estimated</th>
+                                <th className={calendarHeaderClass}>Date</th>
+                                <th className={calendarHeaderClass}>Date</th>
                                 <th className={calendarHeaderClass}>Down days</th>
                                 <th className={calendarHeaderClass}>Avg Downdays</th>
-                                <th className={calendarHeaderClass}>Occurrences till ext</th>
+                                <th className={calendarHeaderClass}>Occurrences till exit</th>
                                 {PLANNED_POST_EVENT_COLUMNS.map((column) => (
                                     <th key={`calendar-post-${column.key}`} className={calendarHeaderClass}>
                                         {column.label}
@@ -1323,10 +1350,10 @@ const MaintenanceDashboard = () => {
                                         </td>
 
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed min-w-[140px]">
-                                            {formatDateForDisplay(row.lastOccurre)}
+                                            {formatOptionalCalendarDate(row.lastOccurre)}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed min-w-[140px]">
-                                            {formatDateForDisplay(row.nextEstima)}
+                                            {formatOptionalCalendarDate(row.firstOccurrenceDate || row.nextEstima)}
                                         </td>
 
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-bold text-emerald-600 dark:text-emerald-400">
@@ -1336,7 +1363,7 @@ const MaintenanceDashboard = () => {
                                             {isEditingCalendar || row.isNew ? <input type="text" value={row.avgDownda || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'avgDownda', e.target.value)} className={`${calendarEditableInputClass} text-right`} /> : <div className="text-right">{row.avgDownda}</div>}
                                         </td>
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700">
-                                            <div className="text-right">{row.occurrence}</div>
+                                            <div className="text-right">{formatOccurrencesTillExit(row)}</div>
                                         </td>
                                         {PLANNED_POST_EVENT_COLUMNS.map((column) => (
                                             <td key={`calendar-post-${row.id}-${column.key}`} className="p-2 border-r border-slate-200 dark:border-slate-700">
@@ -1374,6 +1401,61 @@ const MaintenanceDashboard = () => {
                     <button onClick={handleUpdateCalendar} disabled={!isEditingCalendar} className="flex items-center gap-1 px-5 py-2 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700 transition-colors font-medium disabled:bg-slate-300 disabled:cursor-not-allowed">
                         Update
                     </button>
+                </div>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+                <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                    On Ground dates
+                </h3>
+                <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm">
+                    <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
+                        <thead>
+                            <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300">
+                                {[
+                                    ["MSN", "msn"],
+                                    ["Date", "date"],
+                                    ["Sch.Mx.Event", "event"],
+                                    ["Source", "source"],
+                                    ["Occurrence", "occurrenceNumber"]
+                                ].map(([label, key]) => (
+                                    <th key={`ground-head-${key}`} className="p-2 border border-slate-200 dark:border-slate-700 align-top min-w-[150px]">
+                                        <div className="flex flex-col gap-1 w-full">
+                                            <div
+                                                className="flex items-center gap-1 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-semibold group"
+                                                onClick={() => handleSort(key)}
+                                            >
+                                                {label}
+                                                {sortConfig.key === key ? (
+                                                    sortConfig.direction === "Up" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                                                ) : (
+                                                    <ArrowUp size={12} className="opacity-0 group-hover:opacity-30 transition-opacity" />
+                                                )}
+                                            </div>
+                                            <TableInput name={key} value={filters[key]} onChange={handleFilterChange} placeholder="Filter..." />
+                                        </div>
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-slate-700 dark:text-slate-300">
+                            {filteredGroundDays.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="p-4 text-center text-slate-500 dark:text-slate-400">
+                                        No generated On Ground dates.
+                                    </td>
+                                </tr>
+                            ) : filteredGroundDays.map((row) => (
+                                <tr key={row.id} className="bg-white dark:bg-slate-800">
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-mono text-indigo-600 dark:text-indigo-400">{row.msn}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700">{formatDateForDisplay(row.date)}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.event}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700">{row.source}</td>
+                                    <td className="p-2 border-r border-slate-200 dark:border-slate-700 text-right">{row.occurrenceNumber}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
