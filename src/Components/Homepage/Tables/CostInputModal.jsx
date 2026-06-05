@@ -140,14 +140,59 @@ const buildFxCurrencyOptions = (config = {}) => {
 };
 const DEFAULT_CURRENCY_OPTIONS = buildFxCurrencyOptions();
 const MAINTENANCE_DRIVER_OPTIONS = [
-  { label: "BH", value: "BH" },
   { label: "FH", value: "FH" },
-  { label: "Departure", value: "DEPARTURES" },
-  { label: "Month", value: "MONTH" },
-  { label: "APUHR", value: "APUHR" },
+  { label: "BH", value: "BH" },
 ];
+const DEFAULT_MAINTENANCE_DRIVER = "FH";
+const MAINTENANCE_DRIVER_VALUES = new Set(MAINTENANCE_DRIVER_OPTIONS.map((option) => option.value));
 
 const normalizeText = (value) => String(value ?? "").trim().toUpperCase();
+const ROTABLE_CHANGE_DETAIL_KEYS = ["label", "date", "pn", "msn", "acftRegn", "position", "removedSN", "installedSN"];
+const getRotableChangeDetailKey = (row = {}) => (
+  ROTABLE_CHANGE_DETAIL_KEYS.map((key) => (
+    key === "date"
+      ? (toIsoDate(row?.[key]) || String(row?.[key] ?? "").trim())
+      : normalizeText(row?.[key])
+  )).join("|")
+);
+const getRotableChangeIdentityKeys = (row = {}) => {
+  const keys = [];
+  const sourceId = String(row?.maintenanceRotableId || row?.rotableMovementId || row?.id || "").trim();
+  if (sourceId && !sourceId.startsWith("temp-")) keys.push(`id:${sourceId}`);
+  const detailKey = getRotableChangeDetailKey(row);
+  if (detailKey.replace(/\|/g, "")) keys.push(`detail:${detailKey}`);
+  return keys;
+};
+const mergeRotableChangeCostRows = (maintenanceRows = [], costRows = []) => {
+  const costByKey = new Map();
+  (Array.isArray(costRows) ? costRows : []).forEach((row) => {
+    getRotableChangeIdentityKeys(row).forEach((key) => {
+      if (!costByKey.has(key)) costByKey.set(key, row);
+    });
+  });
+
+  return (Array.isArray(maintenanceRows) ? maintenanceRows : []).map((movement) => {
+    const matchingCostRow = getRotableChangeIdentityKeys(movement)
+      .map((key) => costByKey.get(key))
+      .find(Boolean) || {};
+    const sourceId = String(movement?.id || movement?.maintenanceRotableId || movement?.rotableMovementId || "").trim();
+
+    return {
+      maintenanceRotableId: sourceId,
+      id: sourceId,
+      label: movement?.label || "",
+      date: toIsoDate(movement?.date) || movement?.date || "",
+      pn: movement?.pn || "",
+      msn: movement?.msn || "",
+      acftRegn: movement?.acftRegn || movement?.acftReg || "",
+      position: movement?.position || "",
+      removedSN: movement?.removedSN || "",
+      installedSN: movement?.installedSN || "",
+      cost: matchingCostRow?.cost ?? "",
+      ccy: matchingCostRow?.ccy ?? "",
+    };
+  });
+};
 const normalizeMaintenanceDriver = (value) => {
   const raw = normalizeText(value);
   if (["CYCLE", "CYCLES", "DEPARTURE", "DEPARTURES"].includes(raw)) return "DEPARTURES";
@@ -156,6 +201,34 @@ const normalizeMaintenanceDriver = (value) => {
   if (["BH", "FH"].includes(raw)) return raw;
   return raw;
 };
+const normalizeMaintenanceSettingsDriver = (value) => {
+  const driver = normalizeMaintenanceDriver(value);
+  return MAINTENANCE_DRIVER_VALUES.has(driver) ? driver : DEFAULT_MAINTENANCE_DRIVER;
+};
+const normalizeMaintenanceSettingsRows = (rows = []) => (
+  (Array.isArray(rows) ? rows : []).map((row) => ({
+    ...row,
+    driver: normalizeMaintenanceSettingsDriver(row?.driver),
+  }))
+);
+const hasMaintenanceSettingContent = (row = {}) => (
+  [
+    "mrAccId",
+    "schMxEvent",
+    "acftRegn",
+    "aircraftRegn",
+    "pn",
+    "sn",
+    "msn",
+    "setBalance",
+    "setRate",
+    "annualEscalation",
+    "annualEscl",
+    "anniversaryDate",
+    "anniversary",
+    "endDate",
+  ].some((key) => String(row?.[key] ?? "").trim() !== "")
+);
 
 const toNumeric = (value) => {
   if (value === "" || value === null || value === undefined) return 0;
@@ -193,8 +266,9 @@ const escalateRate = (row, scheduleDate) => {
 };
 
 const generateMaintenanceReserveScheduleRows = (settingsRows = [], existingRows = []) => {
+  const normalizedSettingsRows = normalizeMaintenanceSettingsRows(settingsRows);
   const byKey = new Map();
-  const activeSettingKeys = new Set((Array.isArray(settingsRows) ? settingsRows : []).map((row) => [
+  const activeSettingKeys = new Set(normalizedSettingsRows.map((row) => [
     normalizeText(row?.mrAccId),
     normalizeText(row?.sn || row?.msn),
   ].join("|")));
@@ -207,7 +281,7 @@ const generateMaintenanceReserveScheduleRows = (settingsRows = [], existingRows 
     byKey.set(key, normalized);
   });
 
-  (Array.isArray(settingsRows) ? settingsRows : []).forEach((row) => {
+  normalizedSettingsRows.forEach((row) => {
     const start = parseDateValue(row.asOnDate);
     const end = parseDateValue(row.endDate || row.asOnDate);
     if (!start || !end || !row.mrAccId) return;
@@ -225,7 +299,7 @@ const generateMaintenanceReserveScheduleRows = (settingsRows = [], existingRows 
         acftRegn: normalizeText(row.acftRegn || row.aircraftRegn),
         pn: normalizeText(row.pn),
         sn: normalizeText(row.sn),
-        driver: normalizeMaintenanceDriver(row.driver),
+        driver: normalizeMaintenanceSettingsDriver(row.driver),
         rate: escalateRate(row, cursor),
         contribution: 0,
         openingBalance: previousClosing,
@@ -1618,6 +1692,8 @@ function EditableTable({
   sortFilter = false,
   highlightAutoFields = false,
   readOnly = false,
+  allowAdd = true,
+  allowDelete = true,
 }) {
   const [editingIndex, setEditingIndex] = useState(null);
   const [editRow, setEditRow] = useState({});
@@ -1705,7 +1781,7 @@ function EditableTable({
           <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</h3>
           {titleNote && <span className="text-xs text-slate-500 dark:text-slate-400">{titleNote}</span>}
         </div>
-        {!readOnly && (
+        {!readOnly && allowAdd && (
           <button
             onClick={handleAdd}
             className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
@@ -1835,9 +1911,11 @@ function EditableTable({
                           <button onClick={() => handleEdit(index, row)} className="p-1 text-indigo-600 hover:bg-indigo-50 rounded dark:text-indigo-400 dark:hover:bg-indigo-900/30">
                             <Edit2 size={14} />
                           </button>
-                          <button onClick={() => handleDelete(index)} className="p-1 text-rose-500 hover:bg-rose-50 rounded dark:hover:bg-rose-900/30">
-                            <Trash2 size={14} />
-                          </button>
+                          {allowDelete && (
+                            <button onClick={() => handleDelete(index)} className="p-1 text-rose-500 hover:bg-rose-50 rounded dark:hover:bg-rose-900/30">
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       )}
                     </td>
@@ -2036,7 +2114,9 @@ export default function CostInputModal({ isOpen, onClose }) {
   const updateLeasedReserve = (nextValue) => {
     setLeasedReserve((prevRows) => {
       const rawRows = typeof nextValue === "function" ? nextValue(prevRows) : nextValue;
-      const nextRows = applyMasterStartDateToLeasedReserve(rawRows, masterDateRange.minDate);
+      const nextRows = normalizeMaintenanceSettingsRows(
+        applyMasterStartDateToLeasedReserve(rawRows, masterDateRange.minDate)
+      );
       setMaintenanceReserveSchedule((prevSchedule) => generateMaintenanceReserveScheduleRows(nextRows, prevSchedule));
       return nextRows;
     });
@@ -2044,10 +2124,20 @@ export default function CostInputModal({ isOpen, onClose }) {
 
   useEffect(() => {
     if (isOpen) {
-      api.get("/cost-config")
-        .then(response => {
-          if (response.data && response.data.data) {
-            const d = response.data.data;
+      Promise.all([
+        api.get("/cost-config"),
+        api.get("/maintenance/rotables").catch((error) => {
+          console.error("Error fetching maintenance rotable movements", error);
+          return { data: { success: false, data: [] } };
+        }),
+      ])
+        .then(([costConfigResponse, rotableMovementsResponse]) => {
+          if (costConfigResponse.data && costConfigResponse.data.data) {
+            const d = costConfigResponse.data.data;
+            const maintenanceRotablesLoaded = rotableMovementsResponse.data?.success !== false;
+            const maintenanceRotableRows = Array.isArray(rotableMovementsResponse.data?.data)
+              ? rotableMovementsResponse.data.data
+              : [];
             setFuelConsum(d.fuelConsum || []);
             setFuelConsumIndex(d.fuelConsumIndex || []);
             setApuUsage(d.apuUsage || []);
@@ -2055,13 +2145,20 @@ export default function CostInputModal({ isOpen, onClose }) {
             setCcyFuel(d.ccyFuel || []);
             setAllocationTable(d.allocationTable || []);
 
-            setLeasedReserve(applyMasterStartDateToLeasedReserve(d.leasedReserve || [], masterDateRange.minDate));
-            setMaintenanceReserveSchedule(d.maintenanceReserveSchedule || []);
+            const loadedLeasedReserve = normalizeMaintenanceSettingsRows(
+              applyMasterStartDateToLeasedReserve(d.leasedReserve || [], masterDateRange.minDate)
+            );
+            setLeasedReserve(loadedLeasedReserve);
+            setMaintenanceReserveSchedule(generateMaintenanceReserveScheduleRows(loadedLeasedReserve, d.maintenanceReserveSchedule || []));
             setAircraftOnwing(d.aircraftOnwing || []);
             setSchMxEvents(d.schMxEvents || []);
             setTransitMx(d.transitMx || []);
             setOtherMx(d.otherMx || []);
-            setRotableChanges(d.rotableChanges || []);
+            setRotableChanges(
+              maintenanceRotablesLoaded
+                ? mergeRotableChangeCostRows(maintenanceRotableRows, d.rotableChanges || [])
+                : (d.rotableChanges || [])
+            );
 
             setNavEnr(d.navEnr || []);
             setNavTerm(d.navTerm || []);
@@ -2131,13 +2228,17 @@ export default function CostInputModal({ isOpen, onClose }) {
         return;
       }
 
-      const validDrivers = new Set(["BH", "FH", "DEPARTURES", "MONTH", "APUHR", ""]);
-      const effectiveLeasedReserve = applyMasterStartDateToLeasedReserve(leasedReserve, masterDateRange.minDate);
+      const validMaintenanceSettingDrivers = new Set(MAINTENANCE_DRIVER_OPTIONS.map((option) => option.value));
+      const validScheduleDrivers = new Set(["BH", "FH", "DEPARTURES", "MONTH", "APUHR", ""]);
+      const effectiveLeasedReserve = normalizeMaintenanceSettingsRows(
+        applyMasterStartDateToLeasedReserve(leasedReserve, masterDateRange.minDate)
+      );
+      const persistableLeasedReserve = effectiveLeasedReserve.filter(hasMaintenanceSettingContent);
       const effectiveMaintenanceReserveSchedule = generateMaintenanceReserveScheduleRows(
-        effectiveLeasedReserve,
+        persistableLeasedReserve,
         maintenanceReserveSchedule
       );
-      const settingsDriverIndex = (Array.isArray(effectiveLeasedReserve) ? effectiveLeasedReserve : []).findIndex((row) => !validDrivers.has(normalizeMaintenanceDriver(row?.driver)));
+      const settingsDriverIndex = persistableLeasedReserve.findIndex((row) => !validMaintenanceSettingDrivers.has(normalizeMaintenanceDriver(row?.driver)));
       if (settingsDriverIndex >= 0) {
         toast.error(`Maintenance Reserve Settings row ${settingsDriverIndex + 1}: enter a valid Driver.`);
         return;
@@ -2150,7 +2251,7 @@ export default function CostInputModal({ isOpen, onClose }) {
         if (toNumeric(row?.rate) < 0 || toNumeric(row?.contribution) < 0) return true;
         const ccy = String(row?.ccy || "").trim();
         if (ccy && !/^[A-Za-z]{3}$/.test(ccy)) return true;
-        if (!validDrivers.has(normalizeMaintenanceDriver(row?.driver))) return true;
+        if (!validScheduleDrivers.has(normalizeMaintenanceDriver(row?.driver))) return true;
         return false;
       });
       if (scheduleErrorIndex >= 0) {
@@ -2173,7 +2274,7 @@ export default function CostInputModal({ isOpen, onClose }) {
       const payload = {
         allocationTable,
         fuelConsum, fuelConsumIndex, apuUsage, plfEffect, ccyFuel,
-        leasedReserve: effectiveLeasedReserve,
+        leasedReserve: persistableLeasedReserve,
         maintenanceReserveSchedule: effectiveMaintenanceReserveSchedule,
         aircraftOnwing, schMxEvents, transitMx, otherMx, rotableChanges,
         navMtowTiers, navEnr, navTerm, airportLanding, airportDom, airportIntl, airportAvsec, airportOther,
@@ -2239,7 +2340,9 @@ export default function CostInputModal({ isOpen, onClose }) {
   const handleGenerateMaintenanceReserveSchedule = async () => {
     try {
       setGeneratingMrSchedule(true);
-      const effectiveLeasedReserve = applyMasterStartDateToLeasedReserve(leasedReserve, masterDateRange.minDate);
+      const effectiveLeasedReserve = normalizeMaintenanceSettingsRows(
+        applyMasterStartDateToLeasedReserve(leasedReserve, masterDateRange.minDate)
+      );
       const response = await api.post("/cost-config/maintenance-reserve-schedule/generate", {
         leasedReserve: effectiveLeasedReserve,
         maintenanceReserveSchedule,
@@ -2250,7 +2353,9 @@ export default function CostInputModal({ isOpen, onClose }) {
     } catch (error) {
       console.error("Error generating maintenance reserve schedule", error);
       setMaintenanceReserveSchedule((prev) => generateMaintenanceReserveScheduleRows(
-        applyMasterStartDateToLeasedReserve(leasedReserve, masterDateRange.minDate),
+        normalizeMaintenanceSettingsRows(
+          applyMasterStartDateToLeasedReserve(leasedReserve, masterDateRange.minDate)
+        ),
         prev
       ));
       toast.warn("Generated schedule locally; save to recalculate contribution amounts.");
@@ -2402,7 +2507,16 @@ export default function CostInputModal({ isOpen, onClose }) {
                       allowEmpty: false,
                       preserveUnknownOption: false,
                     },
-                    { label: "Driver", key: "driver", type: "select", options: MAINTENANCE_DRIVER_OPTIONS, placeholder: "Driver" },
+                    {
+                      label: "Driver",
+                      key: "driver",
+                      type: "select",
+                      options: MAINTENANCE_DRIVER_OPTIONS,
+                      placeholder: "Driver",
+                      defaultValue: DEFAULT_MAINTENANCE_DRIVER,
+                      allowEmpty: false,
+                      preserveUnknownOption: false,
+                    },
                     { label: "Annual escl", key: "annualEscalation", type: "number" },
                     { label: "Anniversary", key: "anniversaryDate", type: "date" },
                     { label: "End date", key: "endDate", type: "date" },
@@ -2513,15 +2627,17 @@ export default function CostInputModal({ isOpen, onClose }) {
                   data={rotableChanges}
                   setData={setRotableChanges}
                   sortFilter
+                  allowAdd={false}
+                  allowDelete={false}
                   columns={[
-                    { label: "Label", key: "label" },
-                    { label: "Date", key: "date", type: "date" },
-                    { label: "PN", key: "pn" },
-                    { label: "MSN", key: "msn" },
-                    { label: "ACFT Regn", key: "acftRegn" },
-                    { label: "Position (for PN)", key: "position" },
-                    { label: "Removed SN", key: "removedSN" },
-                    { label: "Installed SN", key: "installedSN" },
+                    { label: "Label", key: "label", readOnly: true },
+                    { label: "Date", key: "date", type: "date", readOnly: true },
+                    { label: "PN", key: "pn", readOnly: true },
+                    { label: "MSN", key: "msn", readOnly: true },
+                    { label: "ACFT Regn", key: "acftRegn", readOnly: true },
+                    { label: "Position (for PN)", key: "position", readOnly: true },
+                    { label: "Removed SN", key: "removedSN", readOnly: true },
+                    { label: "Installed SN", key: "installedSN", readOnly: true },
                     { label: "Cost", key: "cost", type: "number" },
                     { label: "CCY", key: "ccy" },
                   ]}
