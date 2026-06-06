@@ -38,6 +38,59 @@ function getModalTableStyle(columnCount) {
   return { minWidth: `${columnCount * MODAL_TABLE_COLUMN_WIDTH}px` };
 }
 
+const MONTH_SHORT_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_NAME_LOOKUP = MONTH_SHORT_NAMES.reduce((lookup, month, index) => {
+  lookup[month.toUpperCase()] = index + 1;
+  return lookup;
+}, {
+  JANUARY: 1,
+  FEBRUARY: 2,
+  MARCH: 3,
+  APRIL: 4,
+  JUNE: 6,
+  JULY: 7,
+  AUGUST: 8,
+  SEPTEMBER: 9,
+  OCTOBER: 10,
+  NOVEMBER: 11,
+  DECEMBER: 12,
+});
+
+function formatFuelMonthLabel(value) {
+  if (value === null || value === undefined) return "";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return `${MONTH_SHORT_NAMES[value.getMonth()]}-${String(value.getFullYear()).slice(-2)}`;
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return "";
+
+  const isoMatch = raw.match(/^(\d{4})[-/](\d{1,2})(?:[-/]\d{1,2})?$/);
+  if (isoMatch) {
+    const month = Number(isoMatch[2]);
+    if (month >= 1 && month <= 12) return `${MONTH_SHORT_NAMES[month - 1]}-${isoMatch[1].slice(-2)}`;
+  }
+
+  const numericMatch = raw.match(/^(\d{1,2})[/-](\d{2,4})$/);
+  if (numericMatch) {
+    const month = Number(numericMatch[1]);
+    if (month >= 1 && month <= 12) return `${MONTH_SHORT_NAMES[month - 1]}-${numericMatch[2].slice(-2)}`;
+  }
+
+  const textMatch = raw.match(/^([A-Za-z]+)[-/ ]?(\d{2,4})$/);
+  if (textMatch) {
+    const month = MONTH_NAME_LOOKUP[textMatch[1].toUpperCase()];
+    if (month) return `${MONTH_SHORT_NAMES[month - 1]}-${textMatch[2].slice(-2)}`;
+  }
+
+  const parsed = /\d{4}/.test(raw) && /[A-Za-z]/.test(raw) ? new Date(raw) : null;
+  if (parsed && !Number.isNaN(parsed.getTime())) {
+    return `${MONTH_SHORT_NAMES[parsed.getMonth()]}-${String(parsed.getFullYear()).slice(-2)}`;
+  }
+
+  return raw;
+}
+
 function parsePlfPercentInput(value) {
   const digits = String(value ?? "").replace(/[^0-9]/g, "");
   if (!digits) return "";
@@ -690,15 +743,16 @@ function FuelConsumptionTable({ data, setData, className }) {
   const [fallbackMonth2, setFallbackMonth2] = useState("");
   const month1Row = data.find((row) => row.month1 || row.m1Label || row.month);
   const month2Row = data.find((row) => row.month2 || row.m2Label);
-  const month1 = month1Row?.month1 || month1Row?.m1Label || month1Row?.month || fallbackMonth1;
-  const month2 = month2Row?.month2 || month2Row?.m2Label || fallbackMonth2;
+  const month1 = formatFuelMonthLabel(month1Row?.month1 || month1Row?.m1Label || month1Row?.month || fallbackMonth1);
+  const month2 = formatFuelMonthLabel(month2Row?.month2 || month2Row?.m2Label || fallbackMonth2);
 
   const isSectorRow = (row) => (row.rowType ? row.rowType === "sector" : !row.acftRegn);
 
   const applyMonthLabel = (key, value) => {
-    if (key === "month1") setFallbackMonth1(value);
-    if (key === "month2") setFallbackMonth2(value);
-    setData(data.map((row) => ({ ...row, [key]: value })));
+    const formattedValue = formatFuelMonthLabel(value);
+    if (key === "month1") setFallbackMonth1(formattedValue);
+    if (key === "month2") setFallbackMonth2(formattedValue);
+    setData(data.map((row) => ({ ...row, [key]: formattedValue })));
   };
 
   const updateRow = (index, key, value) => {
@@ -751,7 +805,7 @@ function FuelConsumptionTable({ data, setData, className }) {
   return (
     <div className={cn("mb-8", className)}>
       <div className="flex justify-between items-center mb-2">
-        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Fuel Consumption</h3>
+        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">ACFT Regn</h3>
         <div className="flex items-center gap-2">
           <button
             onClick={addSector}
@@ -778,7 +832,7 @@ function FuelConsumptionTable({ data, setData, className }) {
                 <Input
                   value={month1}
                   onChange={(e) => applyMonthLabel("month1", e.target.value)}
-                  placeholder="MMM-YY"
+                  placeholder="Mmm-yy"
                   className="border-0 rounded-none text-right font-semibold"
                 />
               </th>
@@ -786,7 +840,7 @@ function FuelConsumptionTable({ data, setData, className }) {
                 <Input
                   value={month2}
                   onChange={(e) => applyMonthLabel("month2", e.target.value)}
-                  placeholder="MMM-YY"
+                  placeholder="Mmm-yy"
                   className="border-0 rounded-none text-right font-semibold"
                 />
               </th>
@@ -843,7 +897,7 @@ function FuelConsumptionTable({ data, setData, className }) {
                       <div className="h-10 bg-slate-100 dark:bg-slate-800" />
                     ) : (
                       <Input
-                        value={row.m1 ?? (row.month === month1 ? row.fuelConsumptionKg : "")}
+                        value={row.m1 ?? (formatFuelMonthLabel(row.month) === month1 ? row.fuelConsumptionKg : "")}
                         onChange={(e) => updateRow(index, "m1", e.target.value)}
                         type="number"
                         className="border-0 rounded-none text-right"
@@ -1204,14 +1258,15 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
     ["month5", "m5"],
   ];
 
-  const getMonthLabel = (monthKey, fallback) => data.find((row) => row[monthKey])?.[monthKey] || fallbackMonths[monthKey] || fallback;
+  const getMonthLabel = (monthKey, fallback) => formatFuelMonthLabel(data.find((row) => row[monthKey])?.[monthKey] || fallbackMonths[monthKey] || fallback);
   const getCurrentMonthLabels = () => Object.fromEntries(
     monthKeys.map(([monthKey]) => [monthKey, getMonthLabel(monthKey, "")])
   );
 
   const updateMonthLabel = (monthKey, value) => {
-    setFallbackMonths((previous) => ({ ...previous, [monthKey]: value }));
-    setData(data.map((row) => ({ ...row, [monthKey]: value })));
+    const formattedValue = formatFuelMonthLabel(value);
+    setFallbackMonths((previous) => ({ ...previous, [monthKey]: formattedValue }));
+    setData(data.map((row) => ({ ...row, [monthKey]: formattedValue })));
   };
 
   const updateRow = (index, key, value) => {
@@ -1262,7 +1317,7 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
                   <Input
                     value={getMonthLabel(monthKey, "")}
                     onChange={(e) => updateMonthLabel(monthKey, e.target.value)}
-                    placeholder="MMM-YY"
+                    placeholder="Mmm-yy"
                     className="border-0 rounded-none text-right font-semibold"
                   />
                 </th>
@@ -1584,7 +1639,7 @@ function FuelPriceTable({ data, setData, className }) {
   return (
     <div className={cn("mb-8", className)}>
       <div className="flex justify-between items-center mb-2">
-        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Fuel Price</h3>
+        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Fuel price (into plane, per kLtr)</h3>
         <button
           onClick={addRow}
           className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
@@ -1599,7 +1654,7 @@ function FuelPriceTable({ data, setData, className }) {
             <tr className="bg-white dark:bg-slate-900">
               <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Kg/Ltr</th>
               <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">CCY</th>
-              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Into plane (per kLtr)</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Dep Station</th>
               <th className="border border-slate-300 dark:border-slate-700 p-0">
                 <Input
                   value={month1}
@@ -2423,7 +2478,6 @@ export default function CostInputModal({ isOpen, onClose }) {
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
               <div>
                 <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Cost Inputs</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Configure and manage cost allocation tables.</p>
               </div>
               <div className="flex items-center gap-3">
                 <button
@@ -2690,8 +2744,8 @@ export default function CostInputModal({ isOpen, onClose }) {
                     tierKeys={navMtowTiers}
                   />
                   <TierSheetTable
-                    title="Terminal @ Arr Stn"
-                    rowLabel="Terminal @ Arr Stn"
+                    title="Terminal"
+                    rowLabel="Terminal"
                     rowKey="arrStn"
                     data={navTerm}
                     setData={setNavTerm}
