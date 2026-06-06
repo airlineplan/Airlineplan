@@ -79,6 +79,34 @@ const emptyUploadState = {
     otherDuties: { filename: "", loading: false, summary: null, errors: [] },
 };
 
+const uploadLabels = {
+    members: "Crew Information",
+    flightDuties: "Flight Duty roster",
+    otherDuties: "Other Duty roster",
+};
+
+const getUploadOutcome = (key, summary, fallbackMessage) => {
+    const invalidRows = Number(summary?.invalidRows || 0);
+    const changedRows = Number(summary?.rowsInserted || 0) + Number(summary?.rowsUpdated || 0);
+    const label = uploadLabels[key] || "Upload";
+
+    if (invalidRows > 0 && changedRows === 0) {
+        return {
+            type: "error",
+            message: `${label} import failed. ${invalidRows} invalid row${invalidRows === 1 ? "" : "s"} found.`,
+        };
+    }
+
+    if (invalidRows > 0) {
+        return {
+            type: "warning",
+            message: `${label} imported with ${invalidRows} invalid row${invalidRows === 1 ? "" : "s"}.`,
+        };
+    }
+
+    return { type: "success", message: fallbackMessage || `${label} import completed.` };
+};
+
 const InputTime = ({ label, placeholder = "HH:MM", value, onChange, error, className }) => (
     <div className={cn("flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-1.5", className)}>
         <label className="text-base text-slate-700 dark:text-slate-300 font-medium flex-1 pr-4">{label}</label>
@@ -494,10 +522,22 @@ const CrewPage = () => {
             const summary = response.data?.data;
             setUploadState((prev) => ({ ...prev, [key]: { filename: file.name, loading: false, summary, errors: summary?.errors || [] } }));
             await loadBootstrap();
-            toast.success(response.data?.message || "Upload complete.");
+            const outcome = getUploadOutcome(key, summary, response.data?.message);
+            if (outcome.type === "error") toast.error(outcome.message);
+            else if (outcome.type === "warning") toast.warning(outcome.message);
+            else toast.success(outcome.message);
         } catch (error) {
             const message = error.response?.data?.message || "Upload failed.";
-            setUploadState((prev) => ({ ...prev, [key]: { ...prev[key], loading: false, errors: [{ message }] } }));
+            const summary = error.response?.data?.data || null;
+            setUploadState((prev) => ({
+                ...prev,
+                [key]: {
+                    ...prev[key],
+                    loading: false,
+                    summary: summary || prev[key].summary,
+                    errors: summary?.errors || [{ message }],
+                },
+            }));
             toast.error(message);
         }
     };
