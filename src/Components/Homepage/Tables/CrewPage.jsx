@@ -69,6 +69,19 @@ const formatEndTime = (row) => {
     return formatTime(row?.endDateTime);
 };
 
+const getUtcDateKey = (value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toISOString().slice(0, 10);
+};
+
+const sortByStartTime = (left, right) => {
+    const leftTime = new Date(left.startDateTime || 0).getTime();
+    const rightTime = new Date(right.startDateTime || 0).getTime();
+    if (leftTime !== rightTime) return leftTime - rightTime;
+    return String(left.crewCode || "").localeCompare(String(right.crewCode || ""));
+};
+
 const formatMoney = (value, currency) => {
     const amount = Number(value || 0);
     if (!amount) return "-";
@@ -363,6 +376,8 @@ const CrewPage = () => {
     const [kpiLoading, setKpiLoading] = useState(false);
     const [kpiFilters, setKpiFilters] = useState({ periodicity: "MONTHLY", roles: [], bases: [], categories: [], subCategories: [] });
     const [diaryRows, setDiaryRows] = useState([]);
+    const [diarySummaryEvents, setDiarySummaryEvents] = useState([]);
+    const [diaryViewMode, setDiaryViewMode] = useState("summary");
     const [diaryLoading, setDiaryLoading] = useState(false);
     const [diaryPagination, setDiaryPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
     const [diaryFilters, setDiaryFilters] = useState({ startDate: "", endDate: "", crewCode: "", crewName: "", role: "" });
@@ -445,22 +460,28 @@ const CrewPage = () => {
         }
     }, [kpiFilters]);
 
-    const loadDiary = useCallback(async (page = 1) => {
+    const loadDiary = useCallback(async (page = 1, viewMode = diaryViewMode) => {
         setDiaryLoading(true);
         try {
-            const params = new URLSearchParams({ page: String(page), limit: String(diaryPagination.limit) });
+            const isSummary = viewMode === "summary";
+            const params = new URLSearchParams({ page: String(page), limit: String(isSummary ? 5000 : diaryPagination.limit) });
+            if (isSummary) params.set("view", "summary");
             Object.entries(diaryFilters).forEach(([key, value]) => {
                 if (value) params.set(key, value);
             });
             const response = await api.get(`/crew/diary?${params.toString()}`);
-            setDiaryRows(response.data?.data || []);
-            setDiaryPagination(response.data?.pagination || { page, limit: 50, total: 0, totalPages: 0 });
+            if (isSummary) {
+                setDiarySummaryEvents(response.data?.data || []);
+            } else {
+                setDiaryRows(response.data?.data || []);
+                setDiaryPagination(response.data?.pagination || { page, limit: 50, total: 0, totalPages: 0 });
+            }
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to load Crew Diary.");
         } finally {
             setDiaryLoading(false);
         }
-    }, [diaryFilters, diaryPagination.limit]);
+    }, [diaryFilters, diaryPagination.limit, diaryViewMode]);
 
     useEffect(() => {
         loadBootstrap();
@@ -472,7 +493,73 @@ const CrewPage = () => {
 
     useEffect(() => {
         if (modals.diary) loadDiary(1);
-    }, [modals.diary, diaryFilters, loadDiary]);
+    }, [modals.diary, diaryFilters, diaryViewMode, loadDiary]);
+
+    const diarySummary = useMemo(() => {
+        const sortedEvents = [...diarySummaryEvents].sort(sortByStartTime);
+        const columnMap = new Map();
+        const rowMap = new Map();
+
+        sortedEvents.forEach((event) => {
+            const dateKey = event.displayDate || getUtcDateKey(event.startDateTime);
+            const startTime = formatTime(event.startDateTime);
+            const endTime = formatEndTime(event);
+            if (!dateKey || !startTime || !endTime) return;
+
+            const columnKey = `${dateKey}|${startTime}|${endTime}`;
+            if (!columnMap.has(columnKey)) {
+                columnMap.set(columnKey, {
+                    key: columnKey,
+                    dateKey,
+                    dateLabel: formatDate(`${dateKey}T00:00:00.000Z`),
+                    timeLabel: `${startTime}-${endTime}`,
+                });
+            }
+
+            const category = event.category || "Uncategorised";
+            const rowKey = [event.crewCode || "-", event.crewName || "-", event.role || "-", category].join("|");
+            if (!rowMap.has(rowKey)) {
+                rowMap.set(rowKey, {
+                    key: rowKey,
+                    crewCode: event.crewCode || "-",
+                    crewName: event.crewName || "-",
+                    role: event.role || "-",
+                    category,
+                    cells: new Map(),
+                });
+            }
+
+            const cellValues = rowMap.get(rowKey).cells.get(columnKey) || [];
+            const cellParts = [
+                event.subCategory && event.subCategory !== category ? event.subCategory : "",
+                event.flightNumber,
+                event.location,
+            ].filter(Boolean);
+            const cellLabel = cellParts.join(" | ") || category;
+            rowMap.get(rowKey).cells.set(columnKey, [...cellValues, cellLabel]);
+        });
+
+        const columns = Array.from(columnMap.values()).sort((left, right) => {
+            if (left.dateKey !== right.dateKey) return left.dateKey.localeCompare(right.dateKey);
+            return left.timeLabel.localeCompare(right.timeLabel);
+        });
+        const rows = Array.from(rowMap.values()).sort((left, right) => {
+            const crewSort = String(left.crewCode).localeCompare(String(right.crewCode));
+            if (crewSort !== 0) return crewSort;
+            return String(left.category).localeCompare(String(right.category));
+        });
+        const dateGroups = columns.reduce((groups, column) => {
+            const previous = groups[groups.length - 1];
+            if (previous?.dateKey === column.dateKey) {
+                previous.colSpan += 1;
+            } else {
+                groups.push({ dateKey: column.dateKey, label: column.dateLabel, colSpan: 1 });
+            }
+            return groups;
+        }, []);
+
+        return { columns, rows, dateGroups };
+    }, [diarySummaryEvents]);
 
     const dutyErrors = useMemo(() => {
         const errors = {};
@@ -933,64 +1020,158 @@ const CrewPage = () => {
                 </table>
             </Modal>
 
-            <Modal isOpen={modals.diary} onClose={() => toggleModal("diary")} title="Crew Diary" maxWidth="max-w-6xl">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
-                    <SmallInput value={diaryFilters.startDate} type="date" onChange={(value) => setDiaryFilters((prev) => ({ ...prev, startDate: value }))} />
-                    <SmallInput value={diaryFilters.endDate} type="date" onChange={(value) => setDiaryFilters((prev) => ({ ...prev, endDate: value }))} />
-                    <SmallInput value={diaryFilters.crewCode} placeholder="Crew ID" onChange={(value) => setDiaryFilters((prev) => ({ ...prev, crewCode: value }))} />
-                    <SmallInput value={diaryFilters.crewName} placeholder="Crew Name" onChange={(value) => setDiaryFilters((prev) => ({ ...prev, crewName: value }))} />
-                    <SmallInput value={diaryFilters.role} placeholder="Role" onChange={(value) => setDiaryFilters((prev) => ({ ...prev, role: value }))} />
-                </div>
-                <div className="overflow-x-auto w-full border border-slate-200 dark:border-slate-700 rounded-lg">
-                    <table className="w-full text-sm text-left min-w-[1500px]">
-                        <thead className="bg-slate-50 dark:bg-slate-800">
-                            <tr>
-                                {["Crew ID", "Crew Name", "Role", "Date", "From", "To", "Location", "Category", "Sub-category", "DP", "FDP", "FT", "RP", "DP Cost", "FDP Cost", "FT Cost", "Layover", "Positioning", "Reason"].map((header) => (
-                                    <th key={header} className="p-3 font-semibold border-b border-slate-200 dark:border-slate-700">{header}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {diaryLoading && (
-                                <tr><td colSpan={19} className="p-6 text-center text-slate-500">Loading diary rows...</td></tr>
-                            )}
-                            {!diaryLoading && diaryRows.length === 0 && (
-                                <tr><td colSpan={19} className="p-6 text-center text-slate-500">No Crew Diary rows found.</td></tr>
-                            )}
-                            {!diaryLoading && diaryRows.map((row) => (
-                                <tr key={row._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 align-top">
-                                    <td className="p-3 font-medium">{row.crewCode}</td>
-                                    <td className="p-3 text-slate-600 dark:text-slate-400">{row.crewName}</td>
-                                    <td className="p-3 text-slate-600 dark:text-slate-400">{row.role}</td>
-                                    <td className="p-3">{formatDate(row.startDateTime)}</td>
-                                    <td className="p-3 tabular-nums">{formatTime(row.startDateTime)}</td>
-                                    <td className="p-3 tabular-nums">{formatEndTime(row)}</td>
-                                    <td className="p-3">{row.location || "-"}</td>
-                                    <td className="p-3">{row.category}</td>
-                                    <td className="p-3">{row.subCategory}</td>
-                                    <td className="p-3 tabular-nums">{minutesToHHMM(row.dpMinutes)}</td>
-                                    <td className="p-3 tabular-nums">{minutesToHHMM(row.fdpMinutes)}</td>
-                                    <td className="p-3 tabular-nums">{minutesToHHMM(row.ftMinutes)}</td>
-                                    <td className="p-3 tabular-nums">{minutesToHHMM(row.rpMinutes)}</td>
-                                    <td className="p-3 tabular-nums">{formatMoney(row.dpCost, row.currency)}</td>
-                                    <td className="p-3 tabular-nums">{formatMoney(row.fdpCost, row.currency)}</td>
-                                    <td className="p-3 tabular-nums">{formatMoney(row.ftCost, row.currency)}</td>
-                                    <td className="p-3 tabular-nums">{formatMoney(row.layoverCost, row.currency)}</td>
-                                    <td className="p-3 tabular-nums">{formatMoney(row.positioningCost, row.currency)}</td>
-                                    <td className="p-3 min-w-[260px] text-slate-500 dark:text-slate-400 whitespace-normal">{row.reasonText}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-                <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-500">
-                    <span>{diaryPagination.total || 0} rows</span>
-                    <div className="flex items-center gap-2">
-                        <button type="button" disabled={diaryPagination.page <= 1 || diaryLoading} onClick={() => loadDiary(diaryPagination.page - 1)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-50">Prev</button>
-                        <span>Page {diaryPagination.page || 1} of {diaryPagination.totalPages || 1}</span>
-                        <button type="button" disabled={diaryPagination.page >= diaryPagination.totalPages || diaryLoading} onClick={() => loadDiary(diaryPagination.page + 1)} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-50">Next</button>
+            <Modal isOpen={modals.diary} onClose={() => toggleModal("diary")} title="Crew Diary" maxWidth="max-w-7xl">
+                <div className="mb-4 flex flex-col gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                        <SmallInput value={diaryFilters.startDate} type="date" onChange={(value) => setDiaryFilters((prev) => ({ ...prev, startDate: value }))} />
+                        <SmallInput value={diaryFilters.endDate} type="date" onChange={(value) => setDiaryFilters((prev) => ({ ...prev, endDate: value }))} />
+                        <SmallInput value={diaryFilters.crewCode} placeholder="Crew ID" onChange={(value) => setDiaryFilters((prev) => ({ ...prev, crewCode: value }))} />
+                        <SmallInput value={diaryFilters.crewName} placeholder="Crew Name" onChange={(value) => setDiaryFilters((prev) => ({ ...prev, crewName: value }))} />
+                        <SmallInput value={diaryFilters.role} placeholder="Role" onChange={(value) => setDiaryFilters((prev) => ({ ...prev, role: value }))} />
+                    </div>
+                    <div className="inline-flex w-fit rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-1">
+                        {["summary", "detailed"].map((mode) => (
+                            <button
+                                key={mode}
+                                type="button"
+                                onClick={() => setDiaryViewMode(mode)}
+                                className={cn(
+                                    "px-4 py-1.5 rounded-md text-sm font-semibold capitalize transition-colors",
+                                    diaryViewMode === mode
+                                        ? "bg-white dark:bg-slate-900 text-indigo-600 shadow-sm"
+                                        : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                                )}
+                            >
+                                {mode}
+                            </button>
+                        ))}
                     </div>
                 </div>
+
+                {diaryViewMode === "summary" ? (
+                    <>
+                        <div className="overflow-x-auto w-full border border-slate-200 dark:border-slate-700 rounded-lg">
+                            <table className="w-full text-sm text-left min-w-[1100px]">
+                                <thead className="bg-slate-50 dark:bg-slate-800">
+                                    <tr>
+                                        <th rowSpan={2} className="sticky left-0 z-30 w-[110px] min-w-[110px] p-3 font-semibold border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">Crew ID</th>
+                                        <th rowSpan={2} className="sticky left-[110px] z-30 w-[150px] min-w-[150px] p-3 font-semibold border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">Crew Name</th>
+                                        <th rowSpan={2} className="sticky left-[260px] z-30 w-[100px] min-w-[100px] p-3 font-semibold border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">Role</th>
+                                        <th rowSpan={2} className="sticky left-[360px] z-30 w-[180px] min-w-[180px] p-3 font-semibold border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">Activity</th>
+                                        {diarySummary.dateGroups.length > 0 ? diarySummary.dateGroups.map((group) => (
+                                            <th key={group.dateKey} colSpan={group.colSpan} className="p-3 font-semibold text-center border-b border-slate-200 dark:border-slate-700">
+                                                {group.label}
+                                            </th>
+                                        )) : (
+                                            <th className="p-3 font-semibold text-center border-b border-slate-200 dark:border-slate-700">Period</th>
+                                        )}
+                                    </tr>
+                                    <tr>
+                                        {diarySummary.columns.length > 0 ? diarySummary.columns.map((column) => (
+                                            <th key={column.key} className="min-w-[130px] p-3 font-semibold text-center border-b border-l border-slate-200 dark:border-slate-700 tabular-nums">
+                                                {column.timeLabel}
+                                            </th>
+                                        )) : (
+                                            <th className="min-w-[130px] p-3 font-semibold text-center border-b border-l border-slate-200 dark:border-slate-700">No slots</th>
+                                        )}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {diaryLoading && (
+                                        <tr><td colSpan={4 + Math.max(diarySummary.columns.length, 1)} className="p-6 text-center text-slate-500">Loading diary summary...</td></tr>
+                                    )}
+                                    {!diaryLoading && diarySummary.rows.length === 0 && (
+                                        <tr><td colSpan={4 + Math.max(diarySummary.columns.length, 1)} className="p-6 text-center text-slate-500">No Crew Diary rows found.</td></tr>
+                                    )}
+                                    {!diaryLoading && diarySummary.rows.map((row) => (
+                                        <tr key={row.key} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 align-top">
+                                            <td className="sticky left-0 z-20 w-[110px] min-w-[110px] p-3 font-medium border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">{row.crewCode}</td>
+                                            <td className="sticky left-[110px] z-20 w-[150px] min-w-[150px] p-3 text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">{row.crewName}</td>
+                                            <td className="sticky left-[260px] z-20 w-[100px] min-w-[100px] p-3 text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">{row.role}</td>
+                                            <td className="sticky left-[360px] z-20 w-[180px] min-w-[180px] p-3 font-semibold text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">{row.category}</td>
+                                            {diarySummary.columns.map((column) => {
+                                                const values = [...new Set(row.cells.get(column.key) || [])];
+                                                return (
+                                                    <td key={`${row.key}-${column.key}`} className="min-w-[130px] p-3 text-center border-l border-slate-100 dark:border-slate-800">
+                                                        {values.length ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                {values.slice(0, 3).map((value) => (
+                                                                    <span key={value} className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+                                                                        {value}
+                                                                    </span>
+                                                                ))}
+                                                                {values.length > 3 && <span className="text-xs text-slate-500">+{values.length - 3} more</span>}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-slate-300 dark:text-slate-700">-</span>
+                                                        )}
+                                                    </td>
+                                                );
+                                            })}
+                                            {diarySummary.columns.length === 0 && <td className="p-3 text-center text-slate-400">-</td>}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="mt-4 text-sm text-slate-500">
+                            <span>{diarySummaryEvents.length || 0} events in summary</span>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="overflow-x-auto w-full border border-slate-200 dark:border-slate-700 rounded-lg">
+                            <table className="w-full text-sm text-left min-w-[1500px]">
+                                <thead className="bg-slate-50 dark:bg-slate-800">
+                                    <tr>
+                                        {["Crew ID", "Crew Name", "Role", "Date", "From", "To", "Location", "Category", "Sub-category", "DP", "FDP", "FT", "RP", "DP Cost", "FDP Cost", "FT Cost", "Layover", "Positioning", "Reason"].map((header) => (
+                                            <th key={header} className="p-3 font-semibold border-b border-slate-200 dark:border-slate-700">{header}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {diaryLoading && (
+                                        <tr><td colSpan={19} className="p-6 text-center text-slate-500">Loading diary rows...</td></tr>
+                                    )}
+                                    {!diaryLoading && diaryRows.length === 0 && (
+                                        <tr><td colSpan={19} className="p-6 text-center text-slate-500">No Crew Diary rows found.</td></tr>
+                                    )}
+                                    {!diaryLoading && diaryRows.map((row) => (
+                                        <tr key={row._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 align-top">
+                                            <td className="p-3 font-medium">{row.crewCode}</td>
+                                            <td className="p-3 text-slate-600 dark:text-slate-400">{row.crewName}</td>
+                                            <td className="p-3 text-slate-600 dark:text-slate-400">{row.role}</td>
+                                            <td className="p-3">{formatDate(row.startDateTime)}</td>
+                                            <td className="p-3 tabular-nums">{formatTime(row.startDateTime)}</td>
+                                            <td className="p-3 tabular-nums">{formatEndTime(row)}</td>
+                                            <td className="p-3">{row.location || "-"}</td>
+                                            <td className="p-3">{row.category}</td>
+                                            <td className="p-3">{row.subCategory}</td>
+                                            <td className="p-3 tabular-nums">{minutesToHHMM(row.dpMinutes)}</td>
+                                            <td className="p-3 tabular-nums">{minutesToHHMM(row.fdpMinutes)}</td>
+                                            <td className="p-3 tabular-nums">{minutesToHHMM(row.ftMinutes)}</td>
+                                            <td className="p-3 tabular-nums">{minutesToHHMM(row.rpMinutes)}</td>
+                                            <td className="p-3 tabular-nums">{formatMoney(row.dpCost, row.currency)}</td>
+                                            <td className="p-3 tabular-nums">{formatMoney(row.fdpCost, row.currency)}</td>
+                                            <td className="p-3 tabular-nums">{formatMoney(row.ftCost, row.currency)}</td>
+                                            <td className="p-3 tabular-nums">{formatMoney(row.layoverCost, row.currency)}</td>
+                                            <td className="p-3 tabular-nums">{formatMoney(row.positioningCost, row.currency)}</td>
+                                            <td className="p-3 min-w-[260px] text-slate-500 dark:text-slate-400 whitespace-normal">{row.reasonText}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-500">
+                            <span>{diaryPagination.total || 0} rows</span>
+                            <div className="flex items-center gap-2">
+                                <button type="button" disabled={diaryPagination.page <= 1 || diaryLoading} onClick={() => loadDiary(diaryPagination.page - 1, "detailed")} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-50">Prev</button>
+                                <span>Page {diaryPagination.page || 1} of {diaryPagination.totalPages || 1}</span>
+                                <button type="button" disabled={diaryPagination.page >= diaryPagination.totalPages || diaryLoading} onClick={() => loadDiary(diaryPagination.page + 1, "detailed")} className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-50">Next</button>
+                            </div>
+                        </div>
+                    </>
+                )}
             </Modal>
         </div>
     );
