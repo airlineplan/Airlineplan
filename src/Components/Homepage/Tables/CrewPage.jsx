@@ -44,6 +44,8 @@ const hhmmToMinutes = (value) => {
     return hours * 60 + minutes;
 };
 
+const toHHMM = (value) => (durationRegex.test(String(value || "").trim()) ? String(value).trim() : minutesToHHMM(value));
+
 const formatDate = (value) => {
     if (!value) return "";
     const date = new Date(value);
@@ -115,6 +117,19 @@ const PERIODICITY_OPTIONS = [
     { value: "MONTHLY", label: "Monthly" },
     { value: "WEEKLY", label: "Weekly" },
     { value: "DAILY", label: "Daily" },
+];
+
+const DEFAULT_UTILISATION_TARGETS = [
+    { role: "ALL_ROLES", averageDpMinutesPerDay: "00:00", averageFdpMinutesPerDay: "00:00", averageFtMinutesPerDay: "00:00" },
+];
+
+const DEFAULT_POSITIONING_COST_RULES = [
+    { departureStation: "ALL_STATIONS", arrivalStation: "ALL_STATIONS", sector: "ALL_STATIONS-ALL_STATIONS", role: "ALL_ROLES", costAmount: 0, currency: "INR" },
+];
+
+const defaultLayoverRules = (breakThreshold = "03:00") => [
+    { ruleType: "CONVENIENCE", station: "ALL_STATIONS", role: "ALL_ROLES", thresholdMinutes: breakThreshold, costAmount: 0, currency: "INR" },
+    { ruleType: "HOTAC", station: "ALL_STATIONS", role: "ALL_ROLES", thresholdMinutes: "07:00", costAmount: 0, currency: "INR" },
 ];
 
 const toDropdownOptions = (values = []) => Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean)))
@@ -546,13 +561,14 @@ const CrewPage = () => {
 
     const hydrateFromBootstrap = useCallback((data) => {
         const duty = data?.dutySettings || {};
-        setDutySettings({
+        const nextDutySettings = {
             restThresholdMinutes: minutesToHHMM(duty.restThresholdMinutes ?? 420),
             breakThresholdMinutes: minutesToHHMM(duty.breakThresholdMinutes ?? 180),
             preflightNewFdpMinutes: minutesToHHMM(duty.preflightNewFdpMinutes ?? 90),
             preflightExistingDutyMinutes: minutesToHHMM(duty.preflightExistingDutyMinutes ?? 45),
             postflightMinutes: minutesToHHMM(duty.postflightMinutes ?? 30),
-        });
+        };
+        setDutySettings(nextDutySettings);
         const pos = data?.positioningSettings || {};
         setPositioningSettings({
             returnToBaseAfterFdpEnabled: pos.returnToBaseAfterFdpEnabled !== false,
@@ -562,17 +578,19 @@ const CrewPage = () => {
             defaultPositioningMinutes: minutesToHHMM(pos.defaultPositioningMinutes ?? 150),
             hotacToAirportTransferMinutes: minutesToHHMM(pos.hotacToAirportTransferMinutes ?? 60),
         });
-        setUtilisationTargets((data?.utilisationTargets || []).map((row) => ({
+        const targetRows = data?.utilisationTargets?.length ? data.utilisationTargets : DEFAULT_UTILISATION_TARGETS;
+        setUtilisationTargets(targetRows.map((row) => ({
             ...row,
-            averageDpMinutesPerDay: minutesToHHMM(row.averageDpMinutesPerDay),
-            averageFdpMinutesPerDay: minutesToHHMM(row.averageFdpMinutesPerDay),
-            averageFtMinutesPerDay: minutesToHHMM(row.averageFtMinutesPerDay),
+            averageDpMinutesPerDay: toHHMM(row.averageDpMinutesPerDay),
+            averageFdpMinutesPerDay: toHHMM(row.averageFdpMinutesPerDay),
+            averageFtMinutesPerDay: toHHMM(row.averageFtMinutesPerDay),
         })));
-        setLayoverRules((data?.layoverRules || []).map((row) => ({
+        const layoverRows = data?.layoverRules?.length ? data.layoverRules : defaultLayoverRules(nextDutySettings.breakThresholdMinutes);
+        setLayoverRules(layoverRows.map((row) => ({
             ...row,
-            thresholdMinutes: minutesToHHMM(row.thresholdMinutes),
+            thresholdMinutes: toHHMM(row.thresholdMinutes),
         })));
-        setPositioningCostRules(data?.positioningCostRules || []);
+        setPositioningCostRules(data?.positioningCostRules?.length ? data.positioningCostRules : DEFAULT_POSITIONING_COST_RULES);
         setLatestRun(data?.latestRun || null);
         setCounts(data?.counts || {});
     }, []);
@@ -842,6 +860,7 @@ const CrewPage = () => {
     const saveLayoverRules = async () => {
         setSavingModal("layover");
         try {
+            const breakThreshold = hhmmToMinutes(dutySettings.breakThresholdMinutes);
             const items = layoverRules
                 .filter((row) => row.station || row.role || row.thresholdMinutes || row.costAmount)
                 .map((row) => ({
@@ -853,6 +872,9 @@ const CrewPage = () => {
                     currency: row.currency || "INR",
                 }));
             if (items.some((row) => row.thresholdMinutes === null)) throw new Error("Layover thresholds must use HH:MM.");
+            if (breakThreshold !== null && items.some((row) => row.ruleType === "CONVENIENCE" && row.thresholdMinutes < breakThreshold)) {
+                throw new Error("Convenience LO time cannot be lower than the master Break period.");
+            }
             await api.post("/crew/layover-rules/bulk", { items });
             toast.success("Layover rules saved.");
             toggleModal("layover");
@@ -906,6 +928,17 @@ const CrewPage = () => {
         setPositioningCostRules((prev) => prev.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
     };
 
+    const handleBreakThresholdChange = (value) => {
+        setDutySettings((prev) => ({ ...prev, breakThresholdMinutes: value }));
+        const breakThreshold = hhmmToMinutes(value);
+        if (breakThreshold === null) return;
+        setLayoverRules((prev) => prev.map((row) => {
+            if (row.ruleType !== "CONVENIENCE") return row;
+            const rowThreshold = hhmmToMinutes(row.thresholdMinutes);
+            return rowThreshold !== null && rowThreshold < breakThreshold ? { ...row, thresholdMinutes: value } : row;
+        }));
+    };
+
     const runStatus = latestRun
         ? `${latestRun.status}${latestRun.completedAt ? ` at ${formatDate(latestRun.completedAt)} ${formatTime(latestRun.completedAt)}` : ""}`
         : "Not calculated yet";
@@ -950,7 +983,7 @@ const CrewPage = () => {
                 <div className="lg:col-span-7 flex flex-col gap-6">
                     <SectionCard title="Crew Requirements & Limits" icon={Clock}>
                         <InputTime label="Rest period if time period between consecutive duties exceeds" value={dutySettings.restThresholdMinutes} error={dutyErrors.restThresholdMinutes} onChange={(event) => setDutySettings((prev) => ({ ...prev, restThresholdMinutes: event.target.value }))} />
-                        <InputTime label="Break period if time period between consecutive assigned duties exceed" value={dutySettings.breakThresholdMinutes} error={dutyErrors.breakThresholdMinutes} onChange={(event) => setDutySettings((prev) => ({ ...prev, breakThresholdMinutes: event.target.value }))} />
+                        <InputTime label="Break period if time period between consecutive assigned duties exceed" value={dutySettings.breakThresholdMinutes} error={dutyErrors.breakThresholdMinutes} onChange={(event) => handleBreakThresholdChange(event.target.value)} />
                         <InputTime label="Preflight duty period on first flight in FDP with duty period commencing" value={dutySettings.preflightNewFdpMinutes} error={dutyErrors.preflightNewFdpMinutes} onChange={(event) => setDutySettings((prev) => ({ ...prev, preflightNewFdpMinutes: event.target.value }))} />
                         <InputTime label="Preflight duty period on first flight in FDP with duty period already in effect" value={dutySettings.preflightExistingDutyMinutes} error={dutyErrors.preflightExistingDutyMinutes} onChange={(event) => setDutySettings((prev) => ({ ...prev, preflightExistingDutyMinutes: event.target.value }))} />
                         <InputTime label="Post flight duty period after last flight in FDP" value={dutySettings.postflightMinutes} error={dutyErrors.postflightMinutes} onChange={(event) => setDutySettings((prev) => ({ ...prev, postflightMinutes: event.target.value }))} />
@@ -1123,13 +1156,13 @@ const CrewPage = () => {
             <Modal isOpen={modals.layover} onClose={() => toggleModal("layover")} onSave={saveLayoverRules} isSaving={savingModal === "layover"} title="Layover Settings" maxWidth="max-w-4xl">
                 <div className="space-y-8">
                     {[
-                        { title: "Convenience accom/Lounges, etc. if layover exceeds", type: "CONVENIENCE", rows: convenienceRules, costLabel: "Cost per hour" },
-                        { title: "HOTAC (+Airport transfer) if layover exceeds", type: "HOTAC", rows: hotacRules, costLabel: "Cost per 24 hours" },
+                        { title: "Convenience accom/Lounges, etc. if layover exceeds", type: "CONVENIENCE", rows: convenienceRules, costLabel: "Cost per hour", defaultThreshold: dutySettings.breakThresholdMinutes },
+                        { title: "HOTAC (+Airport transfer) if layover exceeds", type: "HOTAC", rows: hotacRules, costLabel: "Cost per 24 hours", defaultThreshold: "07:00" },
                     ].map((table) => (
                         <div key={table.type}>
                             <div className="flex items-center justify-between gap-3 mb-3">
                                 <h4 className="font-semibold text-slate-800 dark:text-slate-200 ml-1 text-base bg-slate-100 dark:bg-slate-800 inline-block px-3 py-1 rounded-md">{table.title}</h4>
-                                <AddRowButton label="Add rule" onClick={() => setLayoverRules((prev) => [...prev, { localId: `${table.type}-${Date.now()}`, ruleType: table.type, station: "ALL_STATIONS", role: "ALL_ROLES", thresholdMinutes: "00:00", costAmount: 0, currency: "INR" }])} />
+                                <AddRowButton label="Add rule" onClick={() => setLayoverRules((prev) => [...prev, { localId: `${table.type}-${Date.now()}`, ruleType: table.type, station: "ALL_STATIONS", role: "ALL_ROLES", thresholdMinutes: table.defaultThreshold, costAmount: 0, currency: "INR" }])} />
                             </div>
                             <table className="w-full text-base text-left border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
                                 <thead className="bg-slate-50 dark:bg-slate-800">
