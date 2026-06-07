@@ -9,6 +9,7 @@ import {
     AlertCircle,
     Calendar,
     Check,
+    ChevronDown,
     Clock,
     DollarSign,
     Plus,
@@ -109,6 +110,16 @@ const uploadLabels = {
     flightDuties: "Flight Duty roster",
     otherDuties: "Other Duty roster",
 };
+
+const PERIODICITY_OPTIONS = [
+    { value: "MONTHLY", label: "Monthly" },
+    { value: "WEEKLY", label: "Weekly" },
+    { value: "DAILY", label: "Daily" },
+];
+
+const toDropdownOptions = (values = []) => Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean)))
+    .sort((left, right) => left.localeCompare(right))
+    .map((value) => ({ value, label: value }));
 
 const getUploadOutcome = (key, summary, fallbackMessage) => {
     const invalidRows = Number(summary?.invalidRows || 0);
@@ -341,6 +352,151 @@ const AddRowButton = ({ onClick, label = "Add row" }) => (
         {label}
     </button>
 );
+
+const MultiSelectDropdown = ({ placeholder, options = [], selected = [], onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef(null);
+    const safeOptions = Array.isArray(options) ? options : [];
+    const safeSelected = Array.isArray(selected) ? selected : [];
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (containerRef.current && !containerRef.current.contains(event.target)) setIsOpen(false);
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const toggleOption = (option) => {
+        const next = safeSelected.some((item) => item.value === option.value)
+            ? safeSelected.filter((item) => item.value !== option.value)
+            : [...safeSelected, option];
+        onChange?.(next);
+    };
+
+    const labelText = safeSelected.length === 0
+        ? placeholder
+        : safeSelected.length === 1
+            ? safeSelected[0].label
+            : `${safeSelected.length} selected`;
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen((prev) => !prev)}
+                className={cn(
+                    "w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-lg border transition-all duration-200 bg-white dark:bg-slate-900/50",
+                    isOpen ? "border-indigo-500 ring-1 ring-indigo-500" : "border-slate-300 dark:border-slate-700 hover:border-slate-400"
+                )}
+            >
+                <span className={cn("truncate font-medium", safeSelected.length ? "text-slate-800 dark:text-slate-100" : "text-slate-600 dark:text-slate-300")}>
+                    {labelText}
+                </span>
+                <ChevronDown size={14} className={cn("text-slate-400 transition-transform shrink-0", isOpen && "rotate-180")} />
+            </button>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        className="absolute z-[100] w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
+                    >
+                        {safeSelected.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => onChange?.([])}
+                                className="w-full px-3 py-2 text-left text-xs font-semibold text-indigo-600 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
+                            >
+                                Clear selection
+                            </button>
+                        )}
+                        {safeOptions.map((option) => {
+                            const isSelected = safeSelected.some((item) => item.value === option.value);
+                            return (
+                                <button
+                                    key={option.value}
+                                    type="button"
+                                    onClick={() => toggleOption(option)}
+                                    className="flex w-full items-center px-3 py-2 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
+                                >
+                                    <span className={cn(
+                                        "w-4 h-4 rounded border mr-3 flex items-center justify-center transition-colors shrink-0",
+                                        isSelected ? "bg-indigo-500 border-indigo-500" : "border-slate-300 dark:border-slate-600"
+                                    )}>
+                                        {isSelected && <Check size={12} className="text-white" />}
+                                    </span>
+                                    <span className="text-slate-700 dark:text-slate-300 truncate">{option.label}</span>
+                                </button>
+                            );
+                        })}
+                        {safeOptions.length === 0 && <div className="p-3 text-sm text-slate-400 text-center">No options</div>}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+const SingleSelectDropdown = ({ placeholder, options = [], selected, onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef(null);
+    const safeOptions = Array.isArray(options) ? options : [];
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (containerRef.current && !containerRef.current.contains(event.target)) setIsOpen(false);
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    return (
+        <div className="relative w-full" ref={containerRef}>
+            <button
+                type="button"
+                onClick={() => setIsOpen((prev) => !prev)}
+                className={cn(
+                    "w-full flex items-center justify-between gap-2 px-3 py-2 text-sm rounded-lg border transition-all duration-200 bg-white dark:bg-slate-900/50",
+                    isOpen ? "border-indigo-500 ring-1 ring-indigo-500" : "border-slate-300 dark:border-slate-700 hover:border-slate-400"
+                )}
+            >
+                <span className="text-slate-800 dark:text-slate-100 font-medium truncate">{selected?.label || placeholder}</span>
+                <ChevronDown size={14} className={cn("text-slate-400 transition-transform shrink-0", isOpen && "rotate-180")} />
+            </button>
+
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        className="absolute z-[100] w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar"
+                    >
+                        {safeOptions.map((option) => (
+                            <button
+                                key={option.value}
+                                type="button"
+                                onClick={() => {
+                                    onChange?.(option);
+                                    setIsOpen(false);
+                                }}
+                                className={cn(
+                                    "flex w-full items-center px-3 py-2 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left",
+                                    selected?.value === option.value ? "text-indigo-700 dark:text-indigo-300 font-semibold" : "text-slate-700 dark:text-slate-300"
+                                )}
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
 
 const CrewPage = () => {
     const [modals, setModals] = useState({ utilisation: false, layover: false, positioning: false, diary: false });
@@ -750,14 +906,25 @@ const CrewPage = () => {
         setPositioningCostRules((prev) => prev.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
     };
 
-    const multiSelectValue = (event) => Array.from(event.target.selectedOptions).map((option) => option.value).filter(Boolean);
-
     const runStatus = latestRun
         ? `${latestRun.status}${latestRun.completedAt ? ` at ${formatDate(latestRun.completedAt)} ${formatTime(latestRun.completedAt)}` : ""}`
         : "Not calculated yet";
 
     const convenienceRules = layoverRules.filter((row) => row.ruleType === "CONVENIENCE");
     const hotacRules = layoverRules.filter((row) => row.ruleType === "HOTAC");
+    const kpiDropdownOptions = useMemo(() => ({
+        roles: toDropdownOptions(options.roles),
+        bases: toDropdownOptions(options.bases),
+        categories: toDropdownOptions(options.categories),
+        subCategories: toDropdownOptions(options.subCategories),
+    }), [options]);
+    const selectedKpiOptions = (key) => {
+        const optionMap = new Map((kpiDropdownOptions[key] || []).map((option) => [option.value, option]));
+        return (kpiFilters[key] || []).map((value) => optionMap.get(value) || { value, label: value });
+    };
+    const updateKpiMultiFilter = (key, selectedOptions) => {
+        setKpiFilters((prev) => ({ ...prev, [key]: selectedOptions.map((option) => option.value) }));
+    };
 
     return (
         <div className="w-full h-full p-4 md:p-6 space-y-6 flex flex-col min-h-[calc(100vh-100px)] bg-slate-50 dark:bg-slate-950/20 rounded-2xl">
@@ -850,23 +1017,36 @@ const CrewPage = () => {
 
             <SectionCard title="Crew KPIs" icon={Activity} className="mt-4">
                 <div className="mb-4 grid grid-cols-2 lg:grid-cols-5 gap-3 bg-slate-50/50 w-full dark:bg-slate-800/30 p-3 rounded-xl border border-slate-200 dark:border-slate-700/50">
-                    <select value={kpiFilters.periodicity} onChange={(event) => setKpiFilters((prev) => ({ ...prev, periodicity: event.target.value }))} className="w-full text-base rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
-                        <option value="MONTHLY">Monthly</option>
-                        <option value="WEEKLY">Weekly</option>
-                        <option value="DAILY">Daily</option>
-                    </select>
-                    <select multiple value={kpiFilters.roles} onChange={(event) => setKpiFilters((prev) => ({ ...prev, roles: multiSelectValue(event) }))} className="w-full h-10 text-base rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
-                        {options.roles.map((role) => <option key={role} value={role}>{role}</option>)}
-                    </select>
-                    <select multiple value={kpiFilters.bases} onChange={(event) => setKpiFilters((prev) => ({ ...prev, bases: multiSelectValue(event) }))} className="w-full h-10 text-base rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
-                        {options.bases.map((base) => <option key={base} value={base}>{base}</option>)}
-                    </select>
-                    <select multiple value={kpiFilters.categories} onChange={(event) => setKpiFilters((prev) => ({ ...prev, categories: multiSelectValue(event) }))} className="w-full h-10 text-base rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
-                        {options.categories.map((category) => <option key={category} value={category}>{category}</option>)}
-                    </select>
-                    <select multiple value={kpiFilters.subCategories} onChange={(event) => setKpiFilters((prev) => ({ ...prev, subCategories: multiSelectValue(event) }))} className="w-full h-10 text-base rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2 focus:ring-2 focus:ring-indigo-500">
-                        {options.subCategories.map((subCategory) => <option key={subCategory} value={subCategory}>{subCategory}</option>)}
-                    </select>
+                    <SingleSelectDropdown
+                        placeholder="Periodicity"
+                        options={PERIODICITY_OPTIONS}
+                        selected={PERIODICITY_OPTIONS.find((option) => option.value === kpiFilters.periodicity)}
+                        onChange={(option) => setKpiFilters((prev) => ({ ...prev, periodicity: option.value }))}
+                    />
+                    <MultiSelectDropdown
+                        placeholder="Role"
+                        options={kpiDropdownOptions.roles}
+                        selected={selectedKpiOptions("roles")}
+                        onChange={(selectedOptions) => updateKpiMultiFilter("roles", selectedOptions)}
+                    />
+                    <MultiSelectDropdown
+                        placeholder="Base"
+                        options={kpiDropdownOptions.bases}
+                        selected={selectedKpiOptions("bases")}
+                        onChange={(selectedOptions) => updateKpiMultiFilter("bases", selectedOptions)}
+                    />
+                    <MultiSelectDropdown
+                        placeholder="Category"
+                        options={kpiDropdownOptions.categories}
+                        selected={selectedKpiOptions("categories")}
+                        onChange={(selectedOptions) => updateKpiMultiFilter("categories", selectedOptions)}
+                    />
+                    <MultiSelectDropdown
+                        placeholder="Sub-category"
+                        options={kpiDropdownOptions.subCategories}
+                        selected={selectedKpiOptions("subCategories")}
+                        onChange={(selectedOptions) => updateKpiMultiFilter("subCategories", selectedOptions)}
+                    />
                 </div>
 
                 <div className="overflow-x-auto w-full custom-scrollbar rounded-xl border border-slate-200 dark:border-slate-700">
