@@ -47,14 +47,26 @@ const formatDate = (value) => {
     if (!value) return "";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
-    return date.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+    return date.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 };
 
 const formatTime = (value) => {
     if (!value) return "";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
-    return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
+    return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" });
+};
+
+const isUtcMidnight = (value) => {
+    const date = new Date(value);
+    return !Number.isNaN(date.getTime()) && date.getUTCHours() === 0 && date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0;
+};
+
+const formatEndTime = (row) => {
+    if (row?.category === "Rest" && isUtcMidnight(row.endDateTime) && new Date(row.endDateTime) > new Date(row.startDateTime)) {
+        return "24:00";
+    }
+    return formatTime(row?.endDateTime);
 };
 
 const formatMoney = (value, currency) => {
@@ -275,7 +287,7 @@ const Modal = ({ isOpen, onClose, onSave, title, children, maxWidth = "max-w-4xl
                                 </div>
                                 <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-end gap-3">
                                     <button type="button" onClick={onClose} disabled={isSaving} className="px-4 py-2 text-base font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors disabled:opacity-60">
-                                        Cancel
+                                        Close
                                     </button>
                                     {onSave && (
                                         <button type="button" onClick={onSave} disabled={isSaving} className="px-5 py-2 text-base font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm shadow-indigo-500/20 transition-colors disabled:opacity-60 flex items-center gap-2">
@@ -952,7 +964,7 @@ const CrewPage = () => {
                                     <td className="p-3 text-slate-600 dark:text-slate-400">{row.role}</td>
                                     <td className="p-3">{formatDate(row.startDateTime)}</td>
                                     <td className="p-3 tabular-nums">{formatTime(row.startDateTime)}</td>
-                                    <td className="p-3 tabular-nums">{formatTime(row.endDateTime)}</td>
+                                    <td className="p-3 tabular-nums">{formatEndTime(row)}</td>
                                     <td className="p-3">{row.location || "-"}</td>
                                     <td className="p-3">{row.category}</td>
                                     <td className="p-3">{row.subCategory}</td>
