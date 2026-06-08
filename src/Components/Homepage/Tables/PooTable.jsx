@@ -424,7 +424,7 @@ const PooTable = () => {
 
   const currencyOptions = useMemo(() => {
     return buildPooCurrencyOptions({ selectedPooCurrency, meta, records });
-  }, [meta.currencyCodes, meta.reportingCurrency, meta.stationCurrency, records, selectedPooCurrency]);
+  }, [meta, records, selectedPooCurrency]);
 
   const toggleAllPoos = () => {
     setPooSelectionReady(true);
@@ -611,7 +611,12 @@ const PooTable = () => {
 
     setSaving(true);
     try {
-      const response = await api.post("/poo/transit", { ...transitDraft, poo: selectedPoos[0], date });
+      const response = await api.post("/poo/transit", {
+        ...transitDraft,
+        poo: selectedPoos[0],
+        date,
+        pooCcy: selectedPooCurrency,
+      });
       setTransitDraft(blankTransitDraft);
       setValidationErrors([]);
       toast.success(response.data.message || "Transit OD created");
@@ -1144,21 +1149,22 @@ const PooTable = () => {
           </div>
 
           <div className="flex flex-wrap items-start gap-3 mt-2">
-            <div className="flex w-24 flex-col p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
+            <div className="flex w-28 flex-col p-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg">
               <span className="text-[10px] text-slate-400 font-bold uppercase">POO CCY</span>
-              <input
-                list="poo-currency-options"
-                value={selectedPooCurrency}
-                onChange={(e) => handlePooCurrencyChange(e.target.value)}
-                disabled={loading || saving}
-                maxLength={3}
-                className="mt-1 h-8 rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
-              />
-              <datalist id="poo-currency-options">
-                {currencyOptions.map((code) => (
-                  <option key={code} value={code}>{code}</option>
-                ))}
-              </datalist>
+              <div className="relative mt-1">
+                <select
+                  aria-label="POO currency"
+                  value={selectedPooCurrency}
+                  onChange={(e) => handlePooCurrencyChange(e.target.value)}
+                  disabled={loading || saving}
+                  className="h-8 w-full appearance-none rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 py-1 pl-2 pr-7 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-60"
+                >
+                  {currencyOptions.map((code) => (
+                    <option key={code} value={code}>{code}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400" />
+              </div>
             </div>
           </div>
 
