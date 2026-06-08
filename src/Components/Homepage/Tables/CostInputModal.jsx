@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Save, Plus, Edit2, Check, Trash2, ArrowUp, ArrowDown, Download } from "lucide-react";
@@ -17,7 +17,10 @@ function cn(...inputs) {
 }
 
 const MODAL_TABLE_COLUMN_WIDTH = 168;
-const modalTableScrollClass = "overflow-x-auto border border-slate-200 dark:border-slate-700 rounded-lg";
+const INITIAL_BLANK_ENTRY_ROWS = 2;
+const MAX_VISIBLE_TABLE_ROWS = 10;
+const MODAL_TABLE_MAX_HEIGHT = 44 + (MAX_VISIBLE_TABLE_ROWS * 44);
+const modalTableScrollClass = "overflow-auto border border-slate-200 dark:border-slate-700 rounded-lg";
 const modalTableClass = "w-full table-fixed text-left text-base whitespace-nowrap border-collapse";
 const PLF_HEADER_ROW_TYPE = "header";
 const PLF_CARRY_FORWARD_KEY = "p100";
@@ -36,6 +39,18 @@ function EqualWidthColGroup({ count }) {
 
 function getModalTableStyle(columnCount) {
   return { minWidth: `${columnCount * MODAL_TABLE_COLUMN_WIDTH}px` };
+}
+
+function getModalTableScrollStyle() {
+  return { maxHeight: `${MODAL_TABLE_MAX_HEIGHT}px` };
+}
+
+function createBlankRows(blankFactory, count = INITIAL_BLANK_ENTRY_ROWS) {
+  return Array.from({ length: count }, () => blankFactory());
+}
+
+function getRowsOrInitialBlanks(data, blankFactory) {
+  return Array.isArray(data) && data.length > 0 ? data : createBlankRows(blankFactory);
 }
 
 const MONTH_SHORT_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -192,6 +207,17 @@ const buildFxCurrencyOptions = (config = {}) => {
   return options.map((value) => ({ label: value, value }));
 };
 const DEFAULT_CURRENCY_OPTIONS = buildFxCurrencyOptions();
+const OTHER_DOC_PER_OPTIONS = [
+  { label: "Departure", value: "DEPARTURES" },
+  { label: "BH", value: "BH" },
+  { label: "FH", value: "FH" },
+  { label: "FT", value: "FT" },
+  { label: "Month", value: "MONTH" },
+  { label: "Pax", value: "PAX" },
+  { label: "Pax km", value: "PAX_KM" },
+  { label: "Cargo tonne", value: "CARGO_TONNE" },
+  { label: "Cargo tonne km", value: "CARGO_TONNE_KM" },
+];
 const MAINTENANCE_DRIVER_OPTIONS = [
   { label: "FH", value: "FH" },
   { label: "BH", value: "BH" },
@@ -202,6 +228,17 @@ const DEFAULT_MAINTENANCE_DRIVER = "FH";
 const MAINTENANCE_DRIVER_VALUES = new Set(MAINTENANCE_DRIVER_OPTIONS.map((option) => option.value));
 
 const normalizeText = (value) => String(value ?? "").trim().toUpperCase();
+const toOption = (value, label = value) => ({ value: String(value ?? "").trim(), label: String(label ?? value ?? "").trim() });
+const uniqueOptions = (values = []) => {
+  const seen = new Set();
+  return (Array.isArray(values) ? values : [])
+    .map((value) => {
+      if (value && typeof value === "object") return toOption(value.value ?? value.label, value.label ?? value.value);
+      return toOption(value);
+    })
+    .filter((option) => option.value && !seen.has(option.value.toUpperCase()) && seen.add(option.value.toUpperCase()))
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: "base" }));
+};
 const ROTABLE_CHANGE_DETAIL_KEYS = ["label", "date", "pn", "msn", "acftRegn", "position", "removedSN", "installedSN"];
 const getRotableChangeDetailKey = (row = {}) => (
   ROTABLE_CHANGE_DETAIL_KEYS.map((key) => (
@@ -552,6 +589,18 @@ function SelectInput({ value, onChange, options = [], placeholder = "Select", cl
   );
 }
 
+function SheetSelectInput({ className, ...props }) {
+  return (
+    <SelectInput
+      {...props}
+      className={cn(
+        "min-h-[34px] h-9 rounded-none border-0 bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 focus:ring-0",
+        className
+      )}
+    />
+  );
+}
+
 function SheetInput({ className, ...props }) {
   return (
     <Input
@@ -586,9 +635,12 @@ function TierSheetTable({
   data,
   setData,
   tierKeys,
+  currencyOptions = DEFAULT_CURRENCY_OPTIONS,
+  rowOptions = [],
   className,
 }) {
-  const rows = Array.isArray(data) && data.length > 0 ? data : [{ ccy: "", [rowKey]: "", ...Object.fromEntries(tierKeys.map((tier) => [tier, ""])) }];
+  const createBlankRow = () => ({ ccy: "", [rowKey]: "", ...Object.fromEntries(tierKeys.map((tier) => [tier, ""])) });
+  const rows = getRowsOrInitialBlanks(data, createBlankRow);
 
   const updateRow = (index, key, value) => {
     setData(rows.map((row, rowIndex) => (rowIndex === index ? { ...row, [key]: value } : row)));
@@ -620,7 +672,7 @@ function TierSheetTable({
       )}
       className={className}
     >
-      <div className="overflow-x-auto border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900">
+      <div className="overflow-auto border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900" style={getModalTableScrollStyle()}>
         <table className="w-full table-fixed border-collapse whitespace-nowrap" style={getModalTableStyle(tierKeys.length + 3)}>
           <EqualWidthColGroup count={tierKeys.length + 3} />
           <thead>
@@ -648,17 +700,19 @@ function TierSheetTable({
               return (
                 <tr key={index}>
                   <td className="border border-slate-300 p-0 dark:border-slate-700">
-                    <SheetInput
+                    <SheetSelectInput
                       value={row.ccy}
                       onChange={(e) => updateRow(index, "ccy", e.target.value)}
+                      options={currencyOptions}
                       placeholder="CCY"
                       className="border-0 px-2 text-sm font-medium"
                     />
                   </td>
                   <td className="border border-slate-300 p-0 dark:border-slate-700">
-                    <SheetInput
+                    <SheetSelectInput
                       value={row[rowKey]}
                       onChange={(e) => updateRow(index, rowKey, e.target.value)}
+                      options={rowOptions}
                       placeholder={rowLabel}
                       className="border-0 px-2 text-sm font-medium"
                     />
@@ -702,9 +756,8 @@ function ChargeSheetTable({
   columns,
   className,
 }) {
-  const rows = Array.isArray(data) && data.length > 0
-    ? data
-    : [columns.reduce((acc, col) => ({ ...acc, [col.key]: "" }), {})];
+  const createBlankRow = () => columns.reduce((acc, col) => ({ ...acc, [col.key]: col.defaultValue ?? "" }), {});
+  const rows = getRowsOrInitialBlanks(data, createBlankRow);
 
   const updateRow = (index, key, value) => {
     setData(rows.map((row, rowIndex) => (rowIndex === index ? { ...row, [key]: value } : row)));
@@ -733,7 +786,7 @@ function ChargeSheetTable({
       )}
       className={className}
     >
-      <div className="overflow-x-auto border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900">
+      <div className="overflow-auto border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-900" style={getModalTableScrollStyle()}>
         <table className="w-full table-fixed border-collapse whitespace-nowrap" style={getModalTableStyle(columns.length + 1)}>
           <EqualWidthColGroup count={columns.length + 1} />
           <thead>
@@ -756,16 +809,28 @@ function ChargeSheetTable({
                 <tr key={index}>
                   {columns.map((col) => (
                     <td key={col.key} className="border border-slate-300 p-0 dark:border-slate-700">
-                      <SheetInput
-                        value={row[col.key]}
-                        onChange={(e) => updateRow(index, col.key, e.target.value)}
-                        type={col.type || "text"}
-                        placeholder={col.placeholder || col.label}
-                        className={cn(
-                          "border-0 px-2 text-sm",
-                          col.type === "number" && "text-right font-medium"
-                        )}
-                      />
+                      {col.type === "select" ? (
+                        <SheetSelectInput
+                          value={row[col.key]}
+                          onChange={(e) => updateRow(index, col.key, e.target.value)}
+                          options={col.options}
+                          placeholder={col.placeholder || col.label}
+                          allowEmpty={col.allowEmpty !== false}
+                          preserveUnknownOption={col.preserveUnknownOption !== false}
+                          className="border-0 px-2 text-sm"
+                        />
+                      ) : (
+                        <SheetInput
+                          value={row[col.key]}
+                          onChange={(e) => updateRow(index, col.key, e.target.value)}
+                          type={col.type || "text"}
+                          placeholder={col.placeholder || col.label}
+                          className={cn(
+                            "border-0 px-2 text-sm",
+                            col.type === "number" && "text-right font-medium"
+                          )}
+                        />
+                      )}
                     </td>
                   ))}
                   <td className="border border-slate-300 px-1 text-center dark:border-slate-700">
@@ -789,7 +854,7 @@ function ChargeSheetTable({
   );
 }
 
-function FuelConsumptionTable({ data, setData, className }) {
+function FuelConsumptionTable({ data, setData, sectorOptions = [], aircraftRegnOptions = [], getSectorGcd = () => "", className }) {
   const [fallbackMonth1, setFallbackMonth1] = useState("");
   const [fallbackMonth2, setFallbackMonth2] = useState("");
   const month1Row = data.find((row) => row.month1 || row.m1Label || row.month);
@@ -807,22 +872,25 @@ function FuelConsumptionTable({ data, setData, className }) {
   };
 
   const updateRow = (index, key, value) => {
-    setData(data.map((row, rowIndex) => (
+    const sourceRows = data.length ? data : rows;
+    setData(sourceRows.map((row, rowIndex) => (
       rowIndex === index ? { ...row, month1, month2, [key]: value } : row
     )));
   };
 
   const updateSectorGroup = (index, key, value) => {
-    const next = data.map((row) => ({ ...row }));
+    const next = (data.length ? data : rows).map((row) => ({ ...row }));
     next[index].month1 = month1;
     next[index].month2 = month2;
     next[index][key] = value;
+    if (key === "sectorOrGcd") next[index].gcd = getSectorGcd(value);
 
     for (let rowIndex = index + 1; rowIndex < next.length; rowIndex += 1) {
       if (isSectorRow(next[rowIndex])) break;
       next[rowIndex].month1 = month1;
       next[rowIndex].month2 = month2;
       next[rowIndex][key] = value;
+      if (key === "sectorOrGcd") next[rowIndex].gcd = getSectorGcd(value);
     }
 
     setData(next);
@@ -851,7 +919,7 @@ function FuelConsumptionTable({ data, setData, className }) {
     setData(data.filter((_, rowIndex) => rowIndex !== index));
   };
 
-  const rows = data.length ? data : [{ rowType: "sector", sectorOrGcd: "", gcd: "", month1, month2 }];
+  const rows = getRowsOrInitialBlanks(data, () => ({ rowType: "sector", sectorOrGcd: "", gcd: "", month1, month2 }));
 
   return (
     <div className={cn("mb-8", className)}>
@@ -872,7 +940,7 @@ function FuelConsumptionTable({ data, setData, className }) {
           </button>
         </div>
       </div>
-      <div className={modalTableScrollClass}>
+      <div className={modalTableScrollClass} style={getModalTableScrollStyle()}>
         <table className={modalTableClass} style={getModalTableStyle(5)}>
           <EqualWidthColGroup count={5} />
           <thead>
@@ -906,23 +974,35 @@ function FuelConsumptionTable({ data, setData, className }) {
               return (
                 <tr key={index} className={cn(sectorRow && "bg-slate-50 dark:bg-slate-800/60")}>
                   <td className="border border-slate-300 dark:border-slate-700 p-0">
-                    <Input
+                    {sectorRow ? (
+                    <SheetSelectInput
                       value={sectorRow ? row.sectorOrGcd : row.acftRegn}
                       onChange={(e) => {
                         if (disabledPlaceholder) {
-                          setData([{ rowType: "sector", sectorOrGcd: e.target.value, gcd: "", month1, month2 }]);
+                          const next = rows.map((entry, rowIndex) => rowIndex === index
+                            ? { ...entry, sectorOrGcd: e.target.value, gcd: getSectorGcd(e.target.value), month1, month2 }
+                            : entry);
+                          setData(next);
                           return;
                         }
-                        if (sectorRow) updateSectorGroup(index, "sectorOrGcd", e.target.value);
-                        else updateRow(index, "acftRegn", e.target.value);
+                        updateSectorGroup(index, "sectorOrGcd", e.target.value);
                       }}
-                      placeholder={sectorRow ? "Sector" : "ACFT Regn"}
+                      options={sectorOptions}
+                      placeholder="Sector"
                       className={cn(
                         "border-0 rounded-none font-medium",
-                        !sectorRow && "pl-8",
                         sectorRow && "bg-slate-50 dark:bg-slate-800/60"
                       )}
                     />
+                    ) : (
+                    <SheetSelectInput
+                      value={row.acftRegn}
+                      onChange={(e) => updateRow(index, "acftRegn", e.target.value)}
+                      options={aircraftRegnOptions}
+                      placeholder="ACFT Regn"
+                      className="border-0 rounded-none pl-8 font-medium"
+                    />
+                    )}
                   </td>
                   <td className="border border-slate-300 dark:border-slate-700 p-0">
                     {sectorRow ? (
@@ -937,6 +1017,7 @@ function FuelConsumptionTable({ data, setData, className }) {
                         }}
                         type="number"
                         placeholder="GCD"
+                        readOnly
                         className="border-0 rounded-none text-right bg-slate-50 dark:bg-slate-800/60"
                       />
                     ) : (
@@ -984,10 +1065,10 @@ function FuelConsumptionTable({ data, setData, className }) {
   );
 }
 
-function PlfEffectTable({ data, setData, className }) {
+function PlfEffectTable({ data, setData, sectorOptions = [], aircraftRegnOptions = [], getSectorGcd = () => "", className }) {
   const isHeaderRow = (row) => row?.rowType === PLF_HEADER_ROW_TYPE;
   const isSectorRow = (row) => (row.rowType ? row.rowType === "sector" : !row.acftRegn);
-  const rows = data.length ? data : [createPlfBlankRow("sector", PLF_DEFAULT_THRESHOLD_KEYS, { sectorOrGcd: "", gcd: "" })];
+  const rows = getRowsOrInitialBlanks(data, () => createPlfBlankRow("sector", PLF_DEFAULT_THRESHOLD_KEYS, { sectorOrGcd: "", gcd: "" }));
   const visibleRows = rows.filter((row) => !isHeaderRow(row));
   const thresholdKeys = getPlfThresholdKeys(rows);
   const renderedRows = visibleRows.length
@@ -1023,7 +1104,8 @@ function PlfEffectTable({ data, setData, className }) {
   };
 
   const updateRow = (index, key, value) => {
-    setData(data.map((row, rowIndex) => {
+    const sourceRows = data.length ? data : rows;
+    setData(sourceRows.map((row, rowIndex) => {
       if (rowIndex !== index) return row;
       if (isSectorRow(row)) return { ...row, [key]: value };
       const next = { ...row, [key]: value };
@@ -1032,12 +1114,14 @@ function PlfEffectTable({ data, setData, className }) {
   };
 
   const updateSectorGroup = (index, key, value) => {
-    const next = data.map((row) => ({ ...row }));
+    const next = (data.length ? data : rows).map((row) => ({ ...row }));
     next[index][key] = value;
+    if (key === "sectorOrGcd") next[index].gcd = getSectorGcd(value);
 
     for (let rowIndex = index + 1; rowIndex < next.length; rowIndex += 1) {
       if (isSectorRow(next[rowIndex])) break;
       next[rowIndex][key] = value;
+      if (key === "sectorOrGcd") next[rowIndex].gcd = getSectorGcd(value);
       next[rowIndex] = normalizeAircraftRow(next[rowIndex]);
     }
 
@@ -1165,7 +1249,7 @@ function PlfEffectTable({ data, setData, className }) {
         </div>
       </div>
       <div className="flex items-start">
-        <div className={modalTableScrollClass}>
+        <div className={modalTableScrollClass} style={getModalTableScrollStyle()}>
           <table className={modalTableClass} style={getModalTableStyle(thresholdKeys.length + 4)}>
             <EqualWidthColGroup count={thresholdKeys.length + 4} />
             <thead>
@@ -1212,23 +1296,34 @@ function PlfEffectTable({ data, setData, className }) {
                 return (
                   <tr key={index} className={cn(sectorRow && "bg-slate-50 dark:bg-slate-800/60")}>
                     <td className="border border-slate-300 dark:border-slate-700 p-0">
-                      <Input
+                      {sectorRow ? (
+                      <SheetSelectInput
                         value={sectorRow ? row.sectorOrGcd : row.acftRegn}
                         onChange={(e) => {
                           if (disabledPlaceholder) {
-                            setData((prev) => [...prev, createPlfBlankRow("sector", thresholdKeys, { sectorOrGcd: e.target.value, gcd: "" })]);
+                            setData(rows.map((entry, rowIndex) => rowIndex === index
+                              ? createPlfBlankRow("sector", thresholdKeys, { ...entry, sectorOrGcd: e.target.value, gcd: getSectorGcd(e.target.value) })
+                              : entry));
                             return;
                           }
-                          if (sectorRow) updateSectorGroup(index, "sectorOrGcd", e.target.value);
-                          else updateRow(index, "acftRegn", e.target.value);
+                          updateSectorGroup(index, "sectorOrGcd", e.target.value);
                         }}
-                        placeholder={sectorRow ? "Sector" : "ACFT Regn"}
+                        options={sectorOptions}
+                        placeholder="Sector"
                         className={cn(
                           "border-0 rounded-none font-medium",
-                          !sectorRow && "pl-8",
                           sectorRow && "bg-slate-50 dark:bg-slate-800/60"
                         )}
                       />
+                      ) : (
+                      <SheetSelectInput
+                        value={row.acftRegn}
+                        onChange={(e) => updateRow(index, "acftRegn", e.target.value)}
+                        options={aircraftRegnOptions}
+                        placeholder="ACFT Regn"
+                        className="border-0 rounded-none pl-8 font-medium"
+                      />
+                      )}
                     </td>
                     <td className="border border-slate-300 dark:border-slate-700 p-0">
                       {sectorRow ? (
@@ -1243,6 +1338,7 @@ function PlfEffectTable({ data, setData, className }) {
                           }}
                           type="number"
                           placeholder="GCD"
+                          readOnly
                           className="border-0 rounded-none text-right bg-slate-50 dark:bg-slate-800/60"
                         />
                       ) : (
@@ -1293,7 +1389,7 @@ function PlfEffectTable({ data, setData, className }) {
   );
 }
 
-function FuelConsumptionIndexTable({ data, setData, className }) {
+function FuelConsumptionIndexTable({ data, setData, aircraftRegnOptions = [], className }) {
   const [fallbackMonths, setFallbackMonths] = useState({
     month1: "",
     month2: "",
@@ -1322,7 +1418,8 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
 
   const updateRow = (index, key, value) => {
     const monthLabels = getCurrentMonthLabels();
-    setData(data.map((row, rowIndex) => (rowIndex === index ? { ...row, ...monthLabels, [key]: value } : row)));
+    const sourceRows = data.length ? data : rows;
+    setData(sourceRows.map((row, rowIndex) => (rowIndex === index ? { ...row, ...monthLabels, [key]: value } : row)));
   };
 
   const addRow = () => {
@@ -1344,7 +1441,7 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
     setData(data.filter((_, rowIndex) => rowIndex !== index));
   };
 
-  const rows = data.length ? data : [{ acftRegn: "", m1: "", m2: "", m3: "", m4: "", m5: "" }];
+  const rows = getRowsOrInitialBlanks(data, () => ({ acftRegn: "", m1: "", m2: "", m3: "", m4: "", m5: "" }));
 
   return (
     <div className={cn("mb-8", className)}>
@@ -1357,12 +1454,12 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
           <Plus size={14} /> Add Row
         </button>
       </div>
-      <div className={modalTableScrollClass}>
+      <div className={modalTableScrollClass} style={getModalTableScrollStyle()}>
         <table className={modalTableClass} style={getModalTableStyle(7)}>
           <EqualWidthColGroup count={7} />
           <thead>
             <tr className="bg-white dark:bg-slate-900">
-              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">Fuel consum</th>
+              <th className="border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200">ACFT Regn</th>
               {monthKeys.map(([monthKey], index) => (
                 <th key={monthKey} className="min-w-[92px] border border-slate-300 dark:border-slate-700 p-0">
                   <Input
@@ -1383,15 +1480,18 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
               return (
                 <tr key={index}>
                   <td className="border border-slate-300 dark:border-slate-700 p-0">
-                    <Input
+                    <SheetSelectInput
                       value={row.acftRegn}
                       onChange={(e) => {
                         if (disabledPlaceholder) {
-                          setData([{ acftRegn: e.target.value, ...getCurrentMonthLabels(), m1: "", m2: "", m3: "", m4: "", m5: "" }]);
+                          setData(rows.map((entry, rowIndex) => rowIndex === index
+                            ? { ...entry, acftRegn: e.target.value, ...getCurrentMonthLabels() }
+                            : entry));
                           return;
                         }
                         updateRow(index, "acftRegn", e.target.value);
                       }}
+                      options={aircraftRegnOptions}
                       placeholder="ACFT Regn"
                       className="border-0 rounded-none font-medium"
                     />
@@ -1423,7 +1523,7 @@ function FuelConsumptionIndexTable({ data, setData, className }) {
   );
 }
 
-function ApuUsageTable({ data, setData, className }) {
+function ApuUsageTable({ data, setData, stationOptions = [], aircraftRegnOptions = [], currencyOptions = DEFAULT_CURRENCY_OPTIONS, className }) {
   const blankIfInvalidNumber = (value) => {
     if (value === "" || value === null || value === undefined) return "";
     const parsed = Number(value);
@@ -1443,7 +1543,8 @@ function ApuUsageTable({ data, setData, className }) {
   };
 
   const updateRow = (index, key, value) => {
-    setData(data.map((row, rowIndex) => {
+    const sourceRows = data.length ? data : rows;
+    setData(sourceRows.map((row, rowIndex) => {
       if (rowIndex !== index) return row;
       const next = {
         ...row,
@@ -1485,7 +1586,7 @@ function ApuUsageTable({ data, setData, className }) {
     setData(data.filter((_, rowIndex) => rowIndex !== index));
   };
 
-  const rows = data.length ? data.map(normalizeRow) : [{
+  const createBlankRow = () => ({
     stn: "",
     fromDate: "",
     toDate: "",
@@ -1495,7 +1596,8 @@ function ApuUsageTable({ data, setData, className }) {
     kgPerApuHr: "",
     addlnUse: "N",
     ccy: "",
-  }];
+  });
+  const rows = getRowsOrInitialBlanks(data.map(normalizeRow), createBlankRow);
 
   return (
     <div className={cn("mb-8", className)}>
@@ -1508,7 +1610,7 @@ function ApuUsageTable({ data, setData, className }) {
           <Plus size={14} /> Add Row
         </button>
       </div>
-      <div className={modalTableScrollClass}>
+      <div className={modalTableScrollClass} style={getModalTableScrollStyle()}>
         <table className={modalTableClass} style={getModalTableStyle(10)}>
           <EqualWidthColGroup count={10} />
           <thead>
@@ -1531,9 +1633,10 @@ function ApuUsageTable({ data, setData, className }) {
               return (
                 <tr key={index}>
                   <td className="border border-slate-300 dark:border-slate-700 p-0">
-                    <Input
+                    <SheetSelectInput
                       value={row.stn}
                       onChange={(e) => updateRow(index, "stn", e.target.value)}
+                      options={stationOptions}
                       placeholder="Stn"
                       className="border-0 rounded-none"
                     />
@@ -1564,9 +1667,10 @@ function ApuUsageTable({ data, setData, className }) {
                     />
                   </td>
                   <td className="border border-slate-300 dark:border-slate-700 p-0">
-                    <Input
+                    <SheetSelectInput
                       value={row.acftRegn}
                       onChange={(e) => updateRow(index, "acftRegn", e.target.value)}
+                      options={aircraftRegnOptions}
                       placeholder="ACFT Regn"
                       className="border-0 rounded-none"
                     />
@@ -1598,9 +1702,10 @@ function ApuUsageTable({ data, setData, className }) {
                     </select>
                   </td>
                   <td className="border border-slate-300 dark:border-slate-700 p-0">
-                    <Input
+                    <SheetSelectInput
                       value={row.ccy}
                       onChange={(e) => updateRow(index, "ccy", e.target.value)}
+                      options={currencyOptions}
                       placeholder="CCY"
                       className="border-0 rounded-none"
                     />
@@ -1622,13 +1727,13 @@ function ApuUsageTable({ data, setData, className }) {
   );
 }
 
-function FuelPriceTable({ data, setData, className }) {
+function FuelPriceTable({ data, setData, stationOptions = [], currencyOptions = DEFAULT_CURRENCY_OPTIONS, className }) {
   const [fallbackMonth1, setFallbackMonth1] = useState("");
   const [fallbackMonth2, setFallbackMonth2] = useState("");
   const month1Row = data.find((row) => row.month1 || row.m1Label || row.month);
   const month2Row = data.find((row) => row.month2 || row.m2Label);
-  const month1 = month1Row?.month1 || month1Row?.m1Label || month1Row?.month || fallbackMonth1;
-  const month2 = month2Row?.month2 || month2Row?.m2Label || fallbackMonth2;
+  const month1 = formatFuelMonthLabel(month1Row?.month1 || month1Row?.m1Label || month1Row?.month || fallbackMonth1);
+  const month2 = formatFuelMonthLabel(month2Row?.month2 || month2Row?.m2Label || fallbackMonth2);
 
   const normalizeRow = (row) => {
     return {
@@ -1639,23 +1744,15 @@ function FuelPriceTable({ data, setData, className }) {
   };
 
   const updateMonthLabel = (key, value) => {
-    if (key === "month1") setFallbackMonth1(value);
-    if (key === "month2") setFallbackMonth2(value);
-    setData(data.map((row) => ({ ...row, [key]: value })));
+    const formattedValue = formatFuelMonthLabel(value);
+    if (key === "month1") setFallbackMonth1(formattedValue);
+    if (key === "month2") setFallbackMonth2(formattedValue);
+    setData(data.map((row) => ({ ...row, [key]: formattedValue })));
   };
 
   const updateRow = (index, key, value) => {
     if (data.length === 0) {
-      setData([normalizeRow({
-        station: "",
-        ccy: "",
-        kgPerLtr: "",
-        month1,
-        month2,
-        m1: "",
-        m2: "",
-        [key]: value,
-      })]);
+      setData(rows.map((row, rowIndex) => rowIndex === index ? normalizeRow({ ...row, [key]: value }) : normalizeRow(row)));
       return;
     }
 
@@ -1685,7 +1782,7 @@ function FuelPriceTable({ data, setData, className }) {
     setData(data.filter((_, rowIndex) => rowIndex !== index));
   };
 
-  const rows = data.length ? data.map(normalizeRow) : [{ station: "", ccy: "", kgPerLtr: "", month1, month2, m1: "", m2: "" }];
+  const rows = getRowsOrInitialBlanks(data.map(normalizeRow), () => ({ station: "", ccy: "", kgPerLtr: "", month1, month2, m1: "", m2: "" }));
 
   return (
     <div className={cn("mb-8", className)}>
@@ -1698,7 +1795,7 @@ function FuelPriceTable({ data, setData, className }) {
           <Plus size={14} /> Add Row
         </button>
       </div>
-      <div className={modalTableScrollClass}>
+      <div className={modalTableScrollClass} style={getModalTableScrollStyle()}>
         <table className={modalTableClass} style={getModalTableStyle(6)}>
           <EqualWidthColGroup count={6} />
           <thead>
@@ -1739,18 +1836,20 @@ function FuelPriceTable({ data, setData, className }) {
                     />
                   </td>
                   <td className="border border-slate-300 dark:border-slate-700 p-0">
-                    <Input
+                    <SheetSelectInput
                       value={row.ccy}
                       onChange={(e) => updateRow(index, "ccy", e.target.value)}
+                      options={currencyOptions}
                       placeholder="CCY"
                       className="border-0 rounded-none"
                     />
                   </td>
                   <td className="border border-slate-300 dark:border-slate-700 p-0">
-                    <Input
+                    <SheetSelectInput
                       value={row.station}
                       onChange={(e) => updateRow(index, "station", e.target.value)}
-                      placeholder="Into plane"
+                      options={stationOptions}
+                      placeholder="Dep Station"
                       className="border-0 rounded-none"
                     />
                   </td>
@@ -1852,7 +1951,11 @@ function EditableTable({
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  let visibleRows = data.map((row, index) => ({ row, index }));
+  const blankRows = createBlankRows(
+    () => columns.reduce((acc, col) => ({ ...acc, [col.key]: col.defaultValue ?? "" }), {}),
+  );
+  const tableRows = data.length > 0 ? data : blankRows;
+  let visibleRows = tableRows.map((row, index) => ({ row, index, isInitialBlank: data.length === 0 }));
 
   if (sortFilter) {
     Object.entries(filters).forEach(([key, value]) => {
@@ -1896,7 +1999,7 @@ function EditableTable({
           </button>
         )}
       </div>
-      <div className={modalTableScrollClass}>
+      <div className={modalTableScrollClass} style={getModalTableScrollStyle()}>
         <table className={modalTableClass} style={getModalTableStyle(columns.length + (readOnly ? 0 : 1))}>
           <EqualWidthColGroup count={columns.length + (readOnly ? 0 : 1)} />
           <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
@@ -1921,7 +2024,7 @@ function EditableTable({
                   key={i}
                   onClick={() => handleSort(col.key)}
                   className={cn(
-                    "px-3 py-3 text-sm font-medium text-slate-500 uppercase",
+                    "px-3 py-3 text-sm font-medium text-slate-500",
                     sortFilter && "cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700",
                     col.headerClassName
                   )}
@@ -1934,7 +2037,7 @@ function EditableTable({
                   </span>
                 </th>
               ))}
-              {!readOnly && <th className="px-3 py-3 text-sm font-medium text-slate-500 uppercase text-right">Actions</th>}
+              {!readOnly && <th className="px-3 py-3 text-sm font-medium text-slate-500 text-right">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -1945,9 +2048,15 @@ function EditableTable({
                 </td>
               </tr>
             )}
-            {visibleRows.map(({ row, index }) => {
-              const isEditing = editingIndex === index;
+            {visibleRows.map(({ row, index, isInitialBlank }) => {
+              const isEditing = editingIndex === index || (isInitialBlank && !readOnly);
               const autoFields = new Set(Array.isArray(row._hydratedFields) ? row._hydratedFields : []);
+              const updateInitialBlank = (key, value) => {
+                const nextRows = tableRows.map((entry, rowIndex) => (rowIndex === index ? { ...entry, [key]: value } : entry));
+                setData(nextRows);
+                setEditingIndex(index);
+                setEditRow(nextRows[index]);
+              };
               return (
                 <tr
                   key={index}
@@ -1968,9 +2077,11 @@ function EditableTable({
                       {isEditing && !readOnly ? (
                         col.type === "select" ? (
                           <SelectInput
-                            value={editRow[col.key]}
+                            value={isInitialBlank ? row[col.key] : editRow[col.key]}
                             onChange={(e) => {
-                              if (!col.readOnly) setEditRow({ ...editRow, [col.key]: e.target.value });
+                              if (col.readOnly) return;
+                              if (isInitialBlank) updateInitialBlank(col.key, e.target.value);
+                              else setEditRow({ ...editRow, [col.key]: e.target.value });
                             }}
                             options={col.options}
                             placeholder={col.placeholder || "Select"}
@@ -1984,9 +2095,11 @@ function EditableTable({
                           />
                         ) : (
                           <Input
-                            value={editRow[col.key]}
+                            value={isInitialBlank ? row[col.key] : editRow[col.key]}
                             onChange={(e) => {
-                              if (!col.readOnly) setEditRow({ ...editRow, [col.key]: e.target.value });
+                              if (col.readOnly) return;
+                              if (isInitialBlank) updateInitialBlank(col.key, e.target.value);
+                              else setEditRow({ ...editRow, [col.key]: e.target.value });
                             }}
                             type={col.type || "text"}
                             readOnly={col.readOnly}
@@ -2008,7 +2121,7 @@ function EditableTable({
                   ))}
                   {!readOnly && (
                     <td className="px-3 py-2 text-right">
-                      {isEditing ? (
+                      {isEditing && !isInitialBlank ? (
                         <button onClick={() => handleSave(index)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded">
                           <Check size={16} />
                         </button>
@@ -2202,6 +2315,13 @@ export default function CostInputModal({ isOpen, onClose }) {
   const [generatingMrSchedule, setGeneratingMrSchedule] = useState(false);
   const [fxCurrencyOptions, setFxCurrencyOptions] = useState(DEFAULT_CURRENCY_OPTIONS);
   const [masterDateRange, setMasterDateRange] = useState({ minDate: "", maxDate: "" });
+  const [costInputOptions, setCostInputOptions] = useState({
+    sectors: [],
+    sectorGcdByValue: {},
+    stations: [],
+    aircraftRegns: [],
+    variants: [],
+  });
 
   // === NAVIGATION & AIRPORT STATE ===
   const [navEnr, setNavEnr] = useState([]);
@@ -2227,6 +2347,16 @@ export default function CostInputModal({ isOpen, onClose }) {
       return nextRows;
     });
   };
+
+  const getSectorGcd = (sector) => costInputOptions.sectorGcdByValue[String(sector || "").toUpperCase()] || "";
+  const stationOptions = costInputOptions.stations;
+  const sectorOptions = costInputOptions.sectors;
+  const aircraftRegnOptions = costInputOptions.aircraftRegns;
+  const variantOptions = costInputOptions.variants;
+  const variantOrAcftOptions = useMemo(
+    () => uniqueOptions([...variantOptions, ...aircraftRegnOptions]),
+    [variantOptions, aircraftRegnOptions]
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -2290,6 +2420,56 @@ export default function CostInputModal({ isOpen, onClose }) {
           console.error("Error fetching FX currency config", err);
           setFxCurrencyOptions(DEFAULT_CURRENCY_OPTIONS);
         });
+
+      Promise.allSettled([
+        api.get("/dashboard/populateDropDowns"),
+        api.get("/sectors"),
+        api.get("/fleet"),
+        api.get("/get-stationData"),
+      ]).then(([dropdownResult, sectorResult, fleetResult, stationResult]) => {
+        const dropdownData = dropdownResult.status === "fulfilled" ? dropdownResult.value.data : {};
+        const sectorRows = sectorResult.status === "fulfilled" && Array.isArray(sectorResult.value.data)
+          ? sectorResult.value.data
+          : [];
+        const fleetRows = fleetResult.status === "fulfilled" && Array.isArray(fleetResult.value.data?.data)
+          ? fleetResult.value.data.data
+          : [];
+        const stationRows = stationResult.status === "fulfilled" && Array.isArray(stationResult.value.data?.data)
+          ? stationResult.value.data.data
+          : [];
+
+        const explicitSectorOptions = sectorRows.map((row) => {
+          const sector = [row?.sector1, row?.sector2].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean).join("-");
+          return sector ? toOption(sector) : null;
+        }).filter(Boolean);
+        const dropdownSectorOptions = uniqueOptions(dropdownData?.sector || []);
+        const sectors = uniqueOptions([...explicitSectorOptions, ...dropdownSectorOptions]);
+        const sectorGcdByValue = sectorRows.reduce((acc, row) => {
+          const sector = [row?.sector1, row?.sector2].map((value) => String(value || "").trim().toUpperCase()).filter(Boolean).join("-");
+          if (sector) acc[sector] = row?.gcd ?? "";
+          return acc;
+        }, {});
+
+        const stations = uniqueOptions([
+          ...(dropdownData?.from || []),
+          ...(dropdownData?.to || []),
+          ...stationRows.map((row) => row?.stationName || row?.station || row?.code),
+        ]);
+        const aircraftRegns = uniqueOptions(
+          fleetRows
+            .filter((row) => String(row?.category || "").toUpperCase() === "AIRCRAFT")
+            .map((row) => row?.regn || row?.acftRegn || row?.sn)
+        );
+        const variants = uniqueOptions([
+          ...(dropdownData?.variant || []),
+          ...fleetRows.map((row) => row?.variant || row?.type),
+        ]);
+
+        setCostInputOptions({ sectors, sectorGcdByValue, stations, aircraftRegns, variants });
+      }).catch((error) => {
+        console.error("Error fetching cost input dropdown options", error);
+        setCostInputOptions({ sectors: [], sectorGcdByValue: {}, stations: [], aircraftRegns: [], variants: [] });
+      });
 
       const loadMasterDateRange = () => {
         api.get("/master-weeks")
@@ -2563,31 +2743,43 @@ export default function CostInputModal({ isOpen, onClose }) {
               {/* === SECTION: FUEL === */}
               <section>
                 <h2 className="text-lg font-bold text-slate-800 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4">Fuel</h2>
-                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-x-10 gap-y-6 items-start">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-8 gap-y-6 items-start">
                   <FuelConsumptionTable
                     className="mb-0"
                     data={fuelConsum}
                     setData={setFuelConsum}
-                  />
-                  <FuelConsumptionIndexTable
-                    className="mb-0"
-                    data={fuelConsumIndex}
-                    setData={setFuelConsumIndex}
+                    sectorOptions={sectorOptions}
+                    aircraftRegnOptions={aircraftRegnOptions}
+                    getSectorGcd={getSectorGcd}
                   />
                   <PlfEffectTable
                     className="mb-0"
                     data={plfEffect}
                     setData={setPlfEffect}
+                    sectorOptions={sectorOptions}
+                    aircraftRegnOptions={aircraftRegnOptions}
+                    getSectorGcd={getSectorGcd}
+                  />
+                  <FuelConsumptionIndexTable
+                    className="mb-0 xl:col-span-2"
+                    data={fuelConsumIndex}
+                    setData={setFuelConsumIndex}
+                    aircraftRegnOptions={aircraftRegnOptions}
                   />
                   <ApuUsageTable
-                    className="mb-0"
+                    className="mb-0 xl:col-span-2"
                     data={apuUsage}
                     setData={setApuUsage}
+                    stationOptions={stationOptions}
+                    aircraftRegnOptions={aircraftRegnOptions}
+                    currencyOptions={fxCurrencyOptions}
                   />
                   <FuelPriceTable
-                    className="mb-0 xl:col-start-1"
+                    className="mb-0 xl:col-span-2"
                     data={ccyFuel}
                     setData={setCcyFuel}
+                    stationOptions={stationOptions}
+                    currencyOptions={fxCurrencyOptions}
                   />
                 </div>
               </section>
@@ -2607,7 +2799,7 @@ export default function CostInputModal({ isOpen, onClose }) {
                   columns={[
                     { label: "MR Acc ID", key: "mrAccId" },
                     { label: "Sch. Mx. Event", key: "schMxEvent" },
-                    { label: "ACFT Regn", key: "acftRegn" },
+                    { label: "ACFT Regn", key: "acftRegn", type: "select", options: aircraftRegnOptions },
                     { label: "PN", key: "pn" },
                     { label: "SN", key: "sn" },
                     { label: "Set balance", key: "setBalance", type: "number" },
@@ -2695,7 +2887,7 @@ export default function CostInputModal({ isOpen, onClose }) {
                     { label: "Cycles", key: "cycles", type: "number" },
                     { label: "Days", key: "days", type: "number" },
                     { label: "Event total cost", key: "cost", type: "number" },
-                    { label: "CCY", key: "ccy" },
+                    { label: "CCY", key: "ccy", type: "select", options: fxCurrencyOptions, defaultValue: defaultFxCurrency, allowEmpty: false, preserveUnknownOption: false },
                     { label: "MR Acc ID", key: "mrAccId" },
                     { label: "MR drawdown", key: "drawdownDate", type: "date" },
                     { label: "Opening bal", key: "openingBal", type: "number" },
@@ -2705,41 +2897,39 @@ export default function CostInputModal({ isOpen, onClose }) {
                     { label: "Capitalisation", key: "capitalisation" },
                   ]}
                 />
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                  <EditableTable
-                    title="Transit maintenance"
-                    data={transitMx}
-                    setData={setTransitMx}
-                    columns={[
-                      { label: "Station", key: "depStn" },
-                      { label: "Variant/ACFT", key: "variant" },
-                      { label: "ACFT Regn", key: "acftRegn" },
-                      { label: "PN", key: "pn" },
-                      { label: "SN", key: "sn" },
-                      { label: "Cost per dep", key: "costPerDeparture", type: "number" },
-                      { label: "CCY", key: "ccy" },
-                      { label: "From date", key: "fromDate", type: "date" },
-                      { label: "To date", key: "toDate", type: "date" },
-                    ]}
-                  />
-                  <EditableTable
-                    title="Other maintenance expenses (consumption, loan charges...etc)"
-                    data={otherMx}
-                    setData={setOtherMx}
-                    columns={[
-                      { label: "Variant/ACFT", key: "variant" },
-                      { label: "ACFT Regn", key: "acftRegn" },
-                      { label: "PN", key: "pn" },
-                      { label: "SN", key: "sn" },
-                      { label: "Cost per BH", key: "costPerBh", type: "number" },
-                      { label: "Cost per dep", key: "costPerDeparture", type: "number" },
-                      { label: "Cost per mon", key: "costPerMonth", type: "number" },
-                      { label: "CCY", key: "ccy" },
-                      { label: "From date", key: "fromDate", type: "date" },
-                      { label: "To date", key: "toDate", type: "date" },
-                    ]}
-                  />
-                </div>
+                <EditableTable
+                  title="Transit maintenance"
+                  data={transitMx}
+                  setData={setTransitMx}
+                  columns={[
+                    { label: "Station", key: "depStn", type: "select", options: stationOptions },
+                    { label: "Variant", key: "variant", type: "select", options: variantOptions },
+                    { label: "ACFT Regn", key: "acftRegn", type: "select", options: aircraftRegnOptions },
+                    { label: "PN", key: "pn" },
+                    { label: "SN", key: "sn" },
+                    { label: "Cost per dep", key: "costPerDeparture", type: "number" },
+                    { label: "CCY", key: "ccy", type: "select", options: fxCurrencyOptions, defaultValue: defaultFxCurrency, allowEmpty: false, preserveUnknownOption: false },
+                    { label: "From date", key: "fromDate", type: "date" },
+                    { label: "To date", key: "toDate", type: "date" },
+                  ]}
+                />
+                <EditableTable
+                  title="Other maintenance expenses (consumption, loan charges...etc)"
+                  data={otherMx}
+                  setData={setOtherMx}
+                  columns={[
+                    { label: "Variant", key: "variant", type: "select", options: variantOptions },
+                    { label: "ACFT Regn", key: "acftRegn", type: "select", options: aircraftRegnOptions },
+                    { label: "PN", key: "pn" },
+                    { label: "SN", key: "sn" },
+                    { label: "Cost per BH", key: "costPerBh", type: "number" },
+                    { label: "Cost per dep", key: "costPerDeparture", type: "number" },
+                    { label: "Cost per mon", key: "costPerMonth", type: "number" },
+                    { label: "CCY", key: "ccy", type: "select", options: fxCurrencyOptions, defaultValue: defaultFxCurrency, allowEmpty: false, preserveUnknownOption: false },
+                    { label: "From date", key: "fromDate", type: "date" },
+                    { label: "To date", key: "toDate", type: "date" },
+                  ]}
+                />
                 <EditableTable
                   title="Cost of rotables changes"
                   data={rotableChanges}
@@ -2757,7 +2947,7 @@ export default function CostInputModal({ isOpen, onClose }) {
                     { label: "Removed SN", key: "removedSN", readOnly: true },
                     { label: "Installed SN", key: "installedSN", readOnly: true },
                     { label: "Cost", key: "cost", type: "number" },
-                    { label: "CCY", key: "ccy" },
+                    { label: "CCY", key: "ccy", type: "select", options: fxCurrencyOptions, defaultValue: defaultFxCurrency, allowEmpty: false, preserveUnknownOption: false },
                   ]}
                 />
               </section>
@@ -2801,19 +2991,23 @@ export default function CostInputModal({ isOpen, onClose }) {
                 <div className="grid grid-cols-1 gap-10 xl:grid-cols-2">
                   <TierSheetTable
                     title="Enroute"
-                    rowLabel="ENR"
+                    rowLabel="Sector"
                     rowKey="sector"
                     data={navEnr}
                     setData={setNavEnr}
                     tierKeys={navMtowTiers}
+                    currencyOptions={fxCurrencyOptions}
+                    rowOptions={sectorOptions}
                   />
                   <TierSheetTable
                     title="Terminal"
-                    rowLabel="Terminal"
+                    rowLabel="Arr Stn"
                     rowKey="arrStn"
                     data={navTerm}
                     setData={setNavTerm}
                     tierKeys={navMtowTiers}
+                    currencyOptions={fxCurrencyOptions}
+                    rowOptions={stationOptions}
                   />
                 </div>
               </section>
@@ -2826,20 +3020,21 @@ export default function CostInputModal({ isOpen, onClose }) {
                 <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
                   <TierSheetTable
                     title="Landing @ Arr Stn"
-                    rowLabel="Landing @"
+                    rowLabel="Arr Stn"
                     rowKey="arrStn"
                     data={airportLanding}
                     setData={setAirportLanding}
                     tierKeys={navMtowTiers}
+                    currencyOptions={fxCurrencyOptions}
+                    rowOptions={stationOptions}
                   />
                   <ChargeSheetTable
                     title="Dom flight handling"
                     data={airportDom}
                     setData={setAirportDom}
                     columns={[
-                      { label: "CCY", key: "ccy", placeholder: "CCY" },
-                      { label: "Arr Stn", key: "arrStn", placeholder: "Stn" },
-                      { label: "Variant", key: "variant", placeholder: "Variant" },
+                      { label: "CCY", key: "ccy", type: "select", options: fxCurrencyOptions, placeholder: "CCY", defaultValue: defaultFxCurrency, allowEmpty: false, preserveUnknownOption: false },
+                      { label: "Arr Stn", key: "arrStn", type: "select", options: stationOptions, placeholder: "Arr Stn" },
                       { label: "MTOW", key: "mtow", type: "number", placeholder: "MTOW" },
                       { label: "Month", key: "month", placeholder: "Month" },
                       { label: "Cost", key: "cost", type: "number", placeholder: "Cost" },
@@ -2850,9 +3045,8 @@ export default function CostInputModal({ isOpen, onClose }) {
                     data={airportIntl}
                     setData={setAirportIntl}
                     columns={[
-                      { label: "CCY", key: "ccy", placeholder: "CCY" },
-                      { label: "Arr Stn", key: "arrStn", placeholder: "Stn" },
-                      { label: "Variant", key: "variant", placeholder: "Variant" },
+                      { label: "CCY", key: "ccy", type: "select", options: fxCurrencyOptions, placeholder: "CCY", defaultValue: defaultFxCurrency, allowEmpty: false, preserveUnknownOption: false },
+                      { label: "Arr Stn", key: "arrStn", type: "select", options: stationOptions, placeholder: "Arr Stn" },
                       { label: "MTOW", key: "mtow", type: "number", placeholder: "MTOW" },
                       { label: "Month", key: "month", placeholder: "Month" },
                       { label: "Cost", key: "cost", type: "number", placeholder: "Cost" },
@@ -2860,11 +3054,13 @@ export default function CostInputModal({ isOpen, onClose }) {
                   />
                   <TierSheetTable
                     title="Other APT costs @ Arr Stn"
-                    rowLabel="Other APT"
+                    rowLabel="Arr Stn"
                     rowKey="arrStn"
                     data={airportOther}
                     setData={setAirportOther}
                     tierKeys={navMtowTiers}
+                    currencyOptions={fxCurrencyOptions}
+                    rowOptions={stationOptions}
                   />
                 </div>
               </section>
@@ -2878,13 +3074,13 @@ export default function CostInputModal({ isOpen, onClose }) {
                   setData={setOtherDoc}
                   columns={[
                     { label: "Label", key: "label" },
-                    { label: "Sector", key: "sector" },
-                    { label: "Dep Stn", key: "depStn" },
-                    { label: "Arr Stn", key: "arrStn" },
-                    { label: "Variant / ACFT Regn", key: "variantOrAcftRegn" },
-                    { label: "Per", key: "per" },
+                    { label: "Sector", key: "sector", type: "select", options: sectorOptions },
+                    { label: "Dep Stn", key: "depStn", type: "select", options: stationOptions },
+                    { label: "Arr Stn", key: "arrStn", type: "select", options: stationOptions },
+                    { label: "Variant / ACFT Regn", key: "variantOrAcftRegn", type: "select", options: variantOrAcftOptions },
+                    { label: "Per", key: "per", type: "select", options: OTHER_DOC_PER_OPTIONS, defaultValue: "DEPARTURES", preserveUnknownOption: false },
                     { label: "Cost", key: "cost", type: "number" },
-                    { label: "CCY", key: "ccy" },
+                    { label: "CCY", key: "ccy", type: "select", options: fxCurrencyOptions, defaultValue: defaultFxCurrency, allowEmpty: false, preserveUnknownOption: false },
                     { label: "From date", key: "fromDate", type: "date" },
                     { label: "To date", key: "toDate", type: "date" },
                   ]}
