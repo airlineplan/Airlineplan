@@ -90,6 +90,12 @@ const targetTableStatusHeaderClass = "p-2 border border-slate-200 dark:border-sl
 const modalStatusHeaderClass = "p-2 border-r border-slate-200 dark:border-slate-700 text-center font-semibold min-w-[220px] whitespace-normal leading-tight";
 const targetStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 text-center min-w-[220px] whitespace-normal leading-tight";
 const targetLastStatusHeaderClass = "p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm text-center min-w-[220px] whitespace-normal leading-tight";
+const CALENDAR_MIN_VISIBLE_ROWS = 2;
+const CALENDAR_SCROLL_ROW_LIMIT = 10;
+const CALENDAR_TABLE_COLUMN_COUNT = 26;
+const DEFERRED_CALENDAR_FEATURE_NOTE = "checkbox (apply to all sn)";
+const isDeferredCalendarFeatureNote = (row = {}) =>
+    String(row.calPn || "").trim().toLowerCase() === DEFERRED_CALENDAR_FEATURE_NOTE;
 const DateTextInput = ({ value, onChange, className = "", placeholder = "dd-mmm-yy" }) => (
     <DateInput value={value} onValueChange={onChange} placeholder={placeholder} className={className} />
 );
@@ -148,7 +154,7 @@ const MaintenanceDashboard = () => {
         try {
             const res = await api.get('/maintenance/calendar');
             if (res.data && res.data.success) {
-                setCalendarData(res.data.data);
+                setCalendarData(Array.isArray(res.data.data) ? res.data.data.filter(row => !isDeferredCalendarFeatureNote(row)) : []);
             }
         } catch (error) {
             console.error("Failed to fetch calendar data:", error);
@@ -232,7 +238,7 @@ const MaintenanceDashboard = () => {
 
     const handleUpdateCalendar = async () => {
         try {
-            await api.post('/maintenance/calendar', { calendarData: calendarData });
+            await api.post('/maintenance/calendar', { calendarData: calendarData.filter(row => !isDeferredCalendarFeatureNote(row)) });
             invalidateFleetMetricsCache();
             window.dispatchEvent(new CustomEvent("assignments:updated"));
             setIsEditingCalendar(false);
@@ -975,6 +981,8 @@ const MaintenanceDashboard = () => {
     const filteredTargetData = useMemo(() => getProcessedData(targetData), [targetData, filters, sortConfig]);
     const filteredCalendarData = useMemo(() => getProcessedData(calendarData), [calendarData, filters, sortConfig]);
     const filteredGroundDays = useMemo(() => getProcessedData(groundDays), [groundDays, filters, sortConfig]);
+    const calendarPlaceholderRows = Math.max(CALENDAR_MIN_VISIBLE_ROWS - filteredCalendarData.length, 0);
+    const shouldScrollCalendarRows = filteredCalendarData.length > CALENDAR_SCROLL_ROW_LIMIT;
     const formatOptionalCalendarDate = (value) => value ? formatDateForDisplay(value) : "None";
     const formatOccurrencesTillExit = (row) => {
         const occurrenceCount = Number(row?.occurrence || 0);
@@ -1227,9 +1235,9 @@ const MaintenanceDashboard = () => {
                 </h3>
                 <span className="text-sm text-slate-500 italic mb-1"></span>
 
-                <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm">
+                <div className={`border border-slate-200 dark:border-slate-700 rounded-lg overflow-x-auto bg-white dark:bg-slate-800 shadow-sm ${shouldScrollCalendarRows ? "max-h-[620px] overflow-y-auto custom-scrollbar" : "overflow-y-hidden"}`}>
                     <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
-                        <thead>
+                        <thead className={shouldScrollCalendarRows ? "sticky top-0 z-10" : ""}>
                             <tr className="bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300">
                                 {renderHeader("Label", "calLabel", "min-w-[140px]")}
                                 {renderHeader("Line/Base/Shop", "lineBase", "min-w-[140px]")}
@@ -1285,7 +1293,7 @@ const MaintenanceDashboard = () => {
                                 const isHighlighted = (colName) => row.highlights?.includes(colName) ? grStyle : "";
 
                                 return (
-                                    <tr key={`cal-${row.id}`} className="bg-green-50/50 dark:bg-green-900/10">
+                                    <tr key={`cal-${row.id}`} className="h-[49px] bg-green-50/50 dark:bg-green-900/10">
                                         <td className="p-2 border-r border-slate-200 dark:border-slate-700 font-medium">
                                             {isEditingCalendar || row.isNew ? <input type="text" value={row.calLabel || ""} onChange={(e) => handleCalendarFieldChange(row.id, 'calLabel', e.target.value)} className={`${calendarEditableInputClass} text-center`} /> : row.calLabel}
                                         </td>
@@ -1382,6 +1390,16 @@ const MaintenanceDashboard = () => {
                                     </tr>
                                 );
                             })}
+                            {Array.from({ length: calendarPlaceholderRows }).map((_, rowIndex) => (
+                                <tr key={`calendar-placeholder-${rowIndex}`} className="h-[49px] bg-green-50/50 dark:bg-green-900/10" aria-hidden="true">
+                                    {Array.from({ length: CALENDAR_TABLE_COLUMN_COUNT }).map((__, cellIndex) => (
+                                        <td
+                                            key={`calendar-placeholder-${rowIndex}-${cellIndex}`}
+                                            className={`h-[49px] p-2 border-r border-slate-200 dark:border-slate-700 ${cellIndex === CALENDAR_TABLE_COLUMN_COUNT - 1 ? "bg-white dark:bg-slate-800" : ""}`}
+                                        />
+                                    ))}
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
