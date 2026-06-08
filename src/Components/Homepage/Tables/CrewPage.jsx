@@ -546,6 +546,7 @@ const CrewPage = () => {
     const [kpiData, setKpiData] = useState({ periods: [], metrics: [] });
     const [kpiLoading, setKpiLoading] = useState(false);
     const [kpiFilters, setKpiFilters] = useState({ periodicity: "MONTHLY", roles: [], bases: [], categories: [], subCategories: [] });
+    const [masterDateRange, setMasterDateRange] = useState({ minDate: "", maxDate: "" });
     const [diaryRows, setDiaryRows] = useState([]);
     const [diarySummaryEvents, setDiarySummaryEvents] = useState([]);
     const [diaryViewMode, setDiaryViewMode] = useState("summary");
@@ -604,24 +605,39 @@ const CrewPage = () => {
         }
     }, []);
 
+    const loadMasterDateRange = useCallback(async () => {
+        try {
+            const response = await api.get("/master-weeks");
+            setMasterDateRange({
+                minDate: response.data?.minDate || "",
+                maxDate: response.data?.maxDate || "",
+            });
+        } catch (error) {
+            console.error("Error fetching master date range:", error);
+            setMasterDateRange({ minDate: "", maxDate: "" });
+        }
+    }, []);
+
     const loadBootstrap = useCallback(async () => {
         setPageLoading(true);
         try {
             const response = await api.get("/crew/bootstrap");
             hydrateFromBootstrap(response.data?.data || {});
-            await loadOptions();
+            await Promise.all([loadOptions(), loadMasterDateRange()]);
         } catch (error) {
             toast.error(error.response?.data?.message || "Failed to load Crew module.");
         } finally {
             setPageLoading(false);
         }
-    }, [hydrateFromBootstrap, loadOptions]);
+    }, [hydrateFromBootstrap, loadMasterDateRange, loadOptions]);
 
     const loadKpis = useCallback(async () => {
         setKpiLoading(true);
         try {
             const params = new URLSearchParams();
             params.set("periodicity", kpiFilters.periodicity);
+            if (masterDateRange.minDate) params.set("startDate", masterDateRange.minDate);
+            if (masterDateRange.maxDate) params.set("endDate", masterDateRange.maxDate);
             ["roles", "bases", "categories", "subCategories"].forEach((key) => {
                 if (kpiFilters[key]?.length) params.set(key, kpiFilters[key].join(","));
             });
@@ -632,7 +648,7 @@ const CrewPage = () => {
         } finally {
             setKpiLoading(false);
         }
-    }, [kpiFilters]);
+    }, [kpiFilters, masterDateRange]);
 
     const loadDiary = useCallback(async (page = 1, viewMode = diaryViewMode) => {
         setDiaryLoading(true);
@@ -691,25 +707,25 @@ const CrewPage = () => {
             }
 
             const category = event.category || "Uncategorised";
-            const rowKey = [event.crewCode || "-", event.crewName || "-", event.role || "-", category].join("|");
+            const rowKey = [event.crewCode || "-", event.crewName || "-", event.role || "-"].join("|");
             if (!rowMap.has(rowKey)) {
                 rowMap.set(rowKey, {
                     key: rowKey,
                     crewCode: event.crewCode || "-",
                     crewName: event.crewName || "-",
                     role: event.role || "-",
-                    category,
                     cells: new Map(),
                 });
             }
 
             const cellValues = rowMap.get(rowKey).cells.get(columnKey) || [];
             const cellParts = [
+                category,
                 event.subCategory && event.subCategory !== category ? event.subCategory : "",
                 event.flightNumber,
                 event.location,
             ].filter(Boolean);
-            const cellLabel = cellParts.join(" | ") || category;
+            const cellLabel = cellParts.join(" | ");
             rowMap.get(rowKey).cells.set(columnKey, [...cellValues, cellLabel]);
         });
 
@@ -720,7 +736,7 @@ const CrewPage = () => {
         const rows = Array.from(rowMap.values()).sort((left, right) => {
             const crewSort = String(left.crewCode).localeCompare(String(right.crewCode));
             if (crewSort !== 0) return crewSort;
-            return String(left.category).localeCompare(String(right.category));
+            return String(left.crewName).localeCompare(String(right.crewName));
         });
         const dateGroups = columns.reduce((groups, column) => {
             const previous = groups[groups.length - 1];
@@ -958,6 +974,8 @@ const CrewPage = () => {
     const updateKpiMultiFilter = (key, selectedOptions) => {
         setKpiFilters((prev) => ({ ...prev, [key]: selectedOptions.map((option) => option.value) }));
     };
+    const kpiPeriods = kpiData.periods.length ? kpiData.periods : Array.from({ length: 6 }, (_, index) => ({ label: `Period ${index + 1}` }));
+    const kpiColumnCount = kpiPeriods.length + 1;
 
     return (
         <div className="w-full h-full p-4 md:p-6 space-y-6 flex flex-col min-h-[calc(100vh-100px)] bg-slate-50 dark:bg-slate-950/20 rounded-2xl">
@@ -1087,7 +1105,7 @@ const CrewPage = () => {
                         <thead className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300">
                             <tr>
                                 <th className="p-3 font-semibold w-[250px] sticky left-0 bg-slate-100 dark:bg-slate-800/90 z-10 border-r border-slate-200 dark:border-slate-700">Metric</th>
-                                {(kpiData.periods.length ? kpiData.periods : Array.from({ length: 6 }, (_, index) => ({ label: `Period ${index + 1}` }))).map((period, index) => (
+                                {kpiPeriods.map((period, index) => (
                                     <th key={`${period.label}-${index}`} className="p-3 font-semibold text-center border-l border-slate-200 dark:border-slate-700">{period.label}</th>
                                 ))}
                             </tr>
@@ -1095,12 +1113,12 @@ const CrewPage = () => {
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {kpiLoading && (
                                 <tr>
-                                    <td colSpan={7} className="p-6 text-center text-slate-500">Loading KPI values...</td>
+                                    <td colSpan={kpiColumnCount} className="p-6 text-center text-slate-500">Loading KPI values...</td>
                                 </tr>
                             )}
                             {!kpiLoading && kpiData.metrics.length === 0 && (
                                 <tr>
-                                    <td colSpan={7} className="p-6 text-center text-slate-500">No calculated KPI values yet.</td>
+                                    <td colSpan={kpiColumnCount} className="p-6 text-center text-slate-500">No calculated KPI values yet.</td>
                                 </tr>
                             )}
                             {!kpiLoading && kpiData.metrics.map((metric) => (
@@ -1108,8 +1126,8 @@ const CrewPage = () => {
                                     <td className="p-3 text-slate-700 dark:text-slate-300 font-medium sticky left-0 bg-white dark:bg-slate-900/40 border-r border-slate-200 dark:border-slate-700/50">
                                         {metric.label}
                                     </td>
-                                    {Array.from({ length: 6 }, (_, index) => (
-                                        <td key={`${metric.key}-${index}`} className="p-3 border-l border-slate-100 dark:border-slate-800 text-center text-slate-700 dark:text-slate-300 tabular-nums">
+                                    {kpiPeriods.map((period, index) => (
+                                        <td key={`${metric.key}-${period.label}-${index}`} className="p-3 border-l border-slate-100 dark:border-slate-800 text-center text-slate-700 dark:text-slate-300 tabular-nums">
                                             {formatKpiValue(metric, metric.values?.[index])}
                                         </td>
                                     ))}
@@ -1270,7 +1288,6 @@ const CrewPage = () => {
                                         <th rowSpan={2} className="sticky left-0 z-30 w-[110px] min-w-[110px] p-3 font-semibold border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">Crew ID</th>
                                         <th rowSpan={2} className="sticky left-[110px] z-30 w-[150px] min-w-[150px] p-3 font-semibold border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">Crew Name</th>
                                         <th rowSpan={2} className="sticky left-[260px] z-30 w-[100px] min-w-[100px] p-3 font-semibold border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">Role</th>
-                                        <th rowSpan={2} className="sticky left-[360px] z-30 w-[180px] min-w-[180px] p-3 font-semibold border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">Activity</th>
                                         {diarySummary.dateGroups.length > 0 ? diarySummary.dateGroups.map((group) => (
                                             <th key={group.dateKey} colSpan={group.colSpan} className="p-3 font-semibold text-center border-b border-slate-200 dark:border-slate-700">
                                                 {group.label}
@@ -1291,25 +1308,24 @@ const CrewPage = () => {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {diaryLoading && (
-                                        <tr><td colSpan={4 + Math.max(diarySummary.columns.length, 1)} className="p-6 text-center text-slate-500">Loading diary summary...</td></tr>
+                                        <tr><td colSpan={3 + Math.max(diarySummary.columns.length, 1)} className="p-6 text-center text-slate-500">Loading diary summary...</td></tr>
                                     )}
                                     {!diaryLoading && diarySummary.rows.length === 0 && (
-                                        <tr><td colSpan={4 + Math.max(diarySummary.columns.length, 1)} className="p-6 text-center text-slate-500">No Crew Diary rows found.</td></tr>
+                                        <tr><td colSpan={3 + Math.max(diarySummary.columns.length, 1)} className="p-6 text-center text-slate-500">No Crew Diary rows found.</td></tr>
                                     )}
                                     {!diaryLoading && diarySummary.rows.map((row) => (
                                         <tr key={row.key} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 align-top">
                                             <td className="sticky left-0 z-20 w-[110px] min-w-[110px] p-3 font-medium border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">{row.crewCode}</td>
                                             <td className="sticky left-[110px] z-20 w-[150px] min-w-[150px] p-3 text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">{row.crewName}</td>
                                             <td className="sticky left-[260px] z-20 w-[100px] min-w-[100px] p-3 text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">{row.role}</td>
-                                            <td className="sticky left-[360px] z-20 w-[180px] min-w-[180px] p-3 font-semibold text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">{row.category}</td>
                                             {diarySummary.columns.map((column) => {
                                                 const values = [...new Set(row.cells.get(column.key) || [])];
                                                 return (
-                                                    <td key={`${row.key}-${column.key}`} className="min-w-[130px] p-3 text-center border-l border-slate-100 dark:border-slate-800">
+                                                    <td key={`${row.key}-${column.key}`} className="min-w-[150px] p-3 text-center border-l border-slate-100 dark:border-slate-800">
                                                         {values.length ? (
                                                             <div className="flex flex-col gap-1">
                                                                 {values.slice(0, 3).map((value) => (
-                                                                    <span key={value} className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+                                                                    <span key={value} className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium leading-5 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
                                                                         {value}
                                                                     </span>
                                                                 ))}
