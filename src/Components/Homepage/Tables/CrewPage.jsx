@@ -158,6 +158,13 @@ const getUploadOutcome = (key, summary, fallbackMessage) => {
     return { type: "success", message: fallbackMessage || `${label} import completed.` };
 };
 
+const shouldRecalculateAfterUpload = (summary) => {
+    const invalidRows = Number(summary?.invalidRows || 0);
+    const changedRows = Number(summary?.rowsInserted || 0) + Number(summary?.rowsUpdated || 0);
+    const rowsRead = Number(summary?.rowsRead || 0);
+    return changedRows > 0 || (rowsRead === 0 && invalidRows === 0);
+};
+
 const InputTime = ({ label, placeholder = "HH:MM", value, onChange, error, className }) => (
     <div className={cn("flex flex-col sm:flex-row sm:items-center justify-between gap-2 py-1.5", className)}>
         <label className="text-base text-slate-700 dark:text-slate-300 font-medium flex-1 pr-4">{label}</label>
@@ -802,6 +809,20 @@ const CrewPage = () => {
         await api.put("/crew/positioning-settings", positioningPayload);
     };
 
+    const refreshCrewPlan = async ({ successMessage = "Crew plan updated.", showToast = true } = {}) => {
+        setUpdatingPlan(true);
+        try {
+            await saveSettings();
+            const response = await api.post("/crew/update-plan");
+            setLatestRun(response.data?.data?.calculationRun || null);
+            if (showToast) toast.success(response.data?.message || successMessage);
+            await Promise.all([loadBootstrap(), loadKpis(), modals.diary ? loadDiary(1) : Promise.resolve()]);
+            return response.data;
+        } finally {
+            setUpdatingPlan(false);
+        }
+    };
+
     const handleUpload = async (key, endpoint, file) => {
         setUploadState((prev) => ({ ...prev, [key]: { ...prev[key], filename: file.name, loading: true, errors: [] } }));
         try {
@@ -815,6 +836,15 @@ const CrewPage = () => {
             if (outcome.type === "error") toast.error(outcome.message);
             else if (outcome.type === "warning") toast.warning(outcome.message);
             else toast.success(outcome.message);
+
+            if (shouldRecalculateAfterUpload(summary)) {
+                try {
+                    await refreshCrewPlan({ showToast: false });
+                    toast.success("Crew Diary updated from the latest upload.");
+                } catch (error) {
+                    toast.warning(error.response?.data?.message || error.message || "Upload completed, but Crew Diary could not be updated.");
+                }
+            }
         } catch (error) {
             const message = error.response?.data?.message || "Upload failed.";
             const summary = error.response?.data?.data || null;
@@ -832,17 +862,10 @@ const CrewPage = () => {
     };
 
     const handleUpdatePlan = async () => {
-        setUpdatingPlan(true);
         try {
-            await saveSettings();
-            const response = await api.post("/crew/update-plan");
-            setLatestRun(response.data?.data?.calculationRun || null);
-            toast.success(response.data?.message || "Crew plan updated.");
-            await Promise.all([loadBootstrap(), loadKpis(), modals.diary ? loadDiary(1) : Promise.resolve()]);
+            await refreshCrewPlan();
         } catch (error) {
             toast.error(error.response?.data?.message || error.message || "Failed to update Crew plan.");
-        } finally {
-            setUpdatingPlan(false);
         }
     };
 
