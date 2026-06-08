@@ -138,7 +138,9 @@ const toDropdownOptions = (values = []) => Array.from(new Set(values.map((value)
 
 const getUploadOutcome = (key, summary, fallbackMessage) => {
     const invalidRows = Number(summary?.invalidRows || 0);
-    const changedRows = Number(summary?.rowsInserted || 0) + Number(summary?.rowsUpdated || 0);
+    const rowsRead = Number(summary?.rowsRead || 0);
+    const deletedRows = Number(summary?.rowsDeleted || 0);
+    const changedRows = Number(summary?.rowsInserted || 0) + Number(summary?.rowsUpdated || 0) + deletedRows;
     const label = uploadLabels[key] || "Upload";
 
     if (invalidRows > 0 && changedRows === 0) {
@@ -155,14 +157,19 @@ const getUploadOutcome = (key, summary, fallbackMessage) => {
         };
     }
 
+    if (rowsRead === 0 && deletedRows > 0) {
+        return { type: "success", message: fallbackMessage || `${label} cleared.` };
+    }
+
     return { type: "success", message: fallbackMessage || `${label} import completed.` };
 };
 
 const shouldRecalculateAfterUpload = (summary) => {
     const invalidRows = Number(summary?.invalidRows || 0);
     const changedRows = Number(summary?.rowsInserted || 0) + Number(summary?.rowsUpdated || 0);
+    const deletedRows = Number(summary?.rowsDeleted || 0);
     const rowsRead = Number(summary?.rowsRead || 0);
-    return changedRows > 0 || (rowsRead === 0 && invalidRows === 0);
+    return changedRows > 0 || deletedRows > 0 || (rowsRead === 0 && invalidRows === 0);
 };
 
 const InputTime = ({ label, placeholder = "HH:MM", value, onChange, error, className }) => (
@@ -271,6 +278,7 @@ const UploadLink = ({ label, state, onUpload }) => {
                     <span>Rows {state.summary.rowsRead || 0}</span>
                     <span>Inserted {state.summary.rowsInserted || 0}</span>
                     <span>Updated {state.summary.rowsUpdated || 0}</span>
+                    {Number(state.summary.rowsRead || 0) === 0 && Number(state.summary.rowsDeleted || 0) > 0 && <span>Removed {state.summary.rowsDeleted || 0}</span>}
                     <span className={state.summary.invalidRows ? "text-rose-500" : ""}>Invalid {state.summary.invalidRows || 0}</span>
                 </div>
             )}
