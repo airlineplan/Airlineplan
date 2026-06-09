@@ -422,13 +422,13 @@ const CopySector = (props) => {
                   <InputGroup label="Block Time (BT)" error={btError}>
                     <input className={baseInputStyles} type="time" name="bt" required value={bt} onChange={handleBlockTime} />
                   </InputGroup>
-                  <InputGroup label={AUTO_CALCULATE_SECTOR_STA ? "STA (LT) - Auto Calculated" : "STA (LT)"}>
+                  <InputGroup label="STA (LT)">
                     <input
                       className={cn(baseInputStyles, AUTO_CALCULATE_SECTOR_STA && "bg-indigo-50/50 dark:bg-indigo-900/20 font-bold")}
                       type="time"
                       value={sta}
                       onChange={handleSTA}
-                      disabled={AUTO_CALCULATE_SECTOR_STA}
+                      disabled
                     />
                   </InputGroup>
                 </div>

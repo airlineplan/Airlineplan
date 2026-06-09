@@ -1828,7 +1828,7 @@ const DashboardTable = () => {
           {periodColumns.map((period, index) => (
             <td
               key={`${node.id}-${period.key}`}
-              className="w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 px-3 py-3 text-center text-sm tabular-nums text-slate-700 dark:border-slate-800 dark:text-slate-300"
+              className="w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 bg-white px-3 py-3 text-center text-sm tabular-nums text-slate-700 group-hover:bg-indigo-50/40 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 dark:group-hover:bg-indigo-500/5"
             >
               <span className={cn(node.emphasize && "font-semibold text-slate-900 dark:text-slate-50")}>
                 {formatFinanceDisplayValue(
@@ -2005,7 +2005,7 @@ const DashboardTable = () => {
                   {periodColumns.map((period) => (
                     <th
                       key={period.key}
-                      className="w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 px-3 py-3 text-center text-sm font-semibold text-slate-800 dark:border-slate-800 dark:text-slate-200"
+                      className="w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 bg-white px-3 py-3 text-center text-sm font-semibold text-slate-800 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-200"
                     >
                       <div className="text-sm font-semibold leading-tight text-slate-800 dark:text-slate-200">{period.dateLabel}</div>
                     </th>
@@ -2034,7 +2034,7 @@ const DashboardTable = () => {
                           {periodColumns.map((period) => (
                             <td
                               key={`${row.label}-${period.key}`}
-                              className="w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 px-3 py-3 text-center text-sm tabular-nums text-slate-700 dark:border-slate-800 dark:text-slate-300"
+                              className="w-[140px] min-w-[140px] max-w-[140px] border-b border-slate-200 bg-white px-3 py-3 text-center text-sm tabular-nums text-slate-700 group-hover:bg-indigo-50/40 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-300 dark:group-hover:bg-indigo-500/5"
                             >
                               <span className={cn(row.emphasize && "font-semibold text-slate-900 dark:text-slate-50")}>
                                 {cnTableValue(row, period.data)}

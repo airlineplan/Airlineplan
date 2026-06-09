@@ -104,8 +104,16 @@ const DatePickerInput = ({ value, onChange, className = "", ...props }) => (
     <DateInput value={toIsoDate(value)} onValueChange={onChange} className={className} {...props} />
 );
 
+const getTodayIsoDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+};
+
 const MaintenanceDashboard = () => {
-    const [selectedDate, setSelectedDate] = useState(() => toIsoDate(new Date()));
+    const [selectedDate, setSelectedDate] = useState(getTodayIsoDate);
     const [selectedMsn, setSelectedMsn] = useState("");
 
     // Dynamic State for Main Tables
@@ -119,6 +127,10 @@ const MaintenanceDashboard = () => {
     const deleteIconButtonClass = "inline-flex items-center justify-center p-1 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors";
     const actionHeaderClass = "p-2 border border-slate-200 dark:border-slate-700 font-bold text-center bg-slate-100 dark:bg-slate-800/90 min-w-[100px]";
     const actionCellClass = "p-2 border-l border-slate-200 dark:border-slate-700 text-center bg-white dark:bg-slate-800";
+
+    useEffect(() => {
+        setSelectedDate(getTodayIsoDate());
+    }, []);
 
     const fetchDashboardData = async () => {
         setMaintenanceData([]);

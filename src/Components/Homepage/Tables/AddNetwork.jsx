@@ -8,7 +8,6 @@ import { X, Save, AlertCircle, Calendar, Plus, Search } from "lucide-react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import useEscapeKey from "../../../hooks/useEscapeKey";
-import { calculateAutoSta } from "./networkStaUtils";
 import { invalidateFleetMetricsCache } from "./fleetMetricsCache";
 import DateInput from "./DateInput";
 
@@ -137,7 +136,7 @@ const ComboboxField = ({ label, name, value, onChange, error, options = [], disa
 };
 
 // --- MAIN COMPONENT ---
-const AddNetwork = ({ setAdd, autoCalculateSta = false }) => {
+const AddNetwork = ({ setAdd }) => {
   const initialFormData = {
     flight: "", depStn: "", std: "", bt: "", sta: "", arrStn: "", variant: "",
     effFromDt: "", effToDt: "", dow: "", domINTL: "",
@@ -146,7 +145,6 @@ const AddNetwork = ({ setAdd, autoCalculateSta = false }) => {
 
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [stationsData, setStationsData] = useState([]);
   const [dropdownData, setDropdownData] = useState({ from: [], to: [] });
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
@@ -186,45 +184,6 @@ const AddNetwork = ({ setAdd, autoCalculateSta = false }) => {
 
     fetchDropdowns();
   }, []);
-
-  useEffect(() => {
-    if (!autoCalculateSta) {
-      setStationsData([]);
-      return;
-    }
-
-    const fetchStations = async () => {
-      try {
-        const response = await api.get("/get-stationData");
-        if (response.data && response.data.data) {
-          setStationsData(response.data.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch stations list", error);
-      }
-    };
-
-    fetchStations();
-  }, [autoCalculateSta]);
-
-  // --- DST-AWARE AUTO-CALCULATE STA ENGINE ---
-  useEffect(() => {
-    if (!autoCalculateSta) return;
-
-    const calculatedSTA = calculateAutoSta({
-      std: formData.std,
-      bt: formData.bt,
-      depStn: formData.depStn,
-      arrStn: formData.arrStn,
-      stationsData,
-      effFromDt: formData.effFromDt,
-    });
-
-    setFormData((prev) => {
-      if (prev.sta === calculatedSTA) return prev;
-      return { ...prev, sta: calculatedSTA };
-    });
-  }, [autoCalculateSta, formData.std, formData.bt, formData.depStn, formData.arrStn, formData.effFromDt, stationsData]);
 
   // --- HANDLERS ---
   const handleOpen = () => {
@@ -381,19 +340,13 @@ const AddNetwork = ({ setAdd, autoCalculateSta = false }) => {
                       required
                     />
                     <ComboboxField
-                      label={autoCalculateSta ? "STA (Local) - Default Auto, Editable" : "STA (Local)"}
+                      label="STA (Local)"
                       name="sta"
                       placeholder="HH:MM"
                       value={formData.sta}
                       onChange={handleChange}
                       options={timeOptions}
-                      className={autoCalculateSta ? "font-bold bg-indigo-50/50 dark:bg-indigo-900/20" : ""}
                     />
-                    {autoCalculateSta && (
-                      <div className="lg:col-span-3 -mt-3 text-xs text-slate-500 dark:text-slate-400">
-                        STA defaults to STD + BT + timezone difference. If you edit it, your value is saved as-is.
-                      </div>
-                    )}
 
                     <InputField label="Effective From" name="effFromDt" type="date" icon={Calendar} value={formData.effFromDt} onChange={handleChange} error={errors.effFromDt} required />
                     <InputField label="Effective To" name="effToDt" type="date" icon={Calendar} value={formData.effToDt} onChange={handleChange} error={errors.effToDt} required min={formData.effFromDt} />

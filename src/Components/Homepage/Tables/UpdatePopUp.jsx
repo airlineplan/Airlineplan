@@ -8,7 +8,6 @@ import "react-toastify/dist/ReactToastify.css";
 import { X, PenLine } from "lucide-react";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { calculateAutoSta } from "./networkStaUtils";
 import useEscapeKey from "../../../hooks/useEscapeKey";
 import { invalidateFleetMetricsCache } from "./fleetMetricsCache";
 import DateInput from "./DateInput";
@@ -60,7 +59,7 @@ const InputGroup = ({ label, error, children }) => (
 const baseInputStyles = "w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400";
 
 // --- MAIN COMPONENT ---
-const UpdatePopUp = ({ autoCalculateSta = false, ...props }) => {
+const UpdatePopUp = (props) => {
   // --- STATE ---
   const [openUpdate, setOpenUpdate] = useState(false);
   const [product, setProduct] = useState("");
@@ -81,9 +80,6 @@ const UpdatePopUp = ({ autoCalculateSta = false, ...props }) => {
   const [remarks1, setRemarks1] = useState("");
   const [remarks2, setRemarks2] = useState("");
   const [message, setMessage] = useState("");
-  const [stationsData, setStationsData] = useState([]);
-  const skipAutoStaOnceRef = React.useRef(false);
-
   const [loading, setLoading] = useState(false);
 
   const [flightError, setFlightError] = useState("");
@@ -108,26 +104,6 @@ const UpdatePopUp = ({ autoCalculateSta = false, ...props }) => {
   const productId = props.checkedRows;
 
   // --- HANDLERS ---
-  useEffect(() => {
-    if (!autoCalculateSta) {
-      setStationsData([]);
-      return;
-    }
-
-    const fetchStations = async () => {
-      try {
-        const response = await api.get("/get-stationData");
-        if (response.data && response.data.data) {
-          setStationsData(response.data.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch stations list", error);
-      }
-    };
-
-    fetchStations();
-  }, [autoCalculateSta]);
-
   const handleUpdateOpen = () => {
     setOpenUpdate(true);
     setFlightError(null);
@@ -240,27 +216,6 @@ const UpdatePopUp = ({ autoCalculateSta = false, ...props }) => {
     }
   };
 
-  // --- AUTO CALCULATION LOGIC FOR STA ---
-  useEffect(() => {
-    if (!autoCalculateSta) return;
-
-    if (skipAutoStaOnceRef.current) {
-      skipAutoStaOnceRef.current = false;
-      return;
-    }
-
-    const calculatedSTA = calculateAutoSta({
-      std,
-      bt,
-      depStn,
-      arrStn,
-      stationsData,
-      effFromDt,
-    });
-
-    setSta(calculatedSTA);
-  }, [autoCalculateSta, std, bt, depStn, arrStn, effFromDt, stationsData]);
-
   // Required Field logic
   useEffect(() => {
     if (!effToDt && !isBulkUpdate) {
@@ -282,7 +237,6 @@ const UpdatePopUp = ({ autoCalculateSta = false, ...props }) => {
   const fetchData = async () => {
     if (isBulkUpdate) return;
     try {
-      skipAutoStaOnceRef.current = autoCalculateSta;
       const response = await api.get(`/products/${DataId}`);
       const item = response.data;
 

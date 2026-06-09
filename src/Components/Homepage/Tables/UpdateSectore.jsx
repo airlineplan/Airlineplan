@@ -55,7 +55,6 @@ const InputGroup = ({ label, error, children }) => (
 );
 
 const baseInputStyles = "w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all text-slate-800 dark:text-slate-200 placeholder:text-slate-400 disabled:opacity-60 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:cursor-not-allowed";
-const AUTO_CALCULATE_SECTOR_STA = false;
 
 // --- MAIN COMPONENT ---
 const UpdateSectore = (props) => {
@@ -67,9 +66,9 @@ const UpdateSectore = (props) => {
   const [gcd, setGCD] = useState("");
   const [acftType, setACFTType] = useState("");
   const [variant, setVariant] = useState("");
-  const [std, setStd] = useState(""); // Needed for STA calculation
+  const [std, setStd] = useState("");
   const [bt, setBlockTime] = useState("");
-  const [sta, setSta] = useState(""); // The calculated STA
+  const [sta, setSta] = useState("");
   const [paxCapacity, setPaxCapacity] = useState("");
   const [CargoCapT, setCargoCapT] = useState("");
   const [paxLF, setPaxLfPercent] = useState("");
@@ -77,9 +76,6 @@ const UpdateSectore = (props) => {
   const [fromDt, setFromDt] = useState("");
   const [toDt, setToDt] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // Stations List for STA Calculation
-  const [stationsList, setStationsList] = useState([]);
 
   // Errors
   const [sector1Error, setSector1Error] = useState("");
@@ -103,67 +99,6 @@ const UpdateSectore = (props) => {
   const DataId = props.checkedRows?.[0];
   const productId = props.checkedRows;
   const isRequired = props.checkedRows?.length > 1 ? false : true;
-
-  // --- API: Fetch Stations for Timezone Logic ---
-  useEffect(() => {
-    if (!AUTO_CALCULATE_SECTOR_STA) return;
-
-    const fetchStations = async () => {
-      try {
-        const response = await api.get("/get-stationData");
-        if (response.data && response.data.data) {
-          setStationsList(response.data.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch stations list for TZ calculation", error);
-      }
-    };
-    fetchStations();
-  }, []);
-
-  // --- ENGINE: Auto-Calculate STA ---
-  useEffect(() => {
-    if (!AUTO_CALCULATE_SECTOR_STA) return;
-
-    // Only calculate if all required variables and stations are present
-    if (std && bt && sector1 && sector2 && stationsList.length > 0) {
-
-      const depStation = stationsList.find(s => s.stationName === sector1);
-      const arrStation = stationsList.find(s => s.stationName === sector2);
-
-      if (depStation?.stdtz && arrStation?.stdtz) {
-
-        // Helper to convert "UTC+5:30" or "UTC-4:00" to total minutes
-        const parseTZ = (tzString) => {
-          if (!tzString || !tzString.startsWith('UTC')) return 0;
-          const sign = tzString.includes('-') ? -1 : 1;
-          const timePart = tzString.replace(/UTC[+-]/, '');
-          if (!timePart) return 0;
-          const [hours, minutes] = timePart.split(':').map(Number);
-          return sign * ((hours * 60) + (minutes || 0));
-        };
-
-        const depTzMins = parseTZ(depStation.stdtz);
-        const arrTzMins = parseTZ(arrStation.stdtz);
-
-        const [stdH, stdM] = std.split(':').map(Number);
-        const [btH, btM] = bt.split(':').map(Number);
-
-        // Formula: STA = STD + BT + (ArrTZ - DepTZ)
-        let totalMins = (stdH * 60 + stdM) + (btH * 60 + btM) + (arrTzMins - depTzMins);
-
-        // Wrap around 24 hours (1440 minutes) to handle next day / previous day overlaps
-        totalMins = ((totalMins % 1440) + 1440) % 1440;
-
-        const staH = Math.floor(totalMins / 60);
-        const staM = totalMins % 60;
-
-        // Format to HH:MM and set state
-        const calculatedSTA = `${String(staH).padStart(2, '0')}:${String(staM).padStart(2, '0')}`;
-        setSta(calculatedSTA);
-      }
-    }
-  }, [std, bt, sector1, sector2, stationsList]);
 
   // --- HANDLERS ---
   const handleClose = () => {
@@ -432,13 +367,13 @@ const UpdateSectore = (props) => {
                   <InputGroup label="Block Time (BT)" error={btError}>
                     <input className={baseInputStyles} type="time" name="bt" disabled required={isRequired} value={bt} onChange={handleBlockTime} />
                   </InputGroup>
-                  <InputGroup label={AUTO_CALCULATE_SECTOR_STA ? "STA (LT) - Auto Calculated" : "STA (LT)"}>
+                  <InputGroup label="STA (LT)">
                     <input
-                      className={cn(baseInputStyles, AUTO_CALCULATE_SECTOR_STA && "bg-indigo-50/50 dark:bg-indigo-900/20 font-bold")}
+                      className={baseInputStyles}
                       type="time"
                       value={sta}
                       onChange={handleSTA}
-                      disabled={AUTO_CALCULATE_SECTOR_STA}
+                      disabled
                     />
                   </InputGroup>
                 </div>
