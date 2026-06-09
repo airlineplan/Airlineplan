@@ -72,6 +72,35 @@ const formatEndTime = (row) => {
     return formatTime(row?.endDateTime);
 };
 
+const getEventDurationMinutes = (event) => {
+    const start = new Date(event?.startDateTime).getTime();
+    const end = new Date(event?.endDateTime).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+    return Math.round((end - start) / 60000);
+};
+
+const getDiaryColumnWidth = (durationMinutes) => {
+    const duration = Number(durationMinutes) || 0;
+    return Math.min(540, Math.max(86, Math.round(duration * 1.35)));
+};
+
+const isOperatedFlightEvent = (event) => (
+    event?.sourceType === "FLIGHT_ROSTER" ||
+    String(event?.subCategory || "").toLowerCase() === "operated flight"
+);
+
+const getDiaryLocation = (event) => {
+    if (isOperatedFlightEvent(event) && event?.flightNumber) return event.flightNumber;
+    return event?.location || "-";
+};
+
+const getDiarySummaryLabel = (event) => {
+    if (isOperatedFlightEvent(event)) return event.flightNumber || "Operated Flight";
+    const category = event.category || "Uncategorised";
+    const activityLabel = event.subCategory && event.subCategory !== category ? event.subCategory : category;
+    return [activityLabel, event.flightNumber, event.location].filter(Boolean).join(" | ");
+};
+
 const getUtcDateKey = (value) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
@@ -709,6 +738,7 @@ const CrewPage = () => {
             const dateKey = event.displayDate || getUtcDateKey(event.startDateTime);
             const startTime = formatTime(event.startDateTime);
             const endTime = formatEndTime(event);
+            const durationMinutes = getEventDurationMinutes(event);
             if (!dateKey || !startTime || !endTime) return;
 
             const columnKey = `${dateKey}|${startTime}|${endTime}`;
@@ -718,10 +748,12 @@ const CrewPage = () => {
                     dateKey,
                     dateLabel: formatDate(`${dateKey}T00:00:00.000Z`),
                     timeLabel: `${startTime}-${endTime}`,
+                    startMs: new Date(event.startDateTime).getTime(),
+                    durationMinutes,
+                    widthPx: getDiaryColumnWidth(durationMinutes),
                 });
             }
 
-            const category = event.category || "Uncategorised";
             const rowKey = [event.crewCode || "-", event.crewName || "-", event.role || "-"].join("|");
             if (!rowMap.has(rowKey)) {
                 rowMap.set(rowKey, {
@@ -734,18 +766,13 @@ const CrewPage = () => {
             }
 
             const cellValues = rowMap.get(rowKey).cells.get(columnKey) || [];
-            const cellParts = [
-                category,
-                event.subCategory && event.subCategory !== category ? event.subCategory : "",
-                event.flightNumber,
-                event.location,
-            ].filter(Boolean);
-            const cellLabel = cellParts.join(" | ");
+            const cellLabel = getDiarySummaryLabel(event);
             rowMap.get(rowKey).cells.set(columnKey, [...cellValues, cellLabel]);
         });
 
         const columns = Array.from(columnMap.values()).sort((left, right) => {
             if (left.dateKey !== right.dateKey) return left.dateKey.localeCompare(right.dateKey);
+            if (left.startMs !== right.startMs) return left.startMs - right.startMs;
             return left.timeLabel.localeCompare(right.timeLabel);
         });
         const rows = Array.from(rowMap.values()).sort((left, right) => {
@@ -757,13 +784,16 @@ const CrewPage = () => {
             const previous = groups[groups.length - 1];
             if (previous?.dateKey === column.dateKey) {
                 previous.colSpan += 1;
+                previous.widthPx += column.widthPx;
             } else {
-                groups.push({ dateKey: column.dateKey, label: column.dateLabel, colSpan: 1 });
+                groups.push({ dateKey: column.dateKey, label: column.dateLabel, colSpan: 1, widthPx: column.widthPx });
             }
             return groups;
         }, []);
 
-        return { columns, rows, dateGroups };
+        const timelineWidthPx = columns.reduce((total, column) => total + column.widthPx, 0);
+
+        return { columns, rows, dateGroups, timelineWidthPx };
     }, [diarySummaryEvents]);
 
     const dutyErrors = useMemo(() => {
@@ -1282,7 +1312,7 @@ const CrewPage = () => {
                 </table>
             </Modal>
 
-            <Modal isOpen={modals.diary} onClose={() => toggleModal("diary")} title="Crew Diary" maxWidth="max-w-7xl">
+            <Modal isOpen={modals.diary} onClose={() => toggleModal("diary")} title="Crew Diary" maxWidth="max-w-[calc(100vw-1rem)]">
                 <div className="mb-4 flex flex-col gap-3">
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                         <SmallInput value={diaryFilters.startDate} type="date" onChange={(value) => setDiaryFilters((prev) => ({ ...prev, startDate: value }))} />
@@ -1313,14 +1343,25 @@ const CrewPage = () => {
                 {diaryViewMode === "summary" ? (
                     <>
                         <div className="overflow-x-auto w-full border border-slate-200 dark:border-slate-700 rounded-lg">
-                            <table className="w-full text-sm text-left min-w-[1100px]">
+                            <table
+                                className="w-full text-sm text-left"
+                                style={{ minWidth: `${360 + Math.max(diarySummary.timelineWidthPx || 0, 740)}px`, tableLayout: "fixed" }}
+                            >
+                                <colgroup>
+                                    <col style={{ width: 110 }} />
+                                    <col style={{ width: 150 }} />
+                                    <col style={{ width: 100 }} />
+                                    {diarySummary.columns.map((column) => (
+                                        <col key={column.key} style={{ width: column.widthPx }} />
+                                    ))}
+                                </colgroup>
                                 <thead className="bg-slate-50 dark:bg-slate-800">
                                     <tr>
                                         <th rowSpan={2} className="sticky left-0 z-30 w-[110px] min-w-[110px] p-3 font-semibold border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">Crew ID</th>
                                         <th rowSpan={2} className="sticky left-[110px] z-30 w-[150px] min-w-[150px] p-3 font-semibold border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">Crew Name</th>
                                         <th rowSpan={2} className="sticky left-[260px] z-30 w-[100px] min-w-[100px] p-3 font-semibold border-b border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">Role</th>
                                         {diarySummary.dateGroups.length > 0 ? diarySummary.dateGroups.map((group) => (
-                                            <th key={group.dateKey} colSpan={group.colSpan} className="p-3 font-semibold text-center border-b border-slate-200 dark:border-slate-700">
+                                            <th key={group.dateKey} colSpan={group.colSpan} className="p-3 font-semibold text-center border-b border-slate-200 dark:border-slate-700" style={{ width: group.widthPx }}>
                                                 {group.label}
                                             </th>
                                         )) : (
@@ -1329,8 +1370,13 @@ const CrewPage = () => {
                                     </tr>
                                     <tr>
                                         {diarySummary.columns.length > 0 ? diarySummary.columns.map((column) => (
-                                            <th key={column.key} className="min-w-[130px] p-3 font-semibold text-center border-b border-l border-slate-200 dark:border-slate-700 tabular-nums">
-                                                {column.timeLabel}
+                                            <th
+                                                key={column.key}
+                                                className="p-3 font-semibold text-center border-b border-l border-slate-200 dark:border-slate-700 tabular-nums"
+                                                style={{ width: column.widthPx }}
+                                                title={`${column.timeLabel} (${minutesToHHMM(column.durationMinutes)})`}
+                                            >
+                                                <span className="block truncate">{column.timeLabel}</span>
                                             </th>
                                         )) : (
                                             <th className="min-w-[130px] p-3 font-semibold text-center border-b border-l border-slate-200 dark:border-slate-700">No slots</th>
@@ -1352,11 +1398,15 @@ const CrewPage = () => {
                                             {diarySummary.columns.map((column) => {
                                                 const values = [...new Set(row.cells.get(column.key) || [])];
                                                 return (
-                                                    <td key={`${row.key}-${column.key}`} className="min-w-[150px] p-3 text-center border-l border-slate-100 dark:border-slate-800">
+                                                    <td
+                                                        key={`${row.key}-${column.key}`}
+                                                        className="p-3 text-center border-l border-slate-100 dark:border-slate-800"
+                                                        style={{ width: column.widthPx }}
+                                                    >
                                                         {values.length ? (
                                                             <div className="flex flex-col gap-1">
                                                                 {values.slice(0, 3).map((value) => (
-                                                                    <span key={value} className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium leading-5 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+                                                                    <span key={value} title={value} className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium leading-5 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300 truncate">
                                                                         {value}
                                                                     </span>
                                                                 ))}
@@ -1381,11 +1431,11 @@ const CrewPage = () => {
                 ) : (
                     <>
                         <div className="overflow-x-auto w-full border border-slate-200 dark:border-slate-700 rounded-lg">
-                            <table className="w-full text-sm text-left min-w-[1500px]">
+                            <table className="w-full text-sm text-center min-w-[1600px]">
                                 <thead className="bg-slate-50 dark:bg-slate-800">
                                     <tr>
-                                        {["Crew ID", "Crew Name", "Role", "Date", "From", "To", "Location", "Category", "Sub-category", "DP", "FDP", "FT", "RP", "DP Cost", "FDP Cost", "FT Cost", "Layover", "Positioning", "Reason"].map((header) => (
-                                            <th key={header} className="p-3 font-semibold border-b border-slate-200 dark:border-slate-700">{header}</th>
+                                        {["Crew ID", "Crew Name", "Role", "Date", "From", "To", "Location", "Category", "Sub-category", "DP", "FDP", "FT", "RP", "DP Cost", "FDP Cost", "FT Cost", "Layover", "Positioning", "Remarks"].map((header) => (
+                                            <th key={header} className={cn("p-3 font-semibold align-middle border-b border-slate-200 dark:border-slate-700", header === "Remarks" ? "text-left" : "text-center")}>{header}</th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -1397,26 +1447,26 @@ const CrewPage = () => {
                                         <tr><td colSpan={19} className="p-6 text-center text-slate-500">No Crew Diary rows found.</td></tr>
                                     )}
                                     {!diaryLoading && diaryRows.map((row) => (
-                                        <tr key={row._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 align-top">
-                                            <td className="p-3 font-medium">{row.crewCode}</td>
-                                            <td className="p-3 text-slate-600 dark:text-slate-400">{row.crewName}</td>
-                                            <td className="p-3 text-slate-600 dark:text-slate-400">{row.role}</td>
-                                            <td className="p-3">{formatDate(row.startDateTime)}</td>
-                                            <td className="p-3 tabular-nums">{formatTime(row.startDateTime)}</td>
-                                            <td className="p-3 tabular-nums">{formatEndTime(row)}</td>
-                                            <td className="p-3">{row.location || "-"}</td>
-                                            <td className="p-3">{row.category}</td>
-                                            <td className="p-3">{row.subCategory}</td>
-                                            <td className="p-3 tabular-nums">{minutesToHHMM(row.dpMinutes)}</td>
-                                            <td className="p-3 tabular-nums">{minutesToHHMM(row.fdpMinutes)}</td>
-                                            <td className="p-3 tabular-nums">{minutesToHHMM(row.ftMinutes)}</td>
-                                            <td className="p-3 tabular-nums">{minutesToHHMM(row.rpMinutes)}</td>
-                                            <td className="p-3 tabular-nums">{formatMoney(row.dpCost, row.currency)}</td>
-                                            <td className="p-3 tabular-nums">{formatMoney(row.fdpCost, row.currency)}</td>
-                                            <td className="p-3 tabular-nums">{formatMoney(row.ftCost, row.currency)}</td>
-                                            <td className="p-3 tabular-nums">{formatMoney(row.layoverCost, row.currency)}</td>
-                                            <td className="p-3 tabular-nums">{formatMoney(row.positioningCost, row.currency)}</td>
-                                            <td className="p-3 min-w-[260px] text-slate-500 dark:text-slate-400 whitespace-normal">{row.reasonText}</td>
+                                        <tr key={row._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 align-middle">
+                                            <td className="p-3 font-medium align-middle">{row.crewCode}</td>
+                                            <td className="p-3 align-middle text-slate-600 dark:text-slate-400">{row.crewName}</td>
+                                            <td className="p-3 align-middle text-slate-600 dark:text-slate-400">{row.role}</td>
+                                            <td className="p-3 align-middle">{formatDate(row.startDateTime)}</td>
+                                            <td className="p-3 align-middle tabular-nums">{formatTime(row.startDateTime)}</td>
+                                            <td className="p-3 align-middle tabular-nums">{formatEndTime(row)}</td>
+                                            <td className="p-3 align-middle">{getDiaryLocation(row)}</td>
+                                            <td className="p-3 align-middle">{row.category}</td>
+                                            <td className="p-3 align-middle">{row.subCategory}</td>
+                                            <td className="p-3 align-middle tabular-nums">{minutesToHHMM(row.dpMinutes)}</td>
+                                            <td className="p-3 align-middle tabular-nums">{minutesToHHMM(row.fdpMinutes)}</td>
+                                            <td className="p-3 align-middle tabular-nums">{minutesToHHMM(row.ftMinutes)}</td>
+                                            <td className="p-3 align-middle tabular-nums">{minutesToHHMM(row.rpMinutes)}</td>
+                                            <td className="p-3 align-middle tabular-nums">{formatMoney(row.dpCost, row.currency)}</td>
+                                            <td className="p-3 align-middle tabular-nums">{formatMoney(row.fdpCost, row.currency)}</td>
+                                            <td className="p-3 align-middle tabular-nums">{formatMoney(row.ftCost, row.currency)}</td>
+                                            <td className="p-3 align-middle tabular-nums">{formatMoney(row.layoverCost, row.currency)}</td>
+                                            <td className="p-3 align-middle tabular-nums">{formatMoney(row.positioningCost, row.currency)}</td>
+                                            <td className="p-3 min-w-[320px] text-left align-top text-slate-500 dark:text-slate-400 whitespace-normal">{row.reasonText}</td>
                                         </tr>
                                     ))}
                                 </tbody>
