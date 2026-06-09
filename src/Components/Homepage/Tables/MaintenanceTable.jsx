@@ -1838,8 +1838,8 @@ const MaintenanceDashboard = () => {
                                 Major rotables changes (Engines, LG..etc)
                             </h2>
                             <div className="flex gap-2">
-                                <button onClick={() => setIsEditingRotables(!isEditingRotables)} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${isEditingRotables ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}>Edit</button>
-                                <button onClick={handleUpdateRotables} disabled={!isEditingRotables} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all shadow-sm">Add</button>
+                                <button onClick={() => setIsEditingRotables(!isEditingRotables)} className={`inline-flex h-8 min-w-[104px] items-center justify-center px-4 rounded-lg text-sm font-semibold transition-all shadow-sm ${isEditingRotables ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}>Edit</button>
+                                <button onClick={handleUpdateRotables} disabled={!isEditingRotables} className="inline-flex h-8 min-w-[104px] items-center justify-center px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all shadow-sm">Add/Update</button>
                                 <button onClick={() => setShowRotablesModal(false)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><X size={20} /></button>
                             </div>
                         </div>
