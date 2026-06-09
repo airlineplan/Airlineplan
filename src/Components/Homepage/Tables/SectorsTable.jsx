@@ -71,6 +71,7 @@ const UNMATCHED_NETWORK_ORDER = Number.MAX_SAFE_INTEGER;
 
 const normalizeId = (value) => (value === null || value === undefined ? "" : String(value));
 const getSourceOrder = (row) => {
+  if (row?.sourceSerialNo === null || row?.sourceSerialNo === undefined || row?.sourceSerialNo === "") return null;
   const value = Number(row?.sourceSerialNo);
   return Number.isFinite(value) ? value : null;
 };
@@ -99,8 +100,8 @@ const SectorsTable = () => {
         const sectors = response.data || [];
         setSectorsTableData(sectors);
 
-        const needsNetworkOrderFallback = sectors.some((row) => getSourceOrder(row) === null && row.networkId);
-        if (needsNetworkOrderFallback) {
+        const hasNetworkLinkedSectors = sectors.some((row) => normalizeId(row.networkId));
+        if (hasNetworkLinkedSectors) {
           try {
             const networkResponse = await api.get("/get-data");
             setNetworkRowOrder(networkResponse.data || []);
@@ -199,10 +200,10 @@ const SectorsTable = () => {
       });
     } else {
       data.sort((a, b) => {
-        const sourceOrderA = getSourceOrder(a);
-        const sourceOrderB = getSourceOrder(b);
-        const orderA = sourceOrderA ?? networkOrderById.get(normalizeId(a.networkId)) ?? UNMATCHED_NETWORK_ORDER;
-        const orderB = sourceOrderB ?? networkOrderById.get(normalizeId(b.networkId)) ?? UNMATCHED_NETWORK_ORDER;
+        const networkOrderA = networkOrderById.get(normalizeId(a.networkId));
+        const networkOrderB = networkOrderById.get(normalizeId(b.networkId));
+        const orderA = networkOrderA ?? getSourceOrder(a) ?? UNMATCHED_NETWORK_ORDER;
+        const orderB = networkOrderB ?? getSourceOrder(b) ?? UNMATCHED_NETWORK_ORDER;
 
         if (orderA !== orderB) return orderA - orderB;
         return a.originalIndex - b.originalIndex;
