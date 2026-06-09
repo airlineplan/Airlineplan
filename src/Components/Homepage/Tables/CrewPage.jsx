@@ -220,7 +220,18 @@ const InputTime = ({ label, placeholder = "HH:MM", value, onChange, error, class
     </div>
 );
 
-const CheckboxSetting = ({ label, checked, onChange, timeValue, onTimeChange, timePlaceholder = "HH:MM", error }) => (
+const CheckboxSetting = ({
+    label,
+    checked,
+    onChange,
+    timeValue,
+    onTimeChange,
+    timePlaceholder = "HH:MM",
+    error,
+    timeDisabled = false,
+    timeRequired = false,
+    timeAriaLabel,
+}) => (
     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 py-2 border-b border-slate-100 dark:border-slate-800/60 last:border-0">
         <div className="flex items-start gap-3 flex-1">
             <div className="relative flex items-start pt-0.5">
@@ -238,12 +249,15 @@ const CheckboxSetting = ({ label, checked, onChange, timeValue, onTimeChange, ti
         {timeValue !== undefined && (
             <div className="flex flex-col items-start sm:items-end gap-1 pl-7 sm:pl-0 mt-2 sm:mt-0">
                 <input
-                    type="text"
+                    type="time"
                     placeholder={timePlaceholder}
                     value={timeValue}
                     onChange={onTimeChange}
+                    disabled={timeDisabled}
+                    required={timeRequired}
+                    aria-label={timeAriaLabel || label}
                     className={cn(
-                        "w-20 px-2 py-1 text-base rounded-md border bg-white dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all",
+                        "w-28 px-2 py-1 text-base rounded-md border bg-white dark:bg-slate-900/50 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-800/70 dark:disabled:text-slate-500",
                         error ? "border-rose-400 dark:border-rose-500" : "border-slate-300 dark:border-slate-700"
                     )}
                 />
@@ -321,16 +335,17 @@ const UploadLink = ({ label, state, onUpload }) => {
     );
 };
 
-const ActionButton = ({ label, icon: Icon, onClick, variant = "primary", disabled = false }) => {
+const ActionButton = ({ label, icon: Icon, onClick, variant = "primary", disabled = false, loading = false }) => {
     const baseStyles = "flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all shadow-sm hover:shadow-md w-full disabled:opacity-60 disabled:cursor-not-allowed";
     const variants = {
         primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-500/20",
         secondary: "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400",
         emerald: "bg-emerald-500 text-white hover:bg-emerald-600 shadow-emerald-500/20",
+        danger: "bg-white dark:bg-slate-800 border border-rose-200 dark:border-rose-900/60 text-rose-600 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 hover:border-rose-400",
     };
     return (
         <button type="button" onClick={onClick} disabled={disabled} className={cn(baseStyles, variants[variant])}>
-            {Icon && <Icon size={18} className={disabled && label.includes("Updating") ? "animate-spin" : ""} />}
+            {Icon && <Icon size={18} className={loading || (disabled && label.includes("Updating")) ? "animate-spin" : ""} />}
             {label}
         </button>
     );
@@ -562,6 +577,7 @@ const CrewPage = () => {
     const [pageLoading, setPageLoading] = useState(true);
     const [savingModal, setSavingModal] = useState("");
     const [updatingPlan, setUpdatingPlan] = useState(false);
+    const [clearingScope, setClearingScope] = useState("");
     const [latestRun, setLatestRun] = useState(null);
     const [counts, setCounts] = useState({});
     const [options, setOptions] = useState({ roles: [], bases: [], categories: [], subCategories: [], stations: [] });
@@ -716,6 +732,14 @@ const CrewPage = () => {
             setDiaryLoading(false);
         }
     }, [diaryFilters, diaryPagination.limit, diaryViewMode]);
+
+    const resetGeneratedCrewViews = useCallback(() => {
+        setLatestRun(null);
+        setKpiData({ periods: [], metrics: [] });
+        setDiaryRows([]);
+        setDiarySummaryEvents([]);
+        setDiaryPagination({ page: 1, limit: 50, total: 0, totalPages: 0 });
+    }, []);
 
     useEffect(() => {
         loadBootstrap();
@@ -881,6 +905,8 @@ const CrewPage = () => {
                     toast.success("Crew Diary updated from the latest upload.");
                 } catch (error) {
                     toast.warning(error.response?.data?.message || error.message || "Upload completed, but Crew Diary could not be updated.");
+                    resetGeneratedCrewViews();
+                    await Promise.all([loadBootstrap(), loadKpis(), modals.diary ? loadDiary(1) : Promise.resolve()]);
                 }
             }
         } catch (error) {
@@ -896,6 +922,40 @@ const CrewPage = () => {
                 },
             }));
             toast.error(message);
+        }
+    };
+
+    const handleClearCrewData = async (scope) => {
+        const clearConfig = {
+            details: {
+                endpoint: "/crew/clear/details",
+                confirmMessage: "Clear all crew details? This also clears duty roster data and the generated Crew Diary.",
+                resetUploads: () => setUploadState(emptyUploadState),
+            },
+            dutyRoster: {
+                endpoint: "/crew/clear/duty-roster",
+                confirmMessage: "Clear all flight and non-flight duties? Crew Diary will become blank.",
+                resetUploads: () => setUploadState((prev) => ({
+                    ...prev,
+                    flightDuties: emptyUploadState.flightDuties,
+                    otherDuties: emptyUploadState.otherDuties,
+                })),
+            },
+        };
+        const config = clearConfig[scope];
+        if (!config || !window.confirm(config.confirmMessage)) return;
+
+        setClearingScope(scope);
+        try {
+            const response = await api.delete(config.endpoint);
+            config.resetUploads();
+            resetGeneratedCrewViews();
+            await Promise.all([loadBootstrap(), loadKpis(), modals.diary ? loadDiary(1) : Promise.resolve()]);
+            toast.success(response.data?.message || "Crew data cleared.");
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to clear crew data.");
+        } finally {
+            setClearingScope("");
         }
     };
 
@@ -1037,6 +1097,8 @@ const CrewPage = () => {
     };
     const kpiPeriods = kpiData.periods.length ? kpiData.periods : Array.from({ length: 6 }, (_, index) => ({ label: `Period ${index + 1}` }));
     const kpiColumnCount = kpiPeriods.length + 1;
+    const uploadBusy = Object.values(uploadState).some((state) => state.loading);
+    const crewClearBusy = pageLoading || updatingPlan || uploadBusy || Boolean(clearingScope);
 
     return (
         <div className="w-full h-full p-4 md:p-6 space-y-6 flex flex-col min-h-[calc(100vh-100px)] bg-slate-50 dark:bg-slate-950/20 rounded-2xl">
@@ -1078,8 +1140,11 @@ const CrewPage = () => {
                             label="Cutoff Local time at end of FDP for Hotac if rest period follows and next DP starts at another (non-Base) station"
                             checked={positioningSettings.hotacCutoffEnabled}
                             onChange={(event) => setPositioningValue("hotacCutoffEnabled", event.target.checked)}
-                            timeValue={positioningSettings.hotacCutoffEnabled ? positioningSettings.hotacCutoffLocalTime : undefined}
+                            timeValue={positioningSettings.hotacCutoffLocalTime}
                             onTimeChange={(event) => setPositioningValue("hotacCutoffLocalTime", event.target.value)}
+                            timeDisabled={!positioningSettings.hotacCutoffEnabled}
+                            timeRequired={positioningSettings.hotacCutoffEnabled}
+                            timeAriaLabel="HOTAC cutoff local time"
                             error={positioningErrors.hotacCutoffLocalTime}
                         />
                         <CheckboxSetting
@@ -1108,6 +1173,24 @@ const CrewPage = () => {
                             <UploadLink label="Crew Information" state={uploadState.members} onUpload={(file) => handleUpload("members", "/crew/upload/members", file)} />
                             <UploadLink label="Crew Roster - Flight Duty" state={uploadState.flightDuties} onUpload={(file) => handleUpload("flightDuties", "/crew/upload/flight-duties", file)} />
                             <UploadLink label="Crew Roster - Other Duty" state={uploadState.otherDuties} onUpload={(file) => handleUpload("otherDuties", "/crew/upload/other-duties", file)} />
+                        </div>
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <ActionButton
+                                label={clearingScope === "details" ? "Clearing details" : "Clear crew details"}
+                                icon={clearingScope === "details" ? RefreshCw : Trash2}
+                                variant="danger"
+                                disabled={crewClearBusy}
+                                loading={clearingScope === "details"}
+                                onClick={() => handleClearCrewData("details")}
+                            />
+                            <ActionButton
+                                label={clearingScope === "dutyRoster" ? "Clearing roster" : "Clear duty roster"}
+                                icon={clearingScope === "dutyRoster" ? RefreshCw : Trash2}
+                                variant="danger"
+                                disabled={crewClearBusy}
+                                loading={clearingScope === "dutyRoster"}
+                                onClick={() => handleClearCrewData("dutyRoster")}
+                            />
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-500 dark:text-slate-400">
                             <span>Crew {counts.crewMembers || 0}</span>
