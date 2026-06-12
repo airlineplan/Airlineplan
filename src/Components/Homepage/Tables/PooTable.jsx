@@ -139,6 +139,25 @@ function calculateCargoRevenue(cargoT, ratePerKg) {
   return numericValue(cargoT) * KG_PER_TONNE * numericValue(ratePerKg);
 }
 
+function getProrateShare(row, fieldName) {
+  if (Number(row?.stops || 0) !== 1) return 1;
+
+  const explicitRatio = numericValue(row?.[fieldName]);
+  if (explicitRatio <= 0) {
+    const totalGcd = numericValue(row?.odViaGcd);
+    const sectorGcd = numericValue(row?.sectorGcd);
+    if (totalGcd <= 0 || sectorGcd <= 0) return 0.5;
+    return Math.min(sectorGcd / totalGcd, 1);
+  }
+
+  const firstLegRatio = Math.min(explicitRatio, 1);
+  const trafficType = String(row?.trafficType || "").trim().toLowerCase();
+  if (trafficType === "behind" || trafficType === "transit_fl") {
+    return firstLegRatio;
+  }
+  return 1 - firstLegRatio;
+}
+
 function isLegTraffic(row) {
   const trafficType = String(row?.trafficType || "").trim().toLowerCase();
   if (trafficType) return trafficType === "leg";
@@ -169,7 +188,10 @@ function getPooRateValue(row) {
 function getPooPaxRevenueValue(row) {
   const pax = numericValue(row?.pax);
   const fare = getPooFareValue(row);
-  if (pax > 0 && fare > 0) return pax * fare;
+  if (pax > 0 && fare > 0) {
+    const share = isLegTraffic(row) ? 1 : getProrateShare(row, "fareProrateRatioL1L2");
+    return pax * fare * share;
+  }
 
   if (isLegTraffic(row)) return firstPresentNumber([row.legPaxRev, row.paxRevenue, row.odPaxRev]);
   return firstPresentNumber([row.paxRevenue, row.odPaxRev, row.legPaxRev]);
@@ -180,7 +202,8 @@ function getPooCargoRevenueValue(row) {
   const rate = getPooRateValue(row);
   const rateFields = isLegTraffic(row) ? [row?.legRate, row?.odRate] : [row?.odRate, row?.legRate];
   if (hasNumericValue(row?.cargoT) && rateFields.some(hasNumericValue)) {
-    return calculateCargoRevenue(cargoT, rate);
+    const share = isLegTraffic(row) ? 1 : getProrateShare(row, "rateProrateRatioL1L2");
+    return calculateCargoRevenue(cargoT, rate) * share;
   }
 
   if (isLegTraffic(row)) return firstPresentNumber([row.legCargoRev, row.cargoRevenue, row.odCargoRev]);
