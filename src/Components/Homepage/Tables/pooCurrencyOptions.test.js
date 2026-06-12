@@ -3,19 +3,19 @@ import assert from "node:assert/strict";
 
 import { buildPooCurrencyOptions } from "./pooCurrencyOptions.js";
 
-test("POO currency options include common currencies when no rows are loaded", () => {
+test("POO currency options use only FX config currencies", () => {
   const options = buildPooCurrencyOptions({
     meta: {
       reportingCurrency: "usd",
-      currencyCodes: [],
+      currencyCodes: ["inr"],
     },
     records: [],
   });
 
-  assert.deepEqual(options, ["AED", "EUR", "GBP", "INR", "JPY", "USD"]);
+  assert.deepEqual(options, ["INR", "USD"]);
 });
 
-test("POO currency options merge FX config, station currency, selected value, and row values", () => {
+test("POO currency options ignore station currency, selected value, and row values", () => {
   const options = buildPooCurrencyOptions({
     selectedPooCurrency: "eur",
     meta: {
@@ -26,16 +26,16 @@ test("POO currency options merge FX config, station currency, selected value, an
     records: [{ pooCcy: "gbp" }, { pooCcy: "usd" }],
   });
 
-  assert.deepEqual(options, ["AED", "EUR", "GBP", "INR", "JPY", "USD"]);
+  assert.deepEqual(options, ["AED", "USD"]);
 });
 
-test("POO currency options normalize custom user-entered codes", () => {
+test("POO currency options normalize FX config codes", () => {
   const options = buildPooCurrencyOptions({
-    selectedPooCurrency: " cad ",
     meta: {
-      reportingCurrency: "u$d",
+      reportingCurrency: " usd ",
+      currencyCodes: [" cad ", "cad"],
     },
   });
 
-  assert.deepEqual(options, ["AED", "CAD", "EUR", "GBP", "INR", "JPY", "USD"]);
+  assert.deepEqual(options, ["CAD", "USD"]);
 });

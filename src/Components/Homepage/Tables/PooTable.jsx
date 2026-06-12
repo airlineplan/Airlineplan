@@ -375,7 +375,10 @@ const PooTable = () => {
           reportingCurrency: prev.reportingCurrency || reportingCurrency,
           currencyCodes: [...new Set([...(Array.isArray(prev.currencyCodes) ? prev.currencyCodes : []), ...mergedCodes])],
         }));
-        setSelectedPooCurrency((prev) => prev || reportingCurrency || mergedCodes[0] || "");
+        setSelectedPooCurrency((prev) => {
+          const current = normalizePooCurrencyCode(prev);
+          return current && mergedCodes.includes(current) ? current : reportingCurrency || mergedCodes[0] || "";
+        });
       } catch (error) {
         console.error("Failed to load revenue currency config for POO CCY", error);
       }
@@ -423,8 +426,20 @@ const PooTable = () => {
   const fetchPooParam = selectedPoos.length === 1 && !allPoosSelected ? selectedPoos[0] : "";
 
   const currencyOptions = useMemo(() => {
-    return buildPooCurrencyOptions({ selectedPooCurrency, meta, records });
-  }, [meta, records, selectedPooCurrency]);
+    return buildPooCurrencyOptions({ meta });
+  }, [meta]);
+
+  useEffect(() => {
+    if (!currencyOptions.length) {
+      if (selectedPooCurrency) setSelectedPooCurrency("");
+      return;
+    }
+
+    const current = normalizePooCurrencyCode(selectedPooCurrency);
+    if (!currencyOptions.includes(current)) {
+      setSelectedPooCurrency(currencyOptions[0]);
+    }
+  }, [currencyOptions, selectedPooCurrency]);
 
   const toggleAllPoos = () => {
     setPooSelectionReady(true);
@@ -444,10 +459,11 @@ const PooTable = () => {
   const applyLoadedRows = useCallback((payload) => {
     const loadedRecords = Array.isArray(payload?.data) ? payload.data : [];
     const loadedMeta = payload?.meta || { stationCurrency: "", reportingCurrency: "", currencyCodes: [] };
-    const rowCurrency = loadedRecords
-      .map((row) => normalizePooCurrencyCode(row.pooCcy))
-      .find(Boolean);
-    const fallbackCurrency = normalizePooCurrencyCode(loadedMeta.stationCurrency || loadedMeta.reportingCurrency);
+    const loadedReportingCurrency = normalizePooCurrencyCode(loadedMeta.reportingCurrency);
+    const loadedCurrencyCodes = Array.isArray(loadedMeta.currencyCodes)
+      ? loadedMeta.currencyCodes.map(normalizePooCurrencyCode).filter(Boolean)
+      : [];
+    const loadedFxCodes = [...new Set([loadedReportingCurrency, ...loadedCurrencyCodes].filter(Boolean))];
 
     setRecords(loadedRecords);
     setMeta((prev) => ({
@@ -459,7 +475,12 @@ const PooTable = () => {
         ]),
       ],
     }));
-    setSelectedPooCurrency(rowCurrency || fallbackCurrency);
+    if (loadedFxCodes.length) {
+      setSelectedPooCurrency((prev) => {
+        const current = normalizePooCurrencyCode(prev);
+        return current && loadedFxCodes.includes(current) ? current : loadedFxCodes[0];
+      });
+    }
     setDirtyMap({});
     setValidationErrors([]);
     setSelectedRowIds(new Set());
