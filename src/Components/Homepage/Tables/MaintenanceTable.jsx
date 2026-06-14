@@ -573,17 +573,23 @@ const MaintenanceDashboard = () => {
 
     const handleUpdateRotables = async () => {
         try {
-            await api.post('/maintenance/rotables', { rotablesData: rotablesData });
-            invalidateFleetMetricsCache();
-            window.dispatchEvent(new CustomEvent("assignments:updated"));
+            const rowsToSave = rotablesData.map(row => ({
+                ...row,
+                date: toIsoDate(row.date)
+            }));
+            const res = await api.post('/maintenance/rotables', { rotablesData: rowsToSave });
+            toast.success(res.data?.message || "Rotable movements updated successfully.");
             setIsEditingRotables(false);
             setShowRotablesModal(false);
+            invalidateFleetMetricsCache();
+            window.dispatchEvent(new CustomEvent("assignments:updated"));
             await Promise.all([
                 fetchDashboardData(),
                 fetchTargetsData()
             ]);
         } catch (error) {
             console.error("Failed to update rotables", error);
+            toast.error(error.response?.data?.message || "Failed to update rotable movements.");
         }
     };
 
@@ -1839,7 +1845,7 @@ const MaintenanceDashboard = () => {
                             </h2>
                             <div className="flex gap-2">
                                 <button onClick={() => setIsEditingRotables(!isEditingRotables)} className={`inline-flex h-8 min-w-[104px] items-center justify-center px-4 rounded-lg text-sm font-semibold transition-all shadow-sm ${isEditingRotables ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}>Edit</button>
-                                <button onClick={handleUpdateRotables} disabled={!isEditingRotables} className="inline-flex h-8 min-w-[104px] items-center justify-center px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all shadow-sm">Add/Update</button>
+                                <button onClick={handleUpdateRotables} disabled={!isEditingRotables} className="inline-flex h-8 min-w-[104px] items-center justify-center px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all shadow-sm">Update</button>
                                 <button onClick={() => setShowRotablesModal(false)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><X size={20} /></button>
                             </div>
                         </div>
