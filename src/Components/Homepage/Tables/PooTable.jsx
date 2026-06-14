@@ -644,8 +644,8 @@ const PooTable = () => {
   };
 
   const handleCreateTransit = async () => {
-    if (selectedPoos.length !== 1 || allPoosSelected || !date) {
-      toast.warn("Choose exactly one POO station and date first");
+    if (!date) {
+      toast.warn("Choose a date first");
       return;
     }
     if (!transitDraft.firstFlightNumber || !transitDraft.secondFlightNumber) {
@@ -657,7 +657,6 @@ const PooTable = () => {
     try {
       const response = await api.post("/poo/transit", {
         ...transitDraft,
-        poo: selectedPoos[0],
         date,
         pooCcy: selectedPooCurrency,
       });
