@@ -135,8 +135,7 @@ export default function Loginpage() {
     "Evaluate implications of different operational alternatives while taking decisions in real time, based on the outcomes forecast.",
     "Track actual performance from completed operations.",
     "Load competition's schedule, fleet and other data to understand strengths, weaknesses and likely trajectory.",
-    "Access the expertise of seasoned industry professionals for hands on support to line staff, department heads and leadership teams towards achieving favorable business outcomes by leveraging our capabilities.",
-    "Airlineplan is a manifestation of the airline integrated management framework envisaged by its creators who are also the practitioners of this management framework."
+    "Airlineplan is a manifestation of the airline integrated management framework."
   ];
 
   return (
