@@ -194,6 +194,7 @@ const getUploadOutcome = (key, summary, fallbackMessage) => {
 };
 
 const shouldRecalculateAfterUpload = (summary) => {
+    if (summary?.dutyRosterCleared) return false;
     const invalidRows = Number(summary?.invalidRows || 0);
     const changedRows = Number(summary?.rowsInserted || 0) + Number(summary?.rowsUpdated || 0);
     const deletedRows = Number(summary?.rowsDeleted || 0);
@@ -899,7 +900,9 @@ const CrewPage = () => {
             else if (outcome.type === "warning") toast.warning(outcome.message);
             else toast.success(outcome.message);
 
-            if (shouldRecalculateAfterUpload(summary)) {
+            if (summary?.dutyRosterCleared) {
+                resetGeneratedCrewViews();
+            } else if (shouldRecalculateAfterUpload(summary)) {
                 try {
                     await refreshCrewPlan({ showToast: false });
                     toast.success("Crew Diary updated from the latest upload.");
