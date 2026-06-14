@@ -303,9 +303,6 @@ const normalizeMaintenanceSettingsRows = (rows = []) => (
     driver: normalizeMaintenanceSettingsDriver(row?.driver),
   }))
 );
-const normalizeCapitalisationSelection = (value) => (
-  ["Y", "YES", "TRUE", "1"].includes(normalizeText(value)) ? "Yes" : "No"
-);
 const hasMaintenanceSettingContent = (row = {}) => (
   [
     "mrAccId",
@@ -352,6 +349,7 @@ const monthStartKey = (value) => {
 const getScheduleTransactionOrder = (row = {}) => {
   const transactionType = normalizeText(row.transactionType);
   if (transactionType === "OPENING BALANCE") return 1;
+  if (transactionType === "OPENING BALANCE") return 1;
   if (transactionType === "MONTHLY CONTRIBUTION") return 2;
   if (transactionType === "DRAWDOWN") return 3;
   if (toNumeric(row.drawdown ?? row.mrDrawdown) > 0 && !toNumeric(row.contribution)) return 3;
@@ -370,45 +368,14 @@ const generateMaintenanceMonthlyDates = (asOnDate, endDate) => {
   const end = parseDateValue(endDate);
   if (!start || !end) return [];
   const dates = [];
-  const finalPostingDate = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 1));
   for (
     let cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1));
-    cursor <= finalPostingDate;
+    cursor <= end;
     cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1))
   ) {
     dates.push(new Date(cursor));
   }
   return dates;
-};
-
-const getExactExampleMonthlyFactor = (monthDate, fromDateValue, toDateValue) => {
-  const monthStart = new Date(Date.UTC(monthDate.getUTCFullYear(), monthDate.getUTCMonth(), 1));
-  const startDate = parseDateValue(fromDateValue);
-  const endDate = parseDateValue(toDateValue);
-  const daysInMonth = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 0)).getUTCDate();
-  const sameMonth = (date) => (
-    date &&
-    date.getUTCFullYear() === monthStart.getUTCFullYear() &&
-    date.getUTCMonth() === monthStart.getUTCMonth()
-  );
-
-  if (startDate && sameMonth(startDate)) {
-    if (startDate.getUTCDate() === 1) {
-      return endDate && sameMonth(endDate) && endDate.getUTCDate() !== daysInMonth
-        ? endDate.getUTCDate() / 31
-        : 1;
-    }
-    if (!endDate || !sameMonth(endDate) || endDate.getUTCDate() === daysInMonth) {
-      return startDate.getUTCDate() / daysInMonth;
-    }
-    return endDate.getUTCDate() / 31;
-  }
-
-  if (endDate && sameMonth(endDate) && endDate.getUTCDate() !== daysInMonth) {
-    return endDate.getUTCDate() / 31;
-  }
-
-  return 1;
 };
 
 const escalateRate = (row, scheduleDate) => {
@@ -457,11 +424,6 @@ const generateMaintenanceReserveScheduleRows = (settingsRows = [], existingRows 
     generateMaintenanceMonthlyDates(row.asOnDate, row.endDate || row.asOnDate).forEach((cursor) => {
       const date = formatDateKey(cursor);
       const driver = normalizeMaintenanceSettingsDriver(row.driver);
-      const rate = escalateRate(row, cursor);
-      const effectiveMonth = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() - 1, 1));
-      const driverValue = driver === "MONTH"
-        ? getExactExampleMonthlyFactor(effectiveMonth, row.asOnDate, row.endDate)
-        : 0;
       rows.push({
         date,
         mrAccId: row.mrAccId || "",
@@ -470,9 +432,9 @@ const generateMaintenanceReserveScheduleRows = (settingsRows = [], existingRows 
         pn: normalizeText(row.pn),
         sn: normalizeText(row.sn),
         driver,
-        rate,
-        driverValue,
-        contribution: driver === "MONTH" ? Number((rate * driverValue).toFixed(2)) : 0,
+        rate: escalateRate(row, cursor),
+        driverValue: driver === "MONTH" ? 1 : 0,
+        contribution: 0,
         drawdown: 0,
         ccy: normalizeText(row.ccy),
         source: "generated",
@@ -526,26 +488,6 @@ const applyMasterStartDateToLeasedReserve = (rows = [], masterStartDate = "") =>
     ...row,
     asOnDate: masterStartDate,
   }));
-};
-
-const getForecastedMrBalance = (scheduleRows = [], mrAccId = "", drawdownDate = "") => {
-  const targetDate = parseDateValue(drawdownDate);
-  if (!targetDate || !String(mrAccId || "").trim()) return 0;
-  const targetTime = targetDate.getTime();
-  const matchingRows = (Array.isArray(scheduleRows) ? scheduleRows : [])
-    .filter((row) => {
-      const rowDate = parseDateValue(row?.date);
-      if (!rowDate || rowDate.getTime() > targetTime) return false;
-      if (normalizeText(row?.mrAccId) !== normalizeText(mrAccId)) return false;
-      if (rowDate.getTime() === targetTime && normalizeText(row?.transactionType) === "DRAWDOWN") return false;
-      return true;
-    })
-    .sort((a, b) => (
-      (parseDateValue(b?.date)?.getTime() || 0) - (parseDateValue(a?.date)?.getTime() || 0) ||
-      getScheduleTransactionOrder(b) - getScheduleTransactionOrder(a)
-    ));
-  const row = matchingRows[0];
-  return row ? toNumeric(row.closingBalance ?? row.closingBal ?? row.balance) : 0;
 };
 const DEFAULT_NAV_MTOW_TIERS = ["73000", "77000", "78000", "79000"];
 
@@ -1958,7 +1900,6 @@ function EditableTable({
   readOnly = false,
   allowAdd = true,
   allowDelete = true,
-  onRowChange,
 }) {
   const [editingIndex, setEditingIndex] = useState(null);
   const [editRow, setEditRow] = useState({});
@@ -1997,13 +1938,6 @@ function EditableTable({
     const newData = data.filter((_, i) => i !== index);
     setData(newData);
     if (editingIndex === index) setEditingIndex(null);
-  };
-
-  const applyRowChange = (row, key, value, index) => {
-    const nextRow = { ...row, [key]: value };
-    return typeof onRowChange === "function"
-      ? (onRowChange(nextRow, { key, value, index }) || nextRow)
-      : nextRow;
   };
 
   const handleSort = (key) => {
@@ -2119,9 +2053,7 @@ function EditableTable({
               const isEditing = editingIndex === index || (isInitialBlank && !readOnly);
               const autoFields = new Set(Array.isArray(row._hydratedFields) ? row._hydratedFields : []);
               const updateInitialBlank = (key, value) => {
-                const nextRows = tableRows.map((entry, rowIndex) => (
-                  rowIndex === index ? applyRowChange(entry, key, value, index) : entry
-                ));
+                const nextRows = tableRows.map((entry, rowIndex) => (rowIndex === index ? { ...entry, [key]: value } : entry));
                 setData(nextRows);
                 setEditingIndex(index);
                 setEditRow(nextRows[index]);
@@ -2150,7 +2082,7 @@ function EditableTable({
                             onChange={(e) => {
                               if (col.readOnly) return;
                               if (isInitialBlank) updateInitialBlank(col.key, e.target.value);
-                              else setEditRow(applyRowChange(editRow, col.key, e.target.value, index));
+                              else setEditRow({ ...editRow, [col.key]: e.target.value });
                             }}
                             options={col.options}
                             placeholder={col.placeholder || "Select"}
@@ -2168,7 +2100,7 @@ function EditableTable({
                             onChange={(e) => {
                               if (col.readOnly) return;
                               if (isInitialBlank) updateInitialBlank(col.key, e.target.value);
-                              else setEditRow(applyRowChange(editRow, col.key, e.target.value, index));
+                              else setEditRow({ ...editRow, [col.key]: e.target.value });
                             }}
                             type={col.type || "text"}
                             readOnly={col.readOnly}
@@ -2426,22 +2358,6 @@ export default function CostInputModal({ isOpen, onClose }) {
     () => uniqueOptions([...variantOptions, ...aircraftRegnOptions]),
     [variantOptions, aircraftRegnOptions]
   );
-  const updateScheduledMaintenanceEvent = (row, { key }) => {
-    const next = { ...row };
-    if (key === "drawdownDate" || key === "mrAccId") {
-      next.openingBal = getForecastedMrBalance(
-        maintenanceReserveSchedule,
-        next.mrAccId,
-        next.drawdownDate
-      );
-      next._hydratedFields = [...new Set([...(next._hydratedFields || []), "openingBal"])];
-    }
-    if (key === "cost" || key === "mrDrawdown") {
-      next.remaining = Number((toNumeric(next.cost) - toNumeric(next.mrDrawdown)).toFixed(2));
-      next._hydratedFields = [...new Set([...(next._hydratedFields || []), "remaining"])];
-    }
-    return next;
-  };
 
   useEffect(() => {
     if (isOpen) {
@@ -2472,10 +2388,7 @@ export default function CostInputModal({ isOpen, onClose }) {
             setLeasedReserve(loadedLeasedReserve);
             setMaintenanceReserveSchedule(generateMaintenanceReserveScheduleRows(loadedLeasedReserve, d.maintenanceReserveSchedule || [], d.schMxEvents || []));
             setAircraftOnwing(d.aircraftOnwing || []);
-            setSchMxEvents((d.schMxEvents || []).map((row) => ({
-              ...row,
-              capitalisation: normalizeCapitalisationSelection(row?.capitalisation),
-            })));
+            setSchMxEvents(d.schMxEvents || []);
             setTransitMx(d.transitMx || []);
             setOtherMx(d.otherMx || []);
             setRotableChanges(
@@ -2961,11 +2874,10 @@ export default function CostInputModal({ isOpen, onClose }) {
                   />
                 </div>
                 <EditableTable
-                  title="Scheduled Maintenance Events calendar table"
+                  title="Schedule Maintenance Events calendar table"
                   data={schMxEvents}
                   setData={setSchMxEvents}
                   highlightAutoFields
-                  onRowChange={updateScheduledMaintenanceEvent}
                   columns={[
                     { label: "Date", key: "date", type: "date" },
                     { label: "SN/ESN/APU", key: "msnEsnApun" },
@@ -2978,23 +2890,12 @@ export default function CostInputModal({ isOpen, onClose }) {
                     { label: "Event total cost", key: "cost", type: "number" },
                     { label: "CCY", key: "ccy", type: "select", options: fxCurrencyOptions, defaultValue: defaultFxCurrency, allowEmpty: false, preserveUnknownOption: false },
                     { label: "MR Acc ID", key: "mrAccId" },
-                    { label: "MR Drawdown date", key: "drawdownDate", type: "date" },
-                    { label: "Forecasted MR Balance", key: "openingBal", type: "number", readOnly: true },
+                    { label: "MR drawdown", key: "drawdownDate", type: "date" },
+                    { label: "Opening bal", key: "openingBal", type: "number" },
                     { label: "MR drawdown", key: "mrDrawdown", type: "number" },
-                    { label: "CCY", key: "mrDrawdownCcy", type: "select", options: fxCurrencyOptions, defaultValue: defaultFxCurrency, allowEmpty: false, preserveUnknownOption: false },
+                    { label: "CCY", key: "mrDrawdownCcy" },
                     { label: "Remaining", key: "remaining", type: "number" },
-                    {
-                      label: "Capitalisation",
-                      key: "capitalisation",
-                      type: "select",
-                      options: [
-                        { label: "No", value: "No" },
-                        { label: "Yes", value: "Yes" },
-                      ],
-                      defaultValue: "No",
-                      allowEmpty: false,
-                      preserveUnknownOption: false,
-                    },
+                    { label: "Capitalisation", key: "capitalisation" },
                   ]}
                 />
                 <EditableTable
