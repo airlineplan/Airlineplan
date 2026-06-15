@@ -82,9 +82,14 @@ const formatCurrencyAmount = (value, currencyCode) => {
         return new Intl.NumberFormat("en-US", {
             style: "currency",
             currency: normalizedCurrency,
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
         }).format(value);
     } catch {
-        return `${normalizedCurrency} ${new Intl.NumberFormat("en-US").format(value)}`;
+        return `${normalizedCurrency} ${new Intl.NumberFormat("en-US", {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(value)}`;
     }
 };
 
@@ -505,7 +510,7 @@ const CostPage = () => {
             const excelRows = tableData.map((row) => {
                 const indent = "    ".repeat(row.level);
                 const label = row.isTotalRow ? `${indent}${row.label}` : `${indent}${row.label}`;
-                return [label, ...row.data];
+                return [label, ...row.data.map((value) => Math.round(Number(value || 0)))];
             });
             const worksheetData = [headers, ...excelRows];
             const ws = XLSX.utils.aoa_to_sheet(worksheetData);

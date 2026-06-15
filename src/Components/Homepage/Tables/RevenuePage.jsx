@@ -199,14 +199,7 @@ const buildMasterPeriodColumns = (startDateValue, endDateValue, periodicity) => 
 const formatMetricValue = (metricKey, value) => {
   const numeric = Number(value || 0);
 
-  if (String(metricKey || "").toLowerCase().includes("rev") || String(metricKey || "").toLowerCase().includes("rate") || String(metricKey || "").toLowerCase().includes("fare")) {
-    return numeric.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  }
-
-  if (metricKey === "cargoT") {
+  if (metricKey === "cargoT" || metricKey === "averageCargoRate") {
     return numeric.toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,

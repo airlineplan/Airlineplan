@@ -359,24 +359,28 @@ function getFinanceBasisDenominator(periodData = {}, basis = "absolute") {
   return denominator > 0 ? denominator : 0;
 }
 
+const TWO_DECIMAL_FINANCE_BASES = new Set(["per ask", "per rpk", "per atk", "per rtk"]);
+
 function formatFinanceDisplayValue(value, periodData = {}, basis = "absolute") {
   const raw = toNumberLike(value);
   const normalizedBasis = normalizeFinanceBasis(basis);
+  const digits = TWO_DECIMAL_FINANCE_BASES.has(normalizedBasis) ? 2 : 0;
 
   if (normalizedBasis === "absolute") {
-    return formatNumber(raw, Number.isInteger(raw) ? 0 : 2);
+    return formatNumber(raw, 0);
   }
 
   const denominator = getFinanceBasisDenominator(periodData, normalizedBasis);
   if (!denominator) {
-    return normalizedBasis === "% of total revenue" ? "0.00%" : "0.00";
+    if (normalizedBasis === "% of total revenue") return "0%";
+    return formatNumber(0, digits);
   }
 
   if (normalizedBasis === "% of total revenue") {
-    return `${((raw / denominator) * 100).toFixed(2)}%`;
+    return `${formatNumber((raw / denominator) * 100, 0)}%`;
   }
 
-  return formatNumber(raw / denominator, 2);
+  return formatNumber(raw / denominator, digits);
 }
 
 const OPERATIONAL_SECTIONS = [
