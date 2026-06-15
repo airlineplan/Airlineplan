@@ -3132,3 +3132,4 @@ export default function CostInputModal({ isOpen, onClose }) {
 
   return typeof document !== "undefined" ? createPortal(modalContent, document.body) : modalContent;
 }
+ 

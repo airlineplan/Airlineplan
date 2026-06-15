@@ -7,6 +7,7 @@ import { ChevronDown, Check, LayoutDashboard, Download, Layers, RefreshCw } from
 import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { getApiErrorMessage, requestWithRetry } from "../../../apiRetry";
 import { getRowRevenueMetrics } from "./revenueMetrics";
 
 function cn(...inputs) {
@@ -578,13 +579,13 @@ const RevenuePage = () => {
           if (!params[key]) delete params[key];
         });
 
-        const response = await api.get("/revenue", { params });
+        const response = await requestWithRetry(() => api.get("/revenue", { params }));
         const rows = response.data?.rows || [];
         setRawRows(Array.isArray(rows) ? rows : []);
       } catch (error) {
         console.error("Error fetching revenue data:", error);
         setRawRows([]);
-        toast.error("Failed to load revenue data.");
+        toast.error(getApiErrorMessage(error, "Failed to load revenue data."));
       } finally {
         setLoading(false);
       }

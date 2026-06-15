@@ -7,6 +7,7 @@ import { ChevronDown, Check, LayoutDashboard, Download, Layers, RefreshCw, PlusC
 import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
 import CostInputModal from "./CostInputModal";
+import { getApiErrorMessage, requestWithRetry } from "../../../apiRetry";
 
 // --- UTILITIES ---
 
@@ -368,13 +369,13 @@ const CostPage = () => {
     const fetchCostData = async () => {
         try {
             setLoading(true);
-            const response = await api.post('/cost-page-data', filters);
+            const response = await requestWithRetry(() => api.post('/cost-page-data', filters));
             const flightsData = response.data.flights || response.data || [];
             setRawFlights(Array.isArray(flightsData) ? flightsData : []);
         } catch (error) {
             console.error('Error fetching cost data:', error);
             setRawFlights([]);
-            toast.error("Failed to load cost data.");
+            toast.error(getApiErrorMessage(error, "Failed to load cost data."));
         } finally {
             setLoading(false);
         }
