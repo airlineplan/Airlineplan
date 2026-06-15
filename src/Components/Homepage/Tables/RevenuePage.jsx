@@ -7,6 +7,7 @@ import { ChevronDown, Check, LayoutDashboard, Download, Layers, RefreshCw } from
 import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { getRowRevenueMetrics } from "./revenueMetrics";
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -212,46 +213,6 @@ const formatMetricValue = (metricKey, value) => {
   }
 
   return Math.round(numeric).toLocaleString();
-};
-
-const toRevenueNumber = (value) => {
-  if (value === null || value === undefined || value === "") return 0;
-  const numeric = Number(String(value).replace(/,/g, ""));
-  return Number.isFinite(numeric) ? numeric : 0;
-};
-
-const calculateCargoRevenue = (cargoT, rate) => cargoT * 1000 * rate;
-
-const getRowRevenueMetrics = (row) => {
-  const pax = toRevenueNumber(row.pax);
-  const cargoT = toRevenueNumber(row.cargoT);
-  const legPaxRev = toRevenueNumber(row.legPaxRev) || pax * toRevenueNumber(row.legFare);
-  const legCargoRev = toRevenueNumber(row.legCargoRev) || calculateCargoRevenue(cargoT, toRevenueNumber(row.legRate));
-  const odPaxRev = toRevenueNumber(row.odPaxRev) || pax * (toRevenueNumber(row.odFare) || toRevenueNumber(row.legFare));
-  const odCargoRev = toRevenueNumber(row.odCargoRev) || calculateCargoRevenue(cargoT, toRevenueNumber(row.odRate) || toRevenueNumber(row.legRate));
-  const usesLegPricing = Boolean(row.applySSPricing);
-  const fallbackPaxRev = usesLegPricing
-    ? toRevenueNumber(row.rccyLegPaxRev) || legPaxRev
-    : toRevenueNumber(row.rccyOdPaxRev) || odPaxRev || toRevenueNumber(row.rccyLegPaxRev) || legPaxRev;
-  const fallbackCargoRev = usesLegPricing
-    ? toRevenueNumber(row.rccyLegCargoRev) || legCargoRev
-    : toRevenueNumber(row.rccyOdCargoRev) || odCargoRev || toRevenueNumber(row.rccyLegCargoRev) || legCargoRev;
-  const rccyPaxRev = toRevenueNumber(row.fnlRccyPaxRev) || fallbackPaxRev;
-  const rccyCargoRev = toRevenueNumber(row.fnlRccyCargoRev) || fallbackCargoRev;
-
-  return {
-    pax,
-    cargoT,
-    fnlRccyPaxRev: rccyPaxRev,
-    fnlRccyCargoRev: rccyCargoRev,
-    fnlRccyTotalRev: toRevenueNumber(row.fnlRccyTotalRev) || rccyPaxRev + rccyCargoRev,
-    odPaxRev,
-    odCargoRev,
-    odTotalRev: toRevenueNumber(row.odTotalRev) || odPaxRev + odCargoRev,
-    legPaxRev,
-    legCargoRev,
-    legTotalRev: toRevenueNumber(row.legTotalRev) || legPaxRev + legCargoRev,
-  };
 };
 
 const normalizeRowValue = (value) => {
