@@ -383,7 +383,7 @@ const OPERATIONAL_SECTIONS = [
       { label: "Destinations", key: "destinations" },
       { label: "Departures", key: "departures" },
       { label: "Seats", key: "seats" },
-      { label: "Pax", key: "pax" },
+      { label: "Pax", key: "pax", format: "integer" },
       { label: "Pax SF", key: "paxSF", format: "percent" },
       { label: "Pax LF", key: "paxLF", format: "percent" },
     ],

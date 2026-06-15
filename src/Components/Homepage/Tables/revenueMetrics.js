@@ -112,3 +112,23 @@ export function getRowRevenueMetrics(row) {
     legTotalRev: legPaxRev + legCargoRev,
   };
 }
+
+export function aggregateRevenueMetric(metricRows, metricKey) {
+  const rows = Array.isArray(metricRows) ? metricRows : [];
+  const sumMetric = (key) => rows.reduce(
+    (total, row) => total + toRevenueNumber(row?.[key]),
+    0
+  );
+
+  if (metricKey === "averageFare") {
+    const pax = sumMetric("pax");
+    return pax > 0 ? sumMetric("fnlRccyPaxRev") / pax : 0;
+  }
+
+  if (metricKey === "averageCargoRate") {
+    const cargoKg = sumMetric("cargoT") * KG_PER_TONNE;
+    return cargoKg > 0 ? sumMetric("fnlRccyCargoRev") / cargoKg : 0;
+  }
+
+  return sumMetric(metricKey);
+}

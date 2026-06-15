@@ -8,7 +8,7 @@ import * as XLSX from "xlsx";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { getApiErrorMessage, requestWithRetry } from "../../../apiRetry";
-import { getRowRevenueMetrics } from "./revenueMetrics";
+import { aggregateRevenueMetric, getRowRevenueMetrics } from "./revenueMetrics";
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -610,11 +610,7 @@ const RevenuePage = () => {
       return {
         ...row,
         _periodKey: periodKey,
-        _metricValues: {
-          ...metricValues,
-          averageFare: metricValues.pax > 0 ? metricValues.fnlRccyPaxRev / metricValues.pax : 0,
-          averageCargoRate: metricValues.cargoT > 0 ? metricValues.fnlRccyCargoRev / metricValues.cargoT : 0,
-        },
+        _metricValues: metricValues,
       };
     });
 
@@ -629,20 +625,20 @@ const RevenuePage = () => {
       columnIndexMap[column] = index;
     });
 
-    const createZeroArray = () => Array(sortedColumns.length).fill(0);
     const finalRows = [];
     let idCounter = 1;
 
     const buildMetricRows = (subset, depth, label, type, pathKey) => {
       selectedMetrics.forEach((metric, metricIndex) => {
-        const totals = createZeroArray();
+        const periodMetricRows = sortedColumns.map(() => []);
 
         subset.forEach((row) => {
           const columnIndex = columnIndexMap[row._periodKey];
           if (columnIndex !== undefined) {
-            totals[columnIndex] += Number(row._metricValues[metric.value] || 0);
+            periodMetricRows[columnIndex].push(row._metricValues);
           }
         });
+        const totals = periodMetricRows.map((rows) => aggregateRevenueMetric(rows, metric.value));
 
         finalRows.push({
           id: `${pathKey}-${metric.value}-${metricIndex}-${idCounter++}`,
@@ -687,14 +683,15 @@ const RevenuePage = () => {
     buildTree(processedRows, 0);
 
     const grandTotals = selectedMetrics.map((metric, metricIndex) => {
-      const totals = createZeroArray();
+      const periodMetricRows = sortedColumns.map(() => []);
 
       processedRows.forEach((row) => {
         const columnIndex = columnIndexMap[row._periodKey];
         if (columnIndex !== undefined) {
-          totals[columnIndex] += Number(row._metricValues[metric.value] || 0);
+          periodMetricRows[columnIndex].push(row._metricValues);
         }
       });
+      const totals = periodMetricRows.map((rows) => aggregateRevenueMetric(rows, metric.value));
 
       return {
         id: `grand-total-${metric.value}-${metricIndex}`,
