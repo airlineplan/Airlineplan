@@ -326,18 +326,22 @@ function cnTableValue(row, period) {
 const FINANCE_BASIS_DENOMINATOR_KEYS = {
   "absolute": null,
   "% of total revenue": "fnlRccyTotalRev",
-  "per ASK": "sumOfask",
-  "per RPK": "sumOfrsk",
-  "per ATK": "sumOfcargoAtk",
-  "per RTK": "sumOfcargoRtk",
-  "per BH": "bh",
-  "per FH": "fh",
-  "per Departure": "departures",
-  "per Seat": "seats",
-  "per Pax": "pax",
-  "per Cargo capacity T": "cargoCapT",
-  "per Cargo T": "cargoT",
+  "per ask": "sumOfask",
+  "per rpk": "sumOfrsk",
+  "per atk": "sumOfcargoAtk",
+  "per rtk": "sumOfcargoRtk",
+  "per bh": "bh",
+  "per fh": "fh",
+  "per departure": "departures",
+  "per seat": "seats",
+  "per pax": "pax",
+  "per cargo capacity t": "cargoCapT",
+  "per cargo t": "cargoT",
 };
+
+function normalizeFinanceBasis(value = "absolute") {
+  return String(value || "absolute").trim().toLowerCase();
+}
 
 function getFinanceNodeValue(node, finance = {}) {
   if (node?.getValue) return toNumberLike(node.getValue(finance));
@@ -345,7 +349,7 @@ function getFinanceNodeValue(node, finance = {}) {
 }
 
 function getFinanceBasisDenominator(periodData = {}, basis = "absolute") {
-  const normalizedBasis = String(basis || "absolute").trim();
+  const normalizedBasis = normalizeFinanceBasis(basis);
   if (normalizedBasis === "absolute") return 1;
 
   const denominatorKey = FINANCE_BASIS_DENOMINATOR_KEYS[normalizedBasis];
@@ -357,7 +361,7 @@ function getFinanceBasisDenominator(periodData = {}, basis = "absolute") {
 
 function formatFinanceDisplayValue(value, periodData = {}, basis = "absolute") {
   const raw = toNumberLike(value);
-  const normalizedBasis = String(basis || "absolute").trim();
+  const normalizedBasis = normalizeFinanceBasis(basis);
 
   if (normalizedBasis === "absolute") {
     return formatNumber(raw, Number.isInteger(raw) ? 0 : 2);
