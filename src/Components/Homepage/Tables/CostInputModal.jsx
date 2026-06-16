@@ -2439,7 +2439,7 @@ export default function CostInputModal({ isOpen, onClose }) {
               applyMasterStartDateToLeasedReserve(d.leasedReserve || [], masterDateRange.minDate)
             );
             setLeasedReserve(loadedLeasedReserve);
-            setMaintenanceReserveSchedule(generateMaintenanceReserveScheduleRows(loadedLeasedReserve, d.maintenanceReserveSchedule || [], d.schMxEvents || []));
+            setMaintenanceReserveSchedule(sortMaintenanceReserveRows(d.maintenanceReserveSchedule || []));
             setAircraftOnwing(d.aircraftOnwing || []);
             setSchMxEvents(d.schMxEvents || []);
             setTransitMx(d.transitMx || []);
@@ -2552,7 +2552,12 @@ export default function CostInputModal({ isOpen, onClose }) {
 
   useEffect(() => {
     if (!isOpen || !masterDateRange.minDate) return;
-    updateLeasedReserve((rows) => rows);
+    setLeasedReserve((rows) => {
+      const nextRows = normalizeMaintenanceSettingsRows(
+        applyMasterStartDateToLeasedReserve(rows, masterDateRange.minDate)
+      );
+      return JSON.stringify(nextRows) === JSON.stringify(rows) ? rows : nextRows;
+    });
   }, [isOpen, masterDateRange.minDate]);
 
   const handleSave = async () => {
