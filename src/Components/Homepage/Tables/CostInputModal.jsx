@@ -226,6 +226,10 @@ const MAINTENANCE_DRIVER_OPTIONS = [
 ];
 const DEFAULT_MAINTENANCE_DRIVER = "FH";
 const MAINTENANCE_DRIVER_VALUES = new Set(MAINTENANCE_DRIVER_OPTIONS.map((option) => option.value));
+const CAPITALISATION_OPTIONS = [
+  { label: "No", value: "No" },
+  { label: "Yes", value: "Yes" },
+];
 
 const normalizeText = (value) => String(value ?? "").trim().toUpperCase();
 const toOption = (value, label = value) => ({ value: String(value ?? "").trim(), label: String(label ?? value ?? "").trim() });
@@ -451,6 +455,44 @@ const normalizeMaintenanceReserveScheduleRows = (rows = []) => sortMaintenanceRe
       ccy: row?.ccy || row?.currency || "",
     };
   })
+);
+
+const getForecastedMrBalanceAsOfDate = (scheduleRows = [], mrAccId = "", drawdownDateValue = "") => {
+  const drawdownDate = parseDateValue(drawdownDateValue);
+  if (!drawdownDate) return 0;
+  const targetTime = drawdownDate.getTime();
+  const matchingRows = (Array.isArray(scheduleRows) ? scheduleRows : [])
+    .filter((row) => {
+      const rowDate = parseDateValue(row?.date);
+      if (!rowDate || rowDate.getTime() > targetTime) return false;
+      if (mrAccId && normalizeText(row?.mrAccId) !== normalizeText(mrAccId)) return false;
+      return true;
+    })
+    .sort((a, b) => (
+      (parseDateValue(b?.date)?.getTime() || 0) - (parseDateValue(a?.date)?.getTime() || 0) ||
+      getScheduleTransactionOrder(b) - getScheduleTransactionOrder(a)
+    ));
+
+  if (!matchingRows.length) return 0;
+  return toNumeric(pickFirstValue(matchingRows[0], ["closingBalance", "closingBal", "balance", "openingBalance", "openingBal"]));
+};
+
+const normalizeCapitalisationValue = (value) => {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (["Y", "YES", "TRUE", "1"].includes(raw)) return "Yes";
+  if (["N", "NO", "FALSE", "0"].includes(raw)) return "No";
+  return "No";
+};
+
+const normalizeSchMxEventRows = (rows = [], scheduleRows = []) => (
+  (Array.isArray(rows) ? rows : []).map((row) => ({
+    ...row,
+    ccy: row?.ccy || "",
+    mrDrawdownCcy: row?.mrDrawdownCcy || "",
+    openingBal: getForecastedMrBalanceAsOfDate(scheduleRows, row?.mrAccId, row?.drawdownDate),
+    capitalisation: normalizeCapitalisationValue(row?.capitalisation),
+    _hydratedFields: [...new Set([...(Array.isArray(row?._hydratedFields) ? row._hydratedFields : []), "openingBal"])],
+  }))
 );
 
 const generateMaintenanceMonthlyDates = (asOnDate, endDate) => {
@@ -804,6 +846,8 @@ function TierSheetTable({
                       onChange={(e) => updateRow(index, "ccy", e.target.value)}
                       options={currencyOptions}
                       placeholder="CCY"
+                      allowEmpty={false}
+                      preserveUnknownOption={false}
                       className="border-0 px-2 text-sm font-medium"
                     />
                   </td>
@@ -1806,6 +1850,8 @@ function ApuUsageTable({ data, setData, stationOptions = [], aircraftRegnOptions
                       onChange={(e) => updateRow(index, "ccy", e.target.value)}
                       options={currencyOptions}
                       placeholder="CCY"
+                      allowEmpty={false}
+                      preserveUnknownOption={false}
                       className="border-0 rounded-none"
                     />
                   </td>
@@ -1940,6 +1986,8 @@ function FuelPriceTable({ data, setData, stationOptions = [], currencyOptions = 
                       onChange={(e) => updateRow(index, "ccy", e.target.value)}
                       options={currencyOptions}
                       placeholder="CCY"
+                      allowEmpty={false}
+                      preserveUnknownOption={false}
                       className="border-0 rounded-none"
                     />
                   </td>
@@ -1991,6 +2039,7 @@ function EditableTable({
   columns,
   data,
   setData,
+  transformRow = (row) => row,
   className,
   titleNote,
   sortFilter = false,
@@ -2005,12 +2054,13 @@ function EditableTable({
   const [filters, setFilters] = useState({});
 
   const normalizeSelectRow = (row) => {
-    return columns.reduce((acc, col) => {
+    const normalized = columns.reduce((acc, col) => {
       if (col.type !== "select" || col.preserveUnknownOption !== false) return acc;
       const optionValues = (Array.isArray(col.options) ? col.options : []).map((option) => option.value);
       if (optionValues.includes(acc[col.key])) return acc;
       return { ...acc, [col.key]: col.defaultValue ?? optionValues[0] ?? "" };
     }, { ...row });
+    return transformRow(normalized);
   };
 
   const handleEdit = (index, row) => {
@@ -2026,7 +2076,7 @@ function EditableTable({
   };
 
   const handleAdd = () => {
-    const newRow = columns.reduce((acc, col) => ({ ...acc, [col.key]: col.defaultValue ?? "" }), {});
+    const newRow = normalizeSelectRow(columns.reduce((acc, col) => ({ ...acc, [col.key]: col.defaultValue ?? "" }), {}));
     setData([...data, newRow]);
     setEditingIndex(data.length);
     setEditRow(newRow);
@@ -2151,10 +2201,13 @@ function EditableTable({
               const isEditing = editingIndex === index || (isInitialBlank && !readOnly);
               const autoFields = new Set(Array.isArray(row._hydratedFields) ? row._hydratedFields : []);
               const updateInitialBlank = (key, value) => {
-                const nextRows = tableRows.map((entry, rowIndex) => (rowIndex === index ? { ...entry, [key]: value } : entry));
+                const nextRows = tableRows.map((entry, rowIndex) => (rowIndex === index ? normalizeSelectRow({ ...entry, [key]: value }) : entry));
                 setData(nextRows);
                 setEditingIndex(index);
                 setEditRow(nextRows[index]);
+              };
+              const updateEditRow = (key, value) => {
+                setEditRow((currentRow) => normalizeSelectRow({ ...currentRow, [key]: value }));
               };
               return (
                 <tr
@@ -2180,7 +2233,7 @@ function EditableTable({
                             onChange={(e) => {
                               if (col.readOnly) return;
                               if (isInitialBlank) updateInitialBlank(col.key, e.target.value);
-                              else setEditRow({ ...editRow, [col.key]: e.target.value });
+                              else updateEditRow(col.key, e.target.value);
                             }}
                             options={col.options}
                             placeholder={col.placeholder || "Select"}
@@ -2198,7 +2251,7 @@ function EditableTable({
                             onChange={(e) => {
                               if (col.readOnly) return;
                               if (isInitialBlank) updateInitialBlank(col.key, e.target.value);
-                              else setEditRow({ ...editRow, [col.key]: e.target.value });
+                              else updateEditRow(col.key, e.target.value);
                             }}
                             type={col.type || "text"}
                             readOnly={col.readOnly}
@@ -2392,7 +2445,7 @@ function CompactEditableTable({ title, columns, data, setData, className, addLab
 
 // --- Main Modal Component ---
 
-export default function CostInputModal({ isOpen, onClose }) {
+export default function CostInputModal({ isOpen, onClose, onSaved }) {
   useEscapeKey(isOpen, onClose);
 
   // === FUEL STATE ===
@@ -2485,10 +2538,11 @@ export default function CostInputModal({ isOpen, onClose }) {
             const loadedLeasedReserve = normalizeMaintenanceSettingsRows(
               applyMasterStartDateToLeasedReserve(d.leasedReserve || [], masterDateRange.minDate)
             );
+            const loadedMaintenanceReserveSchedule = normalizeMaintenanceReserveScheduleRows(d.maintenanceReserveSchedule || []);
             setLeasedReserve(loadedLeasedReserve);
-            setMaintenanceReserveSchedule(normalizeMaintenanceReserveScheduleRows(d.maintenanceReserveSchedule || []));
+            setMaintenanceReserveSchedule(loadedMaintenanceReserveSchedule);
             setAircraftOnwing(d.aircraftOnwing || []);
-            setSchMxEvents(d.schMxEvents || []);
+            setSchMxEvents(normalizeSchMxEventRows(d.schMxEvents || [], loadedMaintenanceReserveSchedule));
             setTransitMx(d.transitMx || []);
             setOtherMx(d.otherMx || []);
             setRotableChanges(
@@ -2675,7 +2729,7 @@ export default function CostInputModal({ isOpen, onClose }) {
         fuelConsum, fuelConsumIndex, apuUsage, plfEffect, ccyFuel,
         leasedReserve: persistableLeasedReserve,
         maintenanceReserveSchedule: effectiveMaintenanceReserveSchedule,
-        aircraftOnwing, schMxEvents, transitMx, otherMx, rotableChanges,
+        aircraftOnwing, schMxEvents: normalizeSchMxEventRows(schMxEvents, effectiveMaintenanceReserveSchedule), transitMx, otherMx, rotableChanges,
         navMtowTiers, navEnr, navTerm, airportLanding, airportDom, airportIntl, airportAvsec, airportOther,
         otherDoc
       };
@@ -2683,6 +2737,7 @@ export default function CostInputModal({ isOpen, onClose }) {
       await api.post("/cost-config", payload);
       await api.post("/apu-fuel-costs/rebuild");
       toast.success("Cost logic configurations saved successfully!");
+      onSaved?.();
       onClose();
     } catch (err) {
       console.error("Error saving cost config", err);
@@ -2979,9 +3034,10 @@ export default function CostInputModal({ isOpen, onClose }) {
                   />
                 </div>
                 <EditableTable
-                  title="Schedule Maintenance Events calendar table"
+                  title="Scheduled Maintenance Events calendar table"
                   data={schMxEvents}
-                  setData={setSchMxEvents}
+                  setData={(rows) => setSchMxEvents(normalizeSchMxEventRows(rows, maintenanceReserveSchedule))}
+                  transformRow={(row) => normalizeSchMxEventRows([row], maintenanceReserveSchedule)[0] || row}
                   highlightAutoFields
                   columns={[
                     { label: "Date", key: "date", type: "date" },
@@ -2995,12 +3051,12 @@ export default function CostInputModal({ isOpen, onClose }) {
                     { label: "Event total cost", key: "cost", type: "number" },
                     { label: "CCY", key: "ccy", type: "select", options: fxCurrencyOptions, defaultValue: defaultFxCurrency, allowEmpty: false, preserveUnknownOption: false },
                     { label: "MR Acc ID", key: "mrAccId" },
-                    { label: "MR drawdown", key: "drawdownDate", type: "date" },
-                    { label: "Opening bal", key: "openingBal", type: "number" },
-                    { label: "MR drawdown", key: "mrDrawdown", type: "number" },
-                    { label: "CCY", key: "mrDrawdownCcy" },
+                    { label: "MR Drawdown date", key: "drawdownDate", type: "date" },
+                    { label: "Forecasted MR Balance", key: "openingBal", type: "number", readOnly: true },
+                    { label: "MR Drawdown", key: "mrDrawdown", type: "number" },
+                    { label: "CCY", key: "mrDrawdownCcy", type: "select", options: fxCurrencyOptions, defaultValue: defaultFxCurrency, allowEmpty: false, preserveUnknownOption: false },
                     { label: "Remaining", key: "remaining", type: "number" },
-                    { label: "Capitalisation", key: "capitalisation" },
+                    { label: "Capitalisation", key: "capitalisation", type: "select", options: CAPITALISATION_OPTIONS, defaultValue: "No", allowEmpty: false, preserveUnknownOption: false },
                   ]}
                 />
                 <EditableTable

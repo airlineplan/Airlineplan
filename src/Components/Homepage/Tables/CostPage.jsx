@@ -679,6 +679,7 @@ const CostPage = () => {
             <CostInputModal
                 isOpen={isCostInputOpen}
                 onClose={() => setIsCostInputOpen(false)}
+                onSaved={fetchCostData}
             />
         </div>
     );
