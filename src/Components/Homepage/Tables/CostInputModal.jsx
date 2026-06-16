@@ -345,6 +345,51 @@ const monthStartKey = (value) => {
   if (!date) return "";
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-01`;
 };
+const getUtcMonthStart = (date) => new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+const getDaysInUtcMonth = (date) => new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
+const isSameUtcMonth = (a, b) => (
+  a && b &&
+  a.getUTCFullYear() === b.getUTCFullYear() &&
+  a.getUTCMonth() === b.getUTCMonth()
+);
+
+const getMaintenanceMonthlyFactor = (postingDate, fromDateValue, toDateValue) => {
+  const monthStart = getUtcMonthStart(new Date(Date.UTC(postingDate.getUTCFullYear(), postingDate.getUTCMonth() - 1, 1)));
+  const startDate = parseDateValue(fromDateValue);
+  const endDate = parseDateValue(toDateValue);
+
+  if (startDate && !endDate && isSameUtcMonth(startDate, monthStart)) {
+    if (startDate.getUTCDate() === 1) return 1;
+    return startDate.getUTCDate() / getDaysInUtcMonth(monthStart);
+  }
+
+  if (!startDate && endDate && isSameUtcMonth(endDate, monthStart)) {
+    if (endDate.getUTCDate() === getDaysInUtcMonth(monthStart)) return 1;
+    return endDate.getUTCDate() / 31;
+  }
+
+  if (startDate && endDate && isSameUtcMonth(startDate, monthStart) && isSameUtcMonth(endDate, monthStart)) {
+    if (startDate.getUTCDate() === 1 && endDate.getUTCDate() === getDaysInUtcMonth(monthStart)) return 1;
+    if (endDate.getUTCDate() === getDaysInUtcMonth(monthStart)) {
+      if (startDate.getUTCDate() === 1) return 1;
+      return startDate.getUTCDate() / getDaysInUtcMonth(monthStart);
+    }
+    if (startDate.getUTCDate() === 1) return endDate.getUTCDate() / 31;
+    return endDate.getUTCDate() / 31;
+  }
+
+  if (startDate && isSameUtcMonth(startDate, monthStart)) {
+    if (startDate.getUTCDate() === 1) return 1;
+    return startDate.getUTCDate() / getDaysInUtcMonth(monthStart);
+  }
+
+  if (endDate && isSameUtcMonth(endDate, monthStart)) {
+    if (endDate.getUTCDate() === getDaysInUtcMonth(monthStart)) return 1;
+    return endDate.getUTCDate() / 31;
+  }
+
+  return 1;
+};
 
 const getScheduleTransactionOrder = (row = {}) => {
   const transactionType = normalizeText(row.transactionType);
@@ -368,9 +413,12 @@ const generateMaintenanceMonthlyDates = (asOnDate, endDate) => {
   const end = parseDateValue(endDate);
   if (!start || !end) return [];
   const dates = [];
+  const finalPostingDate = end.getUTCDate() === 1
+    ? new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1))
+    : new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() + 1, 1));
   for (
     let cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1));
-    cursor <= end;
+    cursor <= finalPostingDate;
     cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1))
   ) {
     dates.push(new Date(cursor));
@@ -424,6 +472,10 @@ const generateMaintenanceReserveScheduleRows = (settingsRows = [], existingRows 
     generateMaintenanceMonthlyDates(row.asOnDate, row.endDate || row.asOnDate).forEach((cursor) => {
       const date = formatDateKey(cursor);
       const driver = normalizeMaintenanceSettingsDriver(row.driver);
+      const rate = escalateRate(row, cursor);
+      const driverValue = driver === "MONTH"
+        ? getMaintenanceMonthlyFactor(cursor, row.asOnDate, row.endDate)
+        : 0;
       rows.push({
         date,
         mrAccId: row.mrAccId || "",
@@ -432,9 +484,10 @@ const generateMaintenanceReserveScheduleRows = (settingsRows = [], existingRows 
         pn: normalizeText(row.pn),
         sn: normalizeText(row.sn),
         driver,
-        rate: escalateRate(row, cursor),
-        driverValue: driver === "MONTH" ? 1 : 0,
-        contribution: 0,
+        rate,
+        driverValue,
+        monthNumber: driverValue,
+        contribution: Number((rate * driverValue).toFixed(2)),
         drawdown: 0,
         ccy: normalizeText(row.ccy),
         source: "generated",
@@ -3132,4 +3185,3 @@ export default function CostInputModal({ isOpen, onClose }) {
 
   return typeof document !== "undefined" ? createPortal(modalContent, document.body) : modalContent;
 }
- 
