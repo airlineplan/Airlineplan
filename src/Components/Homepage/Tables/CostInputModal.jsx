@@ -328,6 +328,15 @@ const toNumeric = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const hasValue = (value) => value !== "" && value !== null && value !== undefined;
+
+const pickFirstValue = (row = {}, keys = []) => {
+  for (const key of keys) {
+    if (hasValue(row?.[key])) return row[key];
+  }
+  return "";
+};
+
 const parseDateValue = (value) => {
   if (!value) return null;
   const isoDate = toIsoDate(value);
@@ -407,6 +416,42 @@ const sortMaintenanceReserveRows = (rows = []) => [...rows].sort((a, b) => (
   String(a.date || "").localeCompare(String(b.date || "")) ||
   getScheduleTransactionOrder(a) - getScheduleTransactionOrder(b)
 ));
+
+const normalizeMaintenanceReserveScheduleRows = (rows = []) => sortMaintenanceReserveRows(
+  (Array.isArray(rows) ? rows : []).map((row) => {
+    const driverValue = pickFirstValue(row, ["driverValue", "driverVal", "monthNumber", "monthNo"]);
+    const contribution = pickFirstValue(row, ["contribution", "monthlyContribution", "mrMonthly"]);
+    const openingBalance = pickFirstValue(row, ["openingBalance", "openingBal"]);
+    const drawdown = pickFirstValue(row, ["drawdown", "mrDrawdown"]);
+    const closingBalance = pickFirstValue(row, ["closingBalance", "closingBal", "balance"]);
+    const balance = pickFirstValue(row, ["balance", "closingBalance", "closingBal"]);
+    const driver = normalizeMaintenanceDriver(row?.driver);
+
+    return {
+      ...row,
+      date: toIsoDate(row?.date) || row?.date || "",
+      mrAccId: row?.mrAccId || row?.mrAccountId || "",
+      schMxEvent: row?.schMxEvent || row?.schMxEventAccount || row?.event || "",
+      acftRegn: row?.acftRegn || row?.acftReg || row?.aircraftRegn || "",
+      pn: row?.pn || "",
+      sn: row?.sn || row?.msn || "",
+      driver,
+      rate: pickFirstValue(row, ["rate", "applicableRate"]),
+      driverValue,
+      driverVal: driverValue,
+      monthNumber: pickFirstValue(row, ["monthNumber", "monthNo", "driverValue", "driverVal"]),
+      contribution,
+      openingBalance,
+      openingBal: openingBalance,
+      drawdown,
+      mrDrawdown: drawdown,
+      closingBalance,
+      closingBal: closingBalance,
+      balance,
+      ccy: row?.ccy || row?.currency || "",
+    };
+  })
+);
 
 const generateMaintenanceMonthlyDates = (asOnDate, endDate) => {
   const start = parseDateValue(asOnDate);
@@ -519,7 +564,7 @@ const generateMaintenanceReserveScheduleRows = (settingsRows = [], existingRows 
   });
 
   const balances = new Map();
-  return sortMaintenanceReserveRows(rows).map((row) => {
+  return normalizeMaintenanceReserveScheduleRows(rows).map((row) => {
     const key = [normalizeText(row.mrAccId), normalizeText(row.sn || row.msn)].join("|");
     if (normalizeText(row.transactionType) === "OPENING BALANCE") {
       const balance = toNumeric(row.balance ?? row.closingBalance ?? row.openingBalance);
@@ -2397,7 +2442,9 @@ export default function CostInputModal({ isOpen, onClose }) {
       const nextRows = normalizeMaintenanceSettingsRows(
         applyMasterStartDateToLeasedReserve(rawRows, masterDateRange.minDate)
       );
-      setMaintenanceReserveSchedule((prevSchedule) => generateMaintenanceReserveScheduleRows(nextRows, prevSchedule, schMxEvents));
+      setMaintenanceReserveSchedule((prevSchedule) => normalizeMaintenanceReserveScheduleRows(
+        generateMaintenanceReserveScheduleRows(nextRows, prevSchedule, schMxEvents)
+      ));
       return nextRows;
     });
   };
@@ -2439,7 +2486,7 @@ export default function CostInputModal({ isOpen, onClose }) {
               applyMasterStartDateToLeasedReserve(d.leasedReserve || [], masterDateRange.minDate)
             );
             setLeasedReserve(loadedLeasedReserve);
-            setMaintenanceReserveSchedule(sortMaintenanceReserveRows(d.maintenanceReserveSchedule || []));
+            setMaintenanceReserveSchedule(normalizeMaintenanceReserveScheduleRows(d.maintenanceReserveSchedule || []));
             setAircraftOnwing(d.aircraftOnwing || []);
             setSchMxEvents(d.schMxEvents || []);
             setTransitMx(d.transitMx || []);
@@ -2579,11 +2626,11 @@ export default function CostInputModal({ isOpen, onClose }) {
         applyMasterStartDateToLeasedReserve(leasedReserve, masterDateRange.minDate)
       );
       const persistableLeasedReserve = effectiveLeasedReserve.filter(hasMaintenanceSettingContent);
-      const effectiveMaintenanceReserveSchedule = generateMaintenanceReserveScheduleRows(
+      const effectiveMaintenanceReserveSchedule = normalizeMaintenanceReserveScheduleRows(generateMaintenanceReserveScheduleRows(
         persistableLeasedReserve,
         maintenanceReserveSchedule,
         schMxEvents
-      );
+      ));
       const settingsDriverIndex = persistableLeasedReserve.findIndex((row) => !validMaintenanceSettingDrivers.has(normalizeMaintenanceDriver(row?.driver)));
       if (settingsDriverIndex >= 0) {
         toast.error(`Maintenance Reserve Settings row ${settingsDriverIndex + 1}: enter a valid Driver.`);
@@ -2701,17 +2748,17 @@ export default function CostInputModal({ isOpen, onClose }) {
         aircraftOnwing,
         schMxEvents,
       });
-      setMaintenanceReserveSchedule(response.data?.data || []);
+      setMaintenanceReserveSchedule(normalizeMaintenanceReserveScheduleRows(response.data?.data || []));
       toast.success("Maintenance Reserve schedule generated.");
     } catch (error) {
       console.error("Error generating maintenance reserve schedule", error);
-      setMaintenanceReserveSchedule((prev) => generateMaintenanceReserveScheduleRows(
+      setMaintenanceReserveSchedule((prev) => normalizeMaintenanceReserveScheduleRows(generateMaintenanceReserveScheduleRows(
         normalizeMaintenanceSettingsRows(
           applyMasterStartDateToLeasedReserve(leasedReserve, masterDateRange.minDate)
         ),
         prev,
         schMxEvents
-      ));
+      )));
       toast.warn("Generated schedule locally; save to recalculate contribution amounts.");
     } finally {
       setGeneratingMrSchedule(false);
