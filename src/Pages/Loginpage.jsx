@@ -204,7 +204,7 @@ export default function Loginpage() {
 
             <div className="grid auto-rows-fr gap-3 xl:grid-cols-2">
               {features.map((text, idx) => (
-                <div key={idx} className={idx === features.length - 1 ? "h-full xl:col-span-2" : "h-full"}>
+                <div key={idx} className="h-full">
                   <FeatureItem text={text} delay={0.3 + (idx * 0.08)} />
                 </div>
               ))}
