@@ -15,6 +15,7 @@ import TermsAndConditionsModal from '../Components/Homepage/TermsAndConditionsMo
 import backgroundPic from "../assets/Images/bglogin.jpeg";
 import { validateStoredSession } from "../auth/validateSession";
 import { setAccessToken } from "../auth/session";
+import { useTenantConfig } from "../context/TenantConfigContext";
 
 // --- UI COMPONENTS ---
 
@@ -57,6 +58,7 @@ const FeatureItem = ({ text, delay }) => (
 // --- MAIN COMPONENT ---
 
 export default function Loginpage() {
+  const { config: tenantConfig } = useTenantConfig();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -188,7 +190,9 @@ export default function Loginpage() {
               <div className="h-10 w-10 bg-indigo-600/80 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg border border-indigo-400/30">
                 <Plane className="text-white" size={20} />
               </div>
-              <span className="text-xl font-bold tracking-wide drop-shadow-md">Airlineplan</span>
+              <span className="text-xl font-bold tracking-wide drop-shadow-md">
+                {tenantConfig.branding?.companyName || "Airlineplan"}
+              </span>
             </motion.div>
 
             <motion.div

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 import { hasPageAccess } from "../../../permissions/pageAccess";
+import { useTenantConfig } from "../../../context/TenantConfigContext";
 
 // Child Components
 import NetworkTable from "./NetworkTable";
@@ -69,7 +70,6 @@ const TABS = [
 const HIDDEN_TAB_IDS = new Set([]);
 const VISIBLE_TABS = TABS.filter((tab) => !HIDDEN_TAB_IDS.has(tab.id));
 const TENANT_ADMIN_ROLES = new Set(["tenant_admin", "admin"]);
-const DEFAULT_TENANT_ADMIN_FEATURES = [{ id: "users", isAllowed: true }];
 
 // --- COMPONENTS ---
 
@@ -111,7 +111,7 @@ const MainPage = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [tenantAdminFeatures, setTenantAdminFeatures] = useState(DEFAULT_TENANT_ADMIN_FEATURES);
+  const { config: tenantConfig, isFeatureEnabled } = useTenantConfig();
 
 
   useEffect(() => {
@@ -166,38 +166,6 @@ const MainPage = () => {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-    const hasTenantAdminAccess = TENANT_ADMIN_ROLES.has(currentUser?.role);
-
-    if (!hasTenantAdminAccess) {
-      setTenantAdminFeatures(DEFAULT_TENANT_ADMIN_FEATURES);
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    const loadTenantAdminFeatures = async () => {
-      try {
-        const response = await api.get("/tenant-admin/features");
-        if (isMounted) {
-          setTenantAdminFeatures(response.data.features || DEFAULT_TENANT_ADMIN_FEATURES);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setTenantAdminFeatures(DEFAULT_TENANT_ADMIN_FEATURES);
-          toast.error(error.response?.data?.error || "Could not load tenant admin features");
-        }
-      }
-    };
-
-    loadTenantAdminFeatures();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [currentUser?.role]);
-
-  useEffect(() => {
     const handleOutsideClick = (event) => {
       if (!event.target.closest("[data-menu-root='main-nav']")) {
         setMenuOpen(false);
@@ -241,22 +209,17 @@ const MainPage = () => {
   };
 
   const hasTenantAdminAccess = TENANT_ADMIN_ROLES.has(currentUser?.role);
-  const tenantAdminFeatureMap = useMemo(
-    () => new Map(tenantAdminFeatures.map((feature) => [feature.id, feature])),
-    [tenantAdminFeatures]
-  );
   const visibleTabs = useMemo(
     () => (
       hasTenantAdminAccess
-        ? TABS.filter((tab) => {
-          const feature = tenantAdminFeatureMap.get(tab.featureId);
-          return feature?.isAllowed === true || feature?.isAlllowed === true;
-        })
+        ? TABS.filter((tab) => isFeatureEnabled(tab.featureId))
         : VISIBLE_TABS.filter((tab) => (
-          !tab.requiresTenantAdmin && hasPageAccess(currentUser?.pageAccess, tab.featureId, "read")
+          !tab.requiresTenantAdmin &&
+          isFeatureEnabled(tab.featureId) &&
+          hasPageAccess(currentUser?.pageAccess, tab.featureId, "read")
         ))
     ),
-    [currentUser?.pageAccess, hasTenantAdminAccess, tenantAdminFeatureMap]
+    [currentUser?.pageAccess, hasTenantAdminAccess, isFeatureEnabled]
   );
   const activeTab = visibleTabs.find((tab) => tab.id === activeStep) || visibleTabs[0] || null;
   const ActiveComponent = activeTab?.component;
@@ -307,7 +270,7 @@ const MainPage = () => {
                   aria-label="Open Airlineplan menu"
                 >
                   <img
-                    src="/favicon-32x32.png"
+                    src={tenantConfig.branding?.logoUrl || "/favicon-32x32.png"}
                     alt=""
                     className={cn("w-7 h-7 object-contain transition-transform duration-300", menuOpen && "scale-105")}
                   />

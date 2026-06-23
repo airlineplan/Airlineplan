@@ -5,12 +5,15 @@ import App from './App.jsx'
 import './index.css'
 // Import the Provider
 import { ThemeProvider } from "./context/ThemeContext"; 
+import { TenantConfigProvider } from "./context/TenantConfigContext";
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ThemeProvider>
       <BrowserRouter>
-        <App />
+        <TenantConfigProvider>
+          <App />
+        </TenantConfigProvider>
       </BrowserRouter>
     </ThemeProvider>
   </React.StrictMode>
