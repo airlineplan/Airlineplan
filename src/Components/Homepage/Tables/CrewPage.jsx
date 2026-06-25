@@ -441,7 +441,7 @@ const MultiSelectDropdown = ({ placeholder, options = [], selected = [], onChang
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
-
+    
     const toggleOption = (option) => {
         const next = safeSelected.some((item) => item.value === option.value)
             ? safeSelected.filter((item) => item.value !== option.value)

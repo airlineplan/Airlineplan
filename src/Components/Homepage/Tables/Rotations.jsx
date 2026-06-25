@@ -119,6 +119,7 @@ const Rotations = () => {
 
   // System State
   const [isLoading, setIsLoading] = useState(false);
+  const [isFlightsLoading, setIsFlightsLoading] = useState(false);
   const [isPrevLoading, setIsPrevLoading] = useState(false);
   const [isRotationDeleting, setIsRotationDeleting] = useState(false);
   const [editable, setEditable] = useState(true);
@@ -134,6 +135,8 @@ const Rotations = () => {
   const RowsPerPage = 8;
   const [arrow, setArrow] = useState({ column: null, direction: "Up" });
   const [filter, setFilter] = useState({});
+  const [flightsTotal, setFlightsTotal] = useState(0);
+  const [flightsTotalPages, setFlightsTotalPages] = useState(1);
 
   const flightInputRef = useRef(null);
 
@@ -207,20 +210,40 @@ const Rotations = () => {
       effToDate,
       effFromDate,
       dow,
+      page: currentPage,
+      limit: RowsPerPage,
+      filters: filter,
+      sort: arrow,
     };
 
+    setIsFlightsLoading(true);
     try {
       const res = await api.post("/flightsWoRotations", requestData);
       setFlgtsTableData(res.data.data);
+      setFlightsTotal(res.data.pagination?.total || 0);
+      setFlightsTotalPages(res.data.pagination?.totalPages || 1);
     } catch (e) { console.error(e); }
+    finally { setIsFlightsLoading(false); }
   };
 
   useEffect(() => {
     if (selectedRotation && selectedVariant && effFromDate && effToDate && dow) {
       setEditable(false);
-      getFgtsWORotations();
+      const timer = setTimeout(() => {
+        getFgtsWORotations();
+      }, 250);
+      return () => clearTimeout(timer);
     }
-  }, [selectedRotation, selectedVariant, effFromDate, effToDate, rotationDevelopmentTableData]);
+    setFlgtsTableData([]);
+    setFlightsTotal(0);
+    setFlightsTotalPages(1);
+  }, [selectedRotation, selectedVariant, effFromDate, effToDate, dow, rotationDevelopmentTableData, currentPage, filter, arrow]);
+
+  useEffect(() => {
+    if (currentPage > flightsTotalPages) {
+      setCurrentPage(flightsTotalPages);
+    }
+  }, [currentPage, flightsTotalPages]);
 
   const handleRotationChange = async (val) => {
     if (val === "new") {
@@ -278,16 +301,24 @@ const Rotations = () => {
       });
 
       if (res.status === 200 || res.status === 201) {
-        toast.success("Leg added");
-        setRotationDevelopmentTableData(prev => [...prev, {
-          ...res.data.data, // Assuming API returns the created object or similar structure
+        const savedLeg = res.data?.data || {
           rotationNumber: selectedRotation,
           depNumber: rotationDevelopmentTableData.length + 1,
           flightNumber: flight,
           depStn: depStn.trim() || originalDepStn,
           std: std.trim() || originalStd,
-          bt, sta, arrStn, variant: selectedVariant, dow, effFromDate, effToDate, domIntl, gt
-        }]);
+          bt,
+          sta,
+          arrStn,
+          variant: selectedVariant,
+          dow,
+          effFromDate,
+          effToDate,
+          domIntl,
+          gt
+        };
+        toast.success("Leg added");
+        setRotationDevelopmentTableData(prev => [...prev, savedLeg]);
         // Reset Inputs
         setFlight(""); setBt(""); setSta(""); setArrStn(""); setDomIntl(""); setGt("00:00");
         flightInputRef.current?.focus();
@@ -384,24 +415,12 @@ const Rotations = () => {
   };
 
   // --- TABLE HELPERS ---
-  const handleFilterChange = (e) => setFilter({ ...filter, [e.target.name]: e.target.value });
-
-  const sortedData = () => {
-    if (!arrow.column) return flgtsTableData;
-    return [...flgtsTableData].sort((a, b) => {
-      const valA = String(a[arrow.column] || "");
-      const valB = String(b[arrow.column] || "");
-      return arrow.direction === "Up" ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    });
+  const handleFilterChange = (e) => {
+    setCurrentPage(1);
+    setFilter({ ...filter, [e.target.name]: e.target.value });
   };
 
-  const paginatedData = sortedData()?.filter(row => {
-    return Object.keys(filter).every(key => {
-      if (!filter[key]) return true;
-      const val = key === 'date' ? moment(row.date).format("DD-MMM-YY") : String(row[key] || "");
-      return val.toLowerCase().includes(filter[key].toLowerCase());
-    });
-  })?.slice((currentPage - 1) * RowsPerPage, currentPage * RowsPerPage);
+  const paginatedData = flgtsTableData || [];
 
   const rotationOptions = useMemo(() => {
     const opts = listOfRotation.map(r => ({ label: r.label, value: r.value }));
@@ -586,7 +605,16 @@ const Rotations = () => {
                   {['date', 'day', 'flight', 'depStn', 'std', 'bt', 'sta', 'arrStn', 'variant'].map(key => (
                     <th key={key} className="p-2 min-w-[80px]">
                       <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-center gap-1 cursor-pointer hover:text-indigo-600" onClick={() => { setArrow({ column: key, direction: arrow.direction === 'Up' ? 'Down' : 'Up' }) }}>
+                        <div
+                          className="flex items-center justify-center gap-1 cursor-pointer hover:text-indigo-600"
+                          onClick={() => {
+                            setCurrentPage(1);
+                            setArrow(prev => ({
+                              column: key,
+                              direction: prev.column === key && prev.direction === 'Up' ? 'Down' : 'Up'
+                            }));
+                          }}
+                        >
                           {key.toUpperCase()}
                           {arrow.column === key && (arrow.direction === 'Up' ? <ArrowUp size={10} /> : <ArrowDown size={10} />)}
                         </div>
@@ -603,7 +631,21 @@ const Rotations = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {paginatedData?.map((row, idx) => (
+                {isFlightsLoading && (
+                  <tr>
+                    <td colSpan={10} className="p-6 text-center text-sm text-slate-500">
+                      Loading flights...
+                    </td>
+                  </tr>
+                )}
+                {!isFlightsLoading && paginatedData.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="p-6 text-center text-sm text-slate-500">
+                      No flights found
+                    </td>
+                  </tr>
+                )}
+                {!isFlightsLoading && paginatedData?.map((row, idx) => (
                   <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                     <td className="p-2 text-center text-sm text-slate-500">{(currentPage - 1) * RowsPerPage + idx + 1}</td>
                     <td className="p-2 text-center text-sm whitespace-nowrap">{moment(row.date).format("DD-MMM-YY")}</td>
@@ -623,9 +665,11 @@ const Rotations = () => {
 
           {/* Pagination */}
           <div className="p-2 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2 bg-slate-50 dark:bg-slate-900">
-            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1 rounded hover:bg-slate-200 disabled:opacity-50"><ChevronLeft size={16} /></button>
-            <span className="text-xs font-medium self-center text-slate-600">Page {currentPage}</span>
-            <button onClick={() => setCurrentPage(p => p + 1)} disabled={paginatedData?.length < RowsPerPage} className="p-1 rounded hover:bg-slate-200 disabled:opacity-50"><ChevronRight size={16} /></button>
+            <span className="text-xs font-medium self-center text-slate-600">
+              {flightsTotal} flights · Page {currentPage} of {flightsTotalPages}
+            </span>
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || isFlightsLoading} className="p-1 rounded hover:bg-slate-200 disabled:opacity-50"><ChevronLeft size={16} /></button>
+            <button onClick={() => setCurrentPage(p => Math.min(flightsTotalPages, p + 1))} disabled={currentPage >= flightsTotalPages || isFlightsLoading} className="p-1 rounded hover:bg-slate-200 disabled:opacity-50"><ChevronRight size={16} /></button>
           </div>
         </div>
 
