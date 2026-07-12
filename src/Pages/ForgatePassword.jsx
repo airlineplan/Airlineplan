@@ -60,7 +60,11 @@ const ForgatePassword = () => {
         toast.error(record.message || "Failed to send OTP");
       }
     } catch (error) {
-      toast.error("Something went wrong. Please try again.");
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        "Something went wrong. Please try again.";
+      toast.error(message);
       console.error(error);
     } finally {
       setLoading(false);

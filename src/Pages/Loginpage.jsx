@@ -285,9 +285,7 @@ export default function Loginpage() {
             </form>
 
             <div className="mt-8 text-center">
-              <p className="text-sm text-indigo-100/60 drop-shadow-sm">
-                Need access? Ask your tenant admin to create an account.
-              </p>
+             
             </div>
 
             {/* Footer Links - Route Economics has been removed from here */}
