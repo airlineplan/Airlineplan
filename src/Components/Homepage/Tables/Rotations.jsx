@@ -198,7 +198,7 @@ const Rotations = () => {
     }
   }, [rotationDevelopmentTableData]);
 
-  const getFgtsWORotations = async () => {
+  const getFgtsWORotations = async (pageOverride) => {
     const lastObject = rotationDevelopmentTableData[rotationDevelopmentTableData.length - 1];
     let allowedDeptStn = lastObject ? lastObject.arrStn : "";
     let allowedStdLt = lastObject ? addTime(lastObject.sta, lastObject.gt) : "";
@@ -210,7 +210,7 @@ const Rotations = () => {
       effToDate,
       effFromDate,
       dow,
-      page: currentPage,
+      page: pageOverride ?? currentPage,
       limit: RowsPerPage,
       filters: filter,
       sort: arrow,
@@ -279,6 +279,8 @@ const Rotations = () => {
         rotationTag, effFromDate, effToDate, dow, selectedVariant
       });
       setEditable(false);
+      setCurrentPage(1);
+      await getFgtsWORotations(1);
       toast.success("Rotation saved successfully");
     } catch (e) { toast.error("Error saving rotation"); }
   };
@@ -324,7 +326,8 @@ const Rotations = () => {
         flightInputRef.current?.focus();
       }
     } catch (e) {
-      toast.error(`Error adding leg: ${e.response?.data?.flightNumber || ''}`);
+      const apiMessage = e.response?.data?.message;
+      toast.error(apiMessage || `Error adding leg: ${e.response?.data?.flightNumber || flight}`);
       flightInputRef.current?.focus();
     } finally {
       setIsLoading(false);
