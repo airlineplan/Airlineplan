@@ -228,7 +228,6 @@ const Rotations = () => {
 
   useEffect(() => {
     if (selectedRotation && selectedVariant && effFromDate && effToDate && dow) {
-      setEditable(false);
       const timer = setTimeout(() => {
         getFgtsWORotations();
       }, 250);
@@ -264,6 +263,7 @@ const Rotations = () => {
         setEffFromDate(rotationSummary.effFromDt ? dayjs(rotationSummary.effFromDt).format("YYYY-MM-DD") : "");
         setEffToDate(rotationSummary.effToDt ? dayjs(rotationSummary.effToDt).format("YYYY-MM-DD") : "");
         setDow(rotationSummary.dow);
+        setEditable(false);
       } catch (e) { console.error(e); }
     }
   };
