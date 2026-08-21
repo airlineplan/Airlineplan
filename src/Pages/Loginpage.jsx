@@ -16,7 +16,6 @@ import backgroundPic from "../assets/Images/bglogin.jpeg";
 import { validateStoredSession } from "../auth/validateSession";
 import { setAccessToken } from "../auth/session";
 import { useTenantConfig } from "../context/TenantConfigContext";
-import { getPublicBrandName } from "../tenantBranding";
 
 // --- UI COMPONENTS ---
 
@@ -60,11 +59,6 @@ const FeatureItem = ({ text, delay }) => (
 
 export default function Loginpage() {
   const { config: tenantConfig } = useTenantConfig();
-  const publicBrandName = getPublicBrandName({
-    hostname: typeof window === "undefined" ? "" : window.location.hostname,
-    rootDomain: import.meta.env.VITE_ROOT_DOMAIN || "airlineplan.com",
-    tenantCompanyName: tenantConfig.branding?.companyName,
-  });
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -197,7 +191,7 @@ export default function Loginpage() {
                 <Plane className="text-white" size={20} />
               </div>
               <span className="text-xl font-bold tracking-wide drop-shadow-md">
-                {publicBrandName}
+                {tenantConfig.branding?.companyName || "Airlineplan"}
               </span>
             </motion.div>
 
