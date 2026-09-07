@@ -7,7 +7,7 @@ import { clsx } from "clsx";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import DateInput from "./DateInput";
-import { buildStationCurrencyOptions } from "./stationCurrencyOptions";
+import { buildStationCurrencyOptions, normalizeStationCurrencyCode } from "./stationCurrencyOptions";
 
 // --- CONSTANTS ---
 const TIMEZONES = [
@@ -114,13 +114,19 @@ const StationsTable = () => {
           api.get("/revenue-config"),
         ]);
 
-        setCurrencyOptions(buildStationCurrencyOptions(revenueConfigResponse.data?.data));
-
         if (response.data?.data) {
-          setData(response.data.data.map((station) => ({
+          const stationRows = response.data.data.map((station) => ({
             ...station,
-            currencyCode: station.currencyCode || "INR",
-          })));
+            currencyCode: normalizeStationCurrencyCode(
+              station.currencyCode || station.currency || station.ccy
+            ) || "INR",
+          }));
+          const nextCurrencyOptions = buildStationCurrencyOptions(
+            revenueConfigResponse.data?.data,
+            stationRows
+          );
+          setCurrencyOptions(nextCurrencyOptions);
+          setData(stationRows);
           if (response.data.hometimeZone) setSelectedHomeTimeZone(response.data.hometimeZone);
         }
       } catch (error) {

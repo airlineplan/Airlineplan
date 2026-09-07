@@ -24,3 +24,24 @@ test("station currency options normalize and deduplicate FX codes", () => {
 test("station currency options fall back to INR when FX config is empty", () => {
   assert.deepEqual(buildStationCurrencyOptions(), ["INR"]);
 });
+
+test("station currency options preserve currencies already assigned to stations", () => {
+  const options = buildStationCurrencyOptions(
+    { reportingCurrency: "INR", currencyCodes: ["INR"] },
+    [
+      { stationName: "AUH", currencyCode: "AED" },
+      { stationName: "CEI", currencyCode: "THB" },
+    ]
+  );
+
+  assert.deepEqual(options, ["INR", "AED", "THB"]);
+});
+
+test("station currency options support legacy station currency fields", () => {
+  const options = buildStationCurrencyOptions(
+    {},
+    [{ stationName: "AUH", currency: "aed" }, { stationName: "CEI", ccy: "thb" }]
+  );
+
+  assert.deepEqual(options, ["AED", "THB"]);
+});

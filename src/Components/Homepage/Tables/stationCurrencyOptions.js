@@ -8,10 +8,13 @@ export function normalizeStationCurrencyCode(value) {
     .slice(0, 3);
 }
 
-export function buildStationCurrencyOptions(config = {}) {
+export function buildStationCurrencyOptions(config = {}, stations = []) {
   const currencyCodes = [
     config.reportingCurrency,
     ...(Array.isArray(config.currencyCodes) ? config.currencyCodes : []),
+    ...(Array.isArray(stations)
+      ? stations.flatMap((station) => [station?.currencyCode, station?.currency, station?.ccy])
+      : []),
   ]
     .map(normalizeStationCurrencyCode)
     .filter((code) => code.length === 3);
