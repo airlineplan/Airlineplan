@@ -79,12 +79,16 @@ export default function Contact() {
     setLoading(true);
 
     try {
-      await api.post('/send-contactEmail', formData);
+      const payload = Object.fromEntries(
+        Object.entries(formData).map(([key, value]) => [key, value.trim()])
+      );
+      await api.post('/send-contactEmail', payload);
       toast.success('Message sent successfully!');
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error('Error sending message. Please try again later.');
+      const message = error?.response?.data?.message;
+      toast.error(message || 'Unable to send your message. Please email admin@airlineplan.com directly.');
     } finally {
       setLoading(false);
     }

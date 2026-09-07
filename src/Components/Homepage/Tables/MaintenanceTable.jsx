@@ -623,6 +623,7 @@ const MaintenanceDashboard = () => {
     const [showUtilisationModal, setShowUtilisationModal] = useState(false);
     const [utilisationData, setUtilisationData] = useState([]);
     const [isEditingUtilisation, setIsEditingUtilisation] = useState(false);
+    const [isUpdatingUtilisation, setIsUpdatingUtilisation] = useState(false);
     const [utilisationSortConfig, setUtilisationSortConfig] = useState({ key: null, direction: "Up" });
     const [utilisationFilters, setUtilisationFilters] = useState({ msn: "", fromDate: "", toDate: "", hours: "", cycles: "", avgDowndays: "" });
 
@@ -836,7 +837,9 @@ const MaintenanceDashboard = () => {
             cycles: "",
             avgDowndays: ""
         };
-        setUtilisationData([...utilisationData, newRow]);
+        setUtilisationFilters({ msn: "", fromDate: "", toDate: "", hours: "", cycles: "", avgDowndays: "" });
+        setUtilisationSortConfig({ key: null, direction: "Up" });
+        setUtilisationData(prev => [...prev, newRow]);
         setIsEditingUtilisation(true);
     };
 
@@ -858,6 +861,8 @@ const MaintenanceDashboard = () => {
     };
 
     const handleUpdateUtilisation = async () => {
+        if (isUpdatingUtilisation) return;
+        setIsUpdatingUtilisation(true);
         try {
             const res = await api.post('/maintenance/utilisation-assumptions', { utilisationAssumptions: utilisationData });
             toast.success(res.data?.message || "Utilisation assumptions updated successfully.");
@@ -868,6 +873,8 @@ const MaintenanceDashboard = () => {
         } catch (error) {
             console.error("Failed to update utilisation assumptions", error);
             toast.error(error.response?.data?.message || "Failed to update utilisation assumptions.");
+        } finally {
+            setIsUpdatingUtilisation(false);
         }
     };
 
@@ -1748,8 +1755,8 @@ const MaintenanceDashboard = () => {
                                 </p>
                             </div>
                             <div className="flex gap-2">
-                                <button onClick={() => setIsEditingUtilisation(!isEditingUtilisation)} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${isEditingUtilisation ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}>Edit</button>
-                                <button onClick={handleUpdateUtilisation} disabled={!isEditingUtilisation} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all shadow-sm">Update</button>
+                                <button disabled={isUpdatingUtilisation} onClick={() => setIsEditingUtilisation(!isEditingUtilisation)} className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm disabled:cursor-not-allowed disabled:opacity-60 ${isEditingUtilisation ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}>Edit</button>
+                                <button onClick={handleUpdateUtilisation} disabled={!isEditingUtilisation || isUpdatingUtilisation} className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-all shadow-sm">{isUpdatingUtilisation ? "Updating..." : "Update"}</button>
                                 <button onClick={() => setShowUtilisationModal(false)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><X size={20} /></button>
                             </div>
                         </div>
@@ -1820,7 +1827,7 @@ const MaintenanceDashboard = () => {
                                         )}
                                         <tr className="bg-slate-50 dark:bg-slate-900/50">
                                             <td colSpan="7" className="p-2 text-center">
-                                                <button onClick={handleAddUtilisationRow} className="text-blue-600 font-semibold hover:underline">
+                                                <button disabled={isUpdatingUtilisation} onClick={handleAddUtilisationRow} className="text-blue-600 font-semibold hover:underline disabled:cursor-not-allowed disabled:opacity-50">
                                                     +Add
                                                 </button>
                                             </td>

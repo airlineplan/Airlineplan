@@ -495,6 +495,23 @@ const normalizeSchMxEventRows = (rows = [], scheduleRows = []) => (
   }))
 );
 
+const getSchMxEventIdentity = (row = {}) => {
+  const occurrenceId = String(row?.occurrenceId || "").trim();
+  if (occurrenceId) return `occurrence:${occurrenceId}`;
+
+  const eventSeriesId = String(row?.eventSeriesId || "").trim();
+  const occurrenceNumber = String(row?.occurrenceNumber ?? "").trim();
+  if (eventSeriesId && occurrenceNumber) return `series:${eventSeriesId}:${occurrenceNumber}`;
+
+  return [
+    toIsoDate(row?.date) || String(row?.date || ""),
+    normalizeText(row?.msnEsnApun || row?.msn),
+    normalizeText(row?.event || row?.schMxEvent || row?.schEvent),
+    normalizeText(row?.pn),
+    normalizeText(row?.snBn || row?.sn),
+  ].join("|");
+};
+
 const generateMaintenanceMonthlyDates = (asOnDate, endDate) => {
   const start = parseDateValue(asOnDate);
   const end = parseDateValue(endDate);
@@ -2047,6 +2064,7 @@ function EditableTable({
   readOnly = false,
   allowAdd = true,
   allowDelete = true,
+  onDelete,
 }) {
   const [editingIndex, setEditingIndex] = useState(null);
   const [editRow, setEditRow] = useState({});
@@ -2083,6 +2101,7 @@ function EditableTable({
   };
 
   const handleDelete = (index) => {
+    onDelete?.(data[index], index);
     const newData = data.filter((_, i) => i !== index);
     setData(newData);
     if (editingIndex === index) setEditingIndex(null);
@@ -2461,6 +2480,7 @@ export default function CostInputModal({ isOpen, onClose, onSaved }) {
   const [maintenanceReserveSchedule, setMaintenanceReserveSchedule] = useState([]);
   const [aircraftOnwing, setAircraftOnwing] = useState([]);
   const [schMxEvents, setSchMxEvents] = useState([]);
+  const [schMxEventExclusions, setSchMxEventExclusions] = useState([]);
   const [transitMx, setTransitMx] = useState([]);
   const [otherMx, setOtherMx] = useState([]);
   const [rotableChanges, setRotableChanges] = useState([]);
@@ -2543,6 +2563,7 @@ export default function CostInputModal({ isOpen, onClose, onSaved }) {
             setMaintenanceReserveSchedule(loadedMaintenanceReserveSchedule);
             setAircraftOnwing(d.aircraftOnwing || []);
             setSchMxEvents(normalizeSchMxEventRows(d.schMxEvents || [], loadedMaintenanceReserveSchedule));
+            setSchMxEventExclusions(d.schMxEventExclusions || []);
             setTransitMx(d.transitMx || []);
             setOtherMx(d.otherMx || []);
             setRotableChanges(
@@ -2729,7 +2750,10 @@ export default function CostInputModal({ isOpen, onClose, onSaved }) {
         fuelConsum, fuelConsumIndex, apuUsage, plfEffect, ccyFuel,
         leasedReserve: persistableLeasedReserve,
         maintenanceReserveSchedule: effectiveMaintenanceReserveSchedule,
-        aircraftOnwing, schMxEvents: normalizeSchMxEventRows(schMxEvents, effectiveMaintenanceReserveSchedule), transitMx, otherMx, rotableChanges,
+        aircraftOnwing,
+        schMxEvents: normalizeSchMxEventRows(schMxEvents, effectiveMaintenanceReserveSchedule),
+        schMxEventExclusions,
+        transitMx, otherMx, rotableChanges,
         navMtowTiers, navEnr, navTerm, airportLanding, airportDom, airportIntl, airportAvsec, airportOther,
         otherDoc
       };
@@ -3037,6 +3061,16 @@ export default function CostInputModal({ isOpen, onClose, onSaved }) {
                   title="Scheduled Maintenance Events calendar table"
                   data={schMxEvents}
                   setData={(rows) => setSchMxEvents(normalizeSchMxEventRows(rows, maintenanceReserveSchedule))}
+                  onDelete={(row) => {
+                    if (normalizeText(row?.source) !== "SCHEDULED_MAINTENANCE") return;
+                    setSchMxEventExclusions((currentRows) => {
+                      const identity = getSchMxEventIdentity(row);
+                      if (currentRows.some((currentRow) => getSchMxEventIdentity(currentRow) === identity)) {
+                        return currentRows;
+                      }
+                      return [...currentRows, row];
+                    });
+                  }}
                   transformRow={(row) => normalizeSchMxEventRows([row], maintenanceReserveSchedule)[0] || row}
                   highlightAutoFields
                   columns={[

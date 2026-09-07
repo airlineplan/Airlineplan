@@ -1501,53 +1501,6 @@ const DashboardTable = () => {
     getDropdownData();
   }, []);
 
-  useEffect(() => {
-    const loadRevenueConfig = async () => {
-      try {
-        const response = await api.get("/revenue/config");
-        const config = response.data?.data || {};
-        const savedCurrencyCodes = Array.isArray(config.currencyCodes) ? config.currencyCodes : [];
-        const normalizedCodes = [...new Set(savedCurrencyCodes.map((code) => normalizeCurrencyCode(code)).filter(Boolean))];
-        const normalizedReportingCurrency = normalizeCurrencyCode(config.reportingCurrency) || normalizedCodes[0] || "";
-        const nextReportingCurrency =
-          normalizedCodes.length === 0 && (Array.isArray(config.fxRates) ? config.fxRates.length === 0 : true)
-            ? ""
-            : normalizedReportingCurrency;
-        const nextCurrencyCodes = normalizedCodes.length > 0
-          ? normalizedCodes
-          : nextReportingCurrency
-            ? [nextReportingCurrency]
-            : [];
-        const nextFxRates = Array.isArray(config.fxRates) ? config.fxRates : [];
-
-        setCurrencyCodes(nextCurrencyCodes);
-        setReportingCurrency(nextReportingCurrency);
-        setSavedFxRates(nextFxRates);
-        setExposureCurrency((prev) => normalizeCurrencyCode(prev) || nextReportingCurrency || nextCurrencyCodes[0] || "");
-      } catch (error) {
-        console.error("Error loading revenue config:", error);
-      }
-    };
-
-    loadRevenueConfig();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const loadFxDates = async () => {
-      try {
-        const response = await api.get("/flight", { params: { page: 1, limit: 100000 } });
-        const flights = Array.isArray(response.data?.data) ? response.data.data : [];
-        setFxDateColumns(buildFxDateColumns(flights));
-      } catch (error) {
-        console.error("Error loading flight dates for FX grid:", error);
-        setFxDateColumns([]);
-      }
-    };
-
-    loadFxDates();
-  }, []);
-
   const serializedFilters = useMemo(() => {
     const params = {
       label: selectedValues.label,

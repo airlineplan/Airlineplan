@@ -7,6 +7,7 @@ import { clsx } from "clsx";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import DateInput from "./DateInput";
+import { buildStationCurrencyOptions } from "./stationCurrencyOptions";
 
 // --- CONSTANTS ---
 const TIMEZONES = [
@@ -41,12 +42,13 @@ const StyledInput = ({ value, onChange, error, placeholder, type = "text", ...pr
   );
 };
 
-const StyledSelect = ({ value, onChange, options }) => (
+const StyledSelect = ({ value, onChange, options, ...props }) => (
   <div className="relative">
     <select
       value={value || ""}
       onChange={onChange}
       className="w-full px-2.5 py-1 text-sm bg-slate-50 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700 dark:text-slate-200 cursor-pointer appearance-none pr-6"
+      {...props}
     >
       {options.map((opt) => (
         <option key={opt} value={opt}>{opt}</option>
@@ -62,6 +64,7 @@ const StyledSelect = ({ value, onChange, options }) => (
 const StationsTable = () => {
   const [selectedHomeTimeZone, setSelectedHomeTimeZone] = useState('UTC+5:30');
   const [data, setData] = useState([]);
+  const [currencyOptions, setCurrencyOptions] = useState(["INR"]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
 
@@ -106,7 +109,13 @@ const StationsTable = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await api.get("/get-stationData");
+        const [response, revenueConfigResponse] = await Promise.all([
+          api.get("/get-stationData"),
+          api.get("/revenue-config"),
+        ]);
+
+        setCurrencyOptions(buildStationCurrencyOptions(revenueConfigResponse.data?.data));
+
         if (response.data?.data) {
           setData(response.data.data.map((station) => ({
             ...station,
@@ -116,7 +125,7 @@ const StationsTable = () => {
         }
       } catch (error) {
         console.error("Error fetching data:", error);
-        toast.error("Failed to load station data");
+        toast.error("Failed to load station data or FX currencies");
       } finally {
         setIsFetching(false);
       }
@@ -247,11 +256,11 @@ const StationsTable = () => {
                       <StyledSelect value={row.dsttz} options={TIMEZONES} onChange={(e) => handleInputChange(e, index, 'dsttz')} />
                     </td>
                     <td className="p-1 border-r border-slate-100 dark:border-slate-800">
-                      <StyledInput
-                        value={row.currencyCode || ""}
+                      <StyledSelect
+                        value={row.currencyCode || currencyOptions[0]}
+                        options={currencyOptions}
                         onChange={(e) => handleInputChange(e, index, 'currencyCode')}
-                        placeholder="INR"
-                        maxLength={3}
+                        aria-label={`${row.stationName} currency`}
                       />
                     </td>
 
