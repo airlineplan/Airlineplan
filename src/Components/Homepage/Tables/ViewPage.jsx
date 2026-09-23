@@ -136,8 +136,9 @@ const ViewPage = () => {
   const [mode, setMode] = useState("Rotations");
   const [stationCode, setStationCode] = useState("DEL");
   const [stationsData, setStationsData] = useState([]);
-  const [stationsLoading, setStationsLoading] = useState(false);
-  const [timezone, setTimezone] = useState("UTC+5:30");
+  const [stationsLoading, setStationsLoading] = useState(true);
+  const [timezone, setTimezone] = useState("");
+  const [timezoneReady, setTimezoneReady] = useState(false);
 
   const [weeks, setWeeks] = useState([]);
   const [weekStart, setWeekStart] = useState("");
@@ -180,6 +181,8 @@ const ViewPage = () => {
   const [creatingConnections, setCreatingConnections] = useState(false);
 
   const handleCreateConnections = async () => {
+    if (!timezoneReady || !timezone || !formattedTimelineStart) return;
+
     try {
       setCreatingConnections(true);
 
@@ -226,24 +229,33 @@ const ViewPage = () => {
   }, [mode]);
 
   useEffect(() => {
-    if (mode !== "Station" || stationsData.length > 0) return;
-
+    let active = true;
     const fetchStations = async () => {
-      setStationsLoading(true);
       try {
         const response = await api.get("/get-stationData");
+        if (!active) return;
         const stations = Array.isArray(response.data?.data) ? response.data.data : [];
+        const homeTimezone = String(response.data?.hometimeZone || "").trim();
         setStationsData(stations);
+        setTimezone(TIMEZONES.includes(homeTimezone) ? homeTimezone : "UTC+5:30");
       } catch (error) {
         console.error("Failed to fetch stations for View Page", error);
+        if (!active) return;
         setStationsData([]);
+        setTimezone("UTC+5:30");
       } finally {
-        setStationsLoading(false);
+        if (active) {
+          setStationsLoading(false);
+          setTimezoneReady(true);
+        }
       }
     };
 
     fetchStations();
-  }, [mode, stationsData.length]);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const stationOptions = useMemo(() => {
     const stations = stationsData
@@ -261,7 +273,7 @@ const ViewPage = () => {
   }, [mode, stationCode, stationOptions]);
 
   useEffect(() => {
-    if (!weekStart || !formattedTimelineStart) return;
+    if (!weekStart || !formattedTimelineStart || !timezoneReady || !timezone) return;
 
     const fetchData = async () => {
       setLoading(true);
@@ -280,7 +292,7 @@ const ViewPage = () => {
     };
 
     fetchData();
-  }, [mode, stationCode, weekStart, formattedTimelineStart, timezone]);
+  }, [mode, stationCode, weekStart, formattedTimelineStart, timezone, timezoneReady]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;

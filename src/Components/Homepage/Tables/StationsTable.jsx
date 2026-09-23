@@ -115,16 +115,23 @@ const StationsTable = () => {
         ]);
 
         if (response.data?.data) {
-          const stationRows = response.data.data.map((station) => ({
-            ...station,
-            currencyCode: normalizeStationCurrencyCode(
+          const revenueConfig = revenueConfigResponse.data?.data || {};
+          const nextCurrencyOptions = buildStationCurrencyOptions(revenueConfig);
+          const reportingCurrency = normalizeStationCurrencyCode(revenueConfig.reportingCurrency);
+          const fallbackCurrency = nextCurrencyOptions.includes(reportingCurrency)
+            ? reportingCurrency
+            : (nextCurrencyOptions[0] || "INR");
+          const stationRows = response.data.data.map((station) => {
+            const persistedCurrency = normalizeStationCurrencyCode(
               station.currencyCode || station.currency || station.ccy
-            ) || "INR",
-          }));
-          const nextCurrencyOptions = buildStationCurrencyOptions(
-            revenueConfigResponse.data?.data,
-            stationRows
-          );
+            );
+            return {
+              ...station,
+              currencyCode: nextCurrencyOptions.includes(persistedCurrency)
+                ? persistedCurrency
+                : fallbackCurrency,
+            };
+          });
           setCurrencyOptions(nextCurrencyOptions);
           setData(stationRows);
           if (response.data.hometimeZone) setSelectedHomeTimeZone(response.data.hometimeZone);
