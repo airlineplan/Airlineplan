@@ -8,11 +8,12 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import DateInput from "./DateInput";
 import { buildStationCurrencyOptions, normalizeStationCurrencyCode } from "./stationCurrencyOptions";
+import { TIMEZONES, resolveHomeTimezone } from "./viewTimezoneUtils";
 
 // --- CONSTANTS ---
-const TIMEZONES = [
-  'UTC-12:00', 'UTC-11:45', 'UTC-11:30', 'UTC-11:15', 'UTC-11:00', 'UTC-10:45', 'UTC-10:30', 'UTC-10:15', 'UTC-10:00', 'UTC-9:45', 'UTC-9:30', 'UTC-9:15', 'UTC-9:00', 'UTC-8:45', 'UTC-8:30', 'UTC-8:15', 'UTC-8:00', 'UTC-7:45', 'UTC-7:30', 'UTC-7:15', 'UTC-7:00', 'UTC-6:45', 'UTC-6:30', 'UTC-6:15', 'UTC-6:00', 'UTC-5:45', 'UTC-5:30', 'UTC-5:15', 'UTC-5:00', 'UTC-4:45', 'UTC-4:30', 'UTC-4:15', 'UTC-4:00', 'UTC-3:45', 'UTC-3:30', 'UTC-3:15', 'UTC-3:00', 'UTC-2:45', 'UTC-2:30', 'UTC-2:15', 'UTC-2:00', 'UTC-1:45', 'UTC-1:30', 'UTC-1:15', 'UTC-1:00', 'UTC-0:45', 'UTC-0:30', 'UTC-0:15', 'UTC+0:00', 'UTC+0:15', 'UTC+0:30', 'UTC+0:45', 'UTC+1:00', 'UTC+1:15', 'UTC+1:30', 'UTC+1:45', 'UTC+2:00', 'UTC+2:15', 'UTC+2:30', 'UTC+2:45', 'UTC+3:00', 'UTC+3:15', 'UTC+3:30', 'UTC+3:45', 'UTC+4:00', 'UTC+4:15', 'UTC+4:30', 'UTC+4:45', 'UTC+5:00', 'UTC+5:15', 'UTC+5:30', 'UTC+5:45', 'UTC+6:00', 'UTC+6:15', 'UTC+6:30', 'UTC+6:45', 'UTC+7:00', 'UTC+7:15', 'UTC+7:30', 'UTC+7:45', 'UTC+8:00', 'UTC+8:15', 'UTC+8:30', 'UTC+8:45', 'UTC+9:00', 'UTC+9:15', 'UTC+9:30', 'UTC+9:45', 'UTC+10:00', 'UTC+10:15', 'UTC+10:30', 'UTC+10:45', 'UTC+11:00', 'UTC+11:15', 'UTC+11:30', 'UTC+11:45', 'UTC+12:00'
-];
+
+// TIMEZONES imported from viewTimezoneUtils
+
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -69,7 +70,21 @@ const StationsTable = () => {
   const [isFetching, setIsFetching] = useState(true);
 
   // --- LOGIC ---
-  const handleTimeZoneChange = (e) => setSelectedHomeTimeZone(e.target.value);
+  const handleTimeZoneChange = async (e) => {
+    const newTz = e.target.value;
+    setSelectedHomeTimeZone(newTz);
+    try {
+      await api.post('/saveStation', {
+        stations: data,
+        homeTimeZone: newTz,
+      });
+      toast.success("Home timezone updated successfully!");
+      window.dispatchEvent(new Event("refreshData"));
+    } catch (error) {
+      console.error("Failed to update home timezone:", error);
+      toast.error("Failed to update home timezone");
+    }
+  };
 
   const handleInputChange = (e, rowIndex, columnName) => {
     let value = e.target ? e.target.value : e;
@@ -134,7 +149,8 @@ const StationsTable = () => {
           });
           setCurrencyOptions(nextCurrencyOptions);
           setData(stationRows);
-          if (response.data.hometimeZone) setSelectedHomeTimeZone(response.data.hometimeZone);
+          const loadedHomeTz = response.data.hometimeZone || response.data.homeTimeZone;
+          if (loadedHomeTz) setSelectedHomeTimeZone(resolveHomeTimezone(loadedHomeTz));
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -182,7 +198,8 @@ const StationsTable = () => {
             <select
               value={selectedHomeTimeZone}
               onChange={handleTimeZoneChange}
-              className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 py-1.5 pl-3 pr-8 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              disabled={isFetching || isLoading}
+              className="appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 py-1.5 pl-3 pr-8 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 cursor-pointer"
             >
               {TIMEZONES.map((tz) => (
                 <option key={tz} value={tz}>{tz}</option>
