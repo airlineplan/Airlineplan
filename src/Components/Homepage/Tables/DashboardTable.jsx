@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import api from "../../../apiConfig";
+import FlightCategorySelect from "./FlightCategorySelect";
 import * as XLSX from "xlsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { clsx } from "clsx";
@@ -1412,6 +1413,7 @@ const DashboardTable = () => {
   const [loading, setLoading] = useState(true);
 
   const [selectedValues, setSelectedValues] = useState({
+    category: "Planned",
     label: "both",
     periodicity: "weekly",
   });
@@ -1481,7 +1483,7 @@ const DashboardTable = () => {
   useEffect(() => {
     const getDropdownData = async () => {
       try {
-        const response = await api.get("/dashboard/populateDropDowns");
+        const response = await api.get("/dashboard/populateDropDowns", { params: { category: selectedValues.category } });
         if (response.data && typeof response.data === "object") {
           setDropdownOptions({
             flight: Array.isArray(response.data.flight) ? response.data.flight : [],
@@ -1499,10 +1501,11 @@ const DashboardTable = () => {
     };
 
     getDropdownData();
-  }, []);
+  }, [selectedValues.category]);
 
   const serializedFilters = useMemo(() => {
     const params = {
+      category: selectedValues.category,
       label: selectedValues.label,
       periodicity: selectedValues.periodicity,
     };
@@ -1872,6 +1875,8 @@ const DashboardTable = () => {
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.8fr)_minmax(320px,0.7fr)]">
           <section className="rounded-3xl border border-slate-200 bg-white/85 p-5 shadow-xl shadow-slate-900/5 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/70">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <FlightCategorySelect value={selectedValues.category} onChange={category => setSelectedValues(previous => ({ ...previous, category }))} />
+              {selectedValues.category !== "Planned" && <p className="text-sm text-amber-700 dark:text-amber-300">Revenue is from plan (POO).</p>}
               <SingleSelectDropdown
                 placeholder="Label"
                 options={singleSelectLabelOptions}

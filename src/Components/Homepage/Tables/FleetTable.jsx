@@ -4,6 +4,7 @@ import moment from "moment";
 import api from "../../../apiConfig";
 import { toast } from "react-toastify";
 import DateInput from "./DateInput";
+import EngineOperatingSettingModal from "./EngineOperatingSettingModal";
 import {
     METRICS_CACHE_KEY_PREFIX,
     METRICS_CACHE_TTL_MS,
@@ -164,6 +165,7 @@ const getOwnershipOptions = (asset) => {
 };
 
 const FleetTable = () => {
+    const [showOperatingSettings, setShowOperatingSettings] = useState(false);
     const [months, setMonths] = useState([]);
     const [selectedMonth, setSelectedMonth] = useState("");
     const [selectedMetric, setSelectedMetric] = useState("bh");
@@ -475,6 +477,7 @@ const FleetTable = () => {
 
     return (
         <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-900 rounded-xl font-sans">
+            {showOperatingSettings && <EngineOperatingSettingModal onClose={() => setShowOperatingSettings(false)} />}
             {/* Header & Toolbars */}
             <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-6">
                 <div className="flex items-center justify-between">
@@ -484,6 +487,7 @@ const FleetTable = () => {
                         </h2>
                     </div>
                     <div className="flex gap-3">
+                        <button onClick={() => setShowOperatingSettings(true)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm dark:border-slate-600">Engine operating setting</button>
 
                         <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-base font-medium text-white bg-emerald-600 hover:bg-emerald-700 shadow-md transition-all disabled:opacity-70">
                             <Save size={18} /> {isSaving ? "Saving..." : "Save Fleet Data"}

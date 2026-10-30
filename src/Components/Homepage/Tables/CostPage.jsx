@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import api from "../../../apiConfig";
+import FlightCategorySelect from "./FlightCategorySelect";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -296,6 +297,7 @@ const CostPage = () => {
     });
 
     const [filters, setFilters] = useState({
+        category: "Planned",
         label: LABEL_OPTIONS[2],
         periodicity: PERIODICITY_OPTIONS[2],
         from: [], to: [], sector: [], sn: [], flight: [], variant: [], userTag1: [], userTag2: [],
@@ -531,6 +533,7 @@ const CostPage = () => {
 
     return (
         <div className="w-full h-full p-6 space-y-6 flex flex-col min-h-[calc(100vh-180px)]">
+            <FlightCategorySelect value={filters.category} onChange={category => setFilters(previous => ({ ...previous, category }))} />
 
             {/* --- TOP HEADER & ACTIONS --- */}
             <div className="flex justify-between items-center w-full">

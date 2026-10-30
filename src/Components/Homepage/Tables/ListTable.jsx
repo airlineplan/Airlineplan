@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import api from "../../../apiConfig";
+import FlightCategorySelect from "./FlightCategorySelect";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -284,6 +285,7 @@ const ListTable = () => {
 
   // Filters
   const [filters, setFilters] = useState({
+    category: "Planned",
     label: LABEL_OPTIONS[2], // Both
     periodicity: PERIODICITY_OPTIONS[2], // Monthly
     metric: METRIC_OPTIONS[0], // Departures
@@ -303,7 +305,7 @@ const ListTable = () => {
     const getDropdownData = async () => {
       try {
         const response = await api.get(
-          `/dashboard/populateDropDowns`
+          `/dashboard/populateDropDowns`, { params: { category: filters.category } }
         );
         if (response.data) {
           setDropdownOptions(prev => ({
@@ -323,7 +325,7 @@ const ListTable = () => {
       }
     };
     getDropdownData();
-  }, []);
+  }, [filters.category]);
 
   const fetchListData = async () => {
     try {
@@ -580,6 +582,7 @@ const ListTable = () => {
             <LayoutDashboard size={14} /> Filter Criteria
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+            <FlightCategorySelect value={filters.category} onChange={value => updateFilter("category", value)} />
             <SingleSelectDropdown placeholder="Label" options={LABEL_OPTIONS} selected={filters.label} onChange={(v) => updateFilter('label', v)} />
             <SingleSelectDropdown placeholder="Periodicity" options={PERIODICITY_OPTIONS} selected={filters.periodicity} onChange={(v) => updateFilter('periodicity', v)} />
             <MultiSelectDropdown placeholder="From" options={dropdownOptions.from} selected={filters.from} onChange={(v) => updateFilter('from', v)} />

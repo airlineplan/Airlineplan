@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { ChevronDown, Calendar, Globe2, MapPin, Search, ArrowUp, ArrowDown } from "lucide-react";
 import api from "../../../apiConfig";
+import FlightCategorySelect from "./FlightCategorySelect";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -135,6 +136,7 @@ const TimelineGrid = () => (
 
 // --- MAIN COMPONENT ---
 const ViewPage = () => {
+  const [category, setCategory] = useState("Planned");
   const [mode, setMode] = useState("Rotations");
   const [stationCode, setStationCode] = useState("DEL");
   const [stationsData, setStationsData] = useState([]);
@@ -195,7 +197,7 @@ const ViewPage = () => {
 
       // 2️⃣ After completion → reload current view data
       const response = await api.get("/view-page-data", {
-        params: { mode, station: stationCode, weekStart: formattedTimelineStart || weekStart, viewTimezone: timezone }
+        params: { mode, station: stationCode, weekStart: formattedTimelineStart || weekStart, viewTimezone: timezone, category }
       });
 
       setData(response.data?.rows || []);
@@ -282,7 +284,7 @@ const ViewPage = () => {
       try {
         const accessToken = localStorage.getItem("accessToken");
         const response = await api.get("/view-page-data", {
-          params: { mode, station: stationCode, weekStart: formattedTimelineStart, viewTimezone: timezone }
+          params: { mode, station: stationCode, weekStart: formattedTimelineStart, viewTimezone: timezone, category }
         });
 
         setData(response.data?.rows || []);
@@ -294,7 +296,7 @@ const ViewPage = () => {
     };
 
     fetchData();
-  }, [mode, stationCode, weekStart, formattedTimelineStart, timezone, timezoneReady]);
+  }, [mode, stationCode, weekStart, formattedTimelineStart, timezone, timezoneReady, category]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -352,7 +354,8 @@ const ViewPage = () => {
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 p-2 sm:p-4 rounded-xl relative text-slate-800 dark:text-slate-200">
 
-      <div className="flex justify-end mb-2">
+      <div className="flex items-center justify-end gap-4 mb-2">
+        <FlightCategorySelect value={category} onChange={setCategory} />
         <button
           onClick={handleCreateConnections}
           disabled={creatingConnections}

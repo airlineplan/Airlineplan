@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import api from "../../../apiConfig";
+import FlightCategorySelect from "./FlightCategorySelect";
+import ActualsUploadButton from "./ActualsUploadButton";
+import { FLIGHT_COST_COLUMNS } from "./flightCostColumns";
 import moment from "moment";
 import debounce from "lodash.debounce";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +22,7 @@ function cn(...inputs) {
 // Notice the added `id` fields to guarantee unique React Keys, 
 // and `formatAsTime` added to the FT column.
 const COLUMNS_CONFIG = [
+  { id: 'category', key: 'category', label: 'Category', minWidth: '110px', filterable: false },
   { id: 'date', key: 'date', label: 'Date', minWidth: '100px', isDate: true },
   { id: 'day', key: 'day', label: 'Day', minWidth: '80px' },
   { id: 'flight', key: 'flight', label: 'Flight #', minWidth: '100px' },
@@ -172,11 +176,12 @@ const FlgtsTable = ({ isMaster = true, showCostColumns = true }) => {
   const rowsPerPage = 10;
   const [totalFlights, setTotalFlights] = useState(0);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "Up" });
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState({ category: "Planned" });
 
   const visibleColumns = useMemo(() => {
-    return COLUMNS_CONFIG.filter(col => isMaster || !col.masterOnly)
-      .filter(col => showCostColumns || !COST_COLUMN_KEYS.has(col.key));
+    const columns = [...COLUMNS_CONFIG, ...FLIGHT_COST_COLUMNS.filter(column => !COLUMNS_CONFIG.some(existing => existing.key === column.key))];
+    return columns.filter(col => isMaster || !col.masterOnly)
+      .filter(col => showCostColumns || !(COST_COLUMN_KEYS.has(col.key) || FLIGHT_COST_COLUMNS.some(column => column.key === col.key)));
   }, [isMaster, showCostColumns]);
 
   const fetchFlights = useCallback(async (page, limit, currentFilters) => {
@@ -240,13 +245,14 @@ const FlgtsTable = ({ isMaster = true, showCostColumns = true }) => {
     setDownloading(true);
     try {
       const response = await api.get("/downloadFLGTs", {
+          params: { category: filters.category },
         responseType: "blob"
       });
 
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "FLGTs.xlsx");
+      link.setAttribute("download", `FLGTs_${filters.category || "Planned"}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -325,7 +331,9 @@ const FlgtsTable = ({ isMaster = true, showCostColumns = true }) => {
   return (
     <div className="w-full p-6 space-y-4 font-sans">
       {isMaster && (
-        <div className="flex justify-end p-1">
+        <div className="flex flex-wrap items-center justify-end gap-4 p-1">
+          <FlightCategorySelect value={filters.category} onChange={category => { setFilters(previous => ({ ...previous, category })); setCurrentPage(1); }} />
+          <ActualsUploadButton onComplete={() => { setFilters(previous => ({ ...previous, category: "Actual" })); setCurrentPage(1); }} />
           <button
             onClick={handleDownload}
             disabled={downloading}

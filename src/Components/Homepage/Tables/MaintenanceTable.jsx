@@ -376,7 +376,7 @@ const MaintenanceDashboard = () => {
             const pn = String(row.pn || "").trim();
             const snBn = String(row.snBn || "").trim();
 
-            if (!msnEsn || !pn || !snBn) {
+            if (!pn || !snBn) {
                 return;
             }
 
@@ -1590,7 +1590,7 @@ const MaintenanceDashboard = () => {
                                                         className="flex items-center justify-center gap-1 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors group"
                                                         onClick={() => handleModalSort("msnEsn")}
                                                     >
-                                                        MSN/ESN
+                                                        MSN/ESN/SN
                                                         {modalSortConfig.key === "msnEsn" ? (
                                                             modalSortConfig.direction === "Up" ? <ArrowUp size={12} /> : <ArrowDown size={12} />
                                                         ) : (
@@ -1883,7 +1883,7 @@ const MaintenanceDashboard = () => {
                                             </th>
                                             <th className="p-2 font-semibold text-slate-600 dark:text-slate-300 text-sm border-r border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-w-[140px]" onClick={() => handleRotablesSort('msn')}>
                                                 <div className="flex justify-between items-center group">
-                                                    MSN {rotablesSortConfig.key === 'msn' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
+                                                    on MSN/ESN/SN {rotablesSortConfig.key === 'msn' && (rotablesSortConfig.direction === 'Up' ? <ArrowUp size={12} className="text-indigo-500" /> : <ArrowDown size={12} className="text-indigo-500" />)}
                                                 </div>
                                                 <TableInput name="msn" value={rotablesFilters.msn} onChange={handleRotablesFilterChange} placeholder="Filter MSN..." />
                                             </th>
@@ -1936,7 +1936,7 @@ const MaintenanceDashboard = () => {
                                                         {isEditingRotables || row.isNew ? <input type="text" value={row.acftRegn || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'acftRegn', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.acftRegn}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
-                                                        {isEditingRotables || row.isNew ? <input type="text" value={row.position || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'position', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.position}
+                                                        {isEditingRotables || row.isNew ? <input type="text" title="Leave Position blank for parts other than engines." placeholder="Optional" value={row.position || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'position', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.position}
                                                     </td>
                                                     <td className="p-2 text-center border-r border-slate-200/50 dark:border-slate-700/50">
                                                         {isEditingRotables || row.isNew ? <input type="text" value={row.removedSN || ""} onChange={(e) => handleRotablesFieldChange(row.id, 'removedSN', e.target.value)} className={`${modalEditableInputClass} text-center`} /> : row.removedSN}

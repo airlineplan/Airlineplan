@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Save, Plus, Edit2, Check, Trash2, ArrowUp, ArrowDown, Download } from "lucide-react";
+import SeverityMatrixModal from "./SeverityMatrixModal";
+import InvoiceUploadWizard from "./InvoiceUploadWizard";
 import * as XLSX from "xlsx";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -318,6 +320,7 @@ const hasMaintenanceSettingContent = (row = {}) => (
     "msn",
     "setBalance",
     "setRate",
+    "setRateType",
     "annualEscalation",
     "annualEscl",
     "anniversaryDate",
@@ -576,7 +579,7 @@ const generateMaintenanceReserveScheduleRows = (settingsRows = [], existingRows 
     generateMaintenanceMonthlyDates(row.asOnDate, row.endDate || row.asOnDate).forEach((cursor) => {
       const date = formatDateKey(cursor);
       const driver = normalizeMaintenanceSettingsDriver(row.driver);
-      const rate = escalateRate(row, cursor);
+      const rate = row.setRateType === "SM" ? "" : escalateRate(row, cursor);
       const driverValue = driver === "MONTH"
         ? getMaintenanceMonthlyFactor(cursor, row.asOnDate, row.endDate)
         : 0;
@@ -622,8 +625,18 @@ const generateMaintenanceReserveScheduleRows = (settingsRows = [], existingRows 
       }));
   });
 
+  const identity = row => [normalizeText(row.mrAccId), normalizeText(row.sn || row.msn), toIsoDate(row.date) || row.date, normalizeText(row.transactionType)].join("|");
+  const lockedRows = (Array.isArray(existingRows) ? existingRows : []).filter(row => row.invoiceLocked);
+  const lockedByIdentity = new Map(lockedRows.map(row => [identity(row), row]));
+  const seen = new Set();
+  const preservedRows = rows.map(row => {
+    const key = identity(row);
+    seen.add(key);
+    return lockedByIdentity.get(key) || row;
+  });
+  lockedRows.forEach(row => { if (!seen.has(identity(row))) preservedRows.push(row); });
   const balances = new Map();
-  return normalizeMaintenanceReserveScheduleRows(rows).map((row) => {
+  return normalizeMaintenanceReserveScheduleRows(preservedRows).map((row) => {
     const key = [normalizeText(row.mrAccId), normalizeText(row.sn || row.msn)].join("|");
     if (normalizeText(row.transactionType) === "OPENING BALANCE") {
       const balance = toNumeric(row.balance ?? row.closingBalance ?? row.openingBalance);
@@ -2083,7 +2096,7 @@ function EditableTable({
 
   const handleEdit = (index, row) => {
     setEditingIndex(index);
-    setEditRow(normalizeSelectRow(row));
+    setEditRow(normalizeSelectRow({ ...row, ...(row.mrAccId ? { previousMrAccId: row.previousMrAccId || row.mrAccId } : {}) }));
   };
 
   const handleSave = (index) => {
@@ -2245,7 +2258,11 @@ function EditableTable({
                         highlightAutoFields && autoFields.has(col.key) && "bg-emerald-50/70 dark:bg-emerald-900/20"
                       )}
                     >
-                      {isEditing && !readOnly ? (
+                      {col.renderCell ? col.renderCell(isEditing && !readOnly ? (isInitialBlank ? row : editRow) : row, changes => {
+                        const next = { ...(isEditing && !isInitialBlank ? editRow : row), ...changes };
+                        setData(tableRows.map((item, i) => i === index ? next : item));
+                        if (isEditing) setEditRow(next);
+                      }) : isEditing && !readOnly ? (
                         col.type === "select" ? (
                           <SelectInput
                             value={isInitialBlank ? row[col.key] : editRow[col.key]}
@@ -2465,7 +2482,9 @@ function CompactEditableTable({ title, columns, data, setData, className, addLab
 // --- Main Modal Component ---
 
 export default function CostInputModal({ isOpen, onClose, onSaved }) {
-  useEscapeKey(isOpen, onClose);
+  const [severitySetting, setSeveritySetting] = useState(null);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  useEscapeKey(isOpen && !severitySetting && !invoiceOpen, onClose);
 
   // === FUEL STATE ===
   const [fuelConsum, setFuelConsum] = useState([]);
@@ -2682,7 +2701,7 @@ export default function CostInputModal({ isOpen, onClose, onSaved }) {
     });
   }, [isOpen, masterDateRange.minDate]);
 
-  const handleSave = async () => {
+  const handleSave = async (options = {}) => {
     try {
       const missingApuStationIndex = (Array.isArray(apuUsage) ? apuUsage : []).findIndex((row) => {
         const addlnUse = String(row?.addlnUse || "N").trim().toUpperCase();
@@ -2758,14 +2777,17 @@ export default function CostInputModal({ isOpen, onClose, onSaved }) {
         otherDoc
       };
 
-      await api.post("/cost-config", payload);
+      const saved = await api.post("/cost-config", payload);
+      if (saved.data.data?.maintenanceReserveSchedule) setMaintenanceReserveSchedule(normalizeMaintenanceReserveScheduleRows(saved.data.data.maintenanceReserveSchedule));
       await api.post("/apu-fuel-costs/rebuild");
       toast.success("Cost logic configurations saved successfully!");
       onSaved?.();
-      onClose();
+      if (!options.keepOpen) onClose();
+      return true;
     } catch (err) {
       console.error("Error saving cost config", err);
       toast.error("Failed to save cost configurations");
+      return false;
     }
   };
 
@@ -2866,10 +2888,11 @@ export default function CostInputModal({ isOpen, onClose, onSaved }) {
       ["openingBalance", "Opening bal"],
       ["closingBalance", "Closing bal"],
       ["ccy", "CCY"],
+      ["invoiceSource", "Source"],
     ];
     const rows = maintenanceReserveSchedule.map((row) =>
       columns.reduce((acc, [key, label]) => {
-        acc[label] = row[key] ?? "";
+        acc[label] = key === "invoiceSource" ? (row.invoiceLocked ? "Invoice" : "Generated") : row[key] ?? "";
         return acc;
       }, {})
     );
@@ -2888,6 +2911,8 @@ export default function CostInputModal({ isOpen, onClose, onSaved }) {
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6">
+          {severitySetting && <SeverityMatrixModal setting={severitySetting} beforeSave={() => handleSave({ keepOpen: true })} onClose={() => setSeveritySetting(null)} onSaved={rows => setMaintenanceReserveSchedule(normalizeMaintenanceReserveScheduleRows(rows))} />}
+          {invoiceOpen && <InvoiceUploadWizard settings={leasedReserve} onClose={() => setInvoiceOpen(false)} onSaved={rows => { setMaintenanceReserveSchedule(normalizeMaintenanceReserveScheduleRows(rows)); onSaved?.(); }} />}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -2988,7 +3013,15 @@ export default function CostInputModal({ isOpen, onClose, onSaved }) {
                     { label: "PN", key: "pn" },
                     { label: "SN", key: "sn" },
                     { label: "Set balance", key: "setBalance", type: "number" },
-                    { label: "Set rate", key: "setRate", type: "number" },
+                    { label: "Set rate", key: "setRate", type: "number", renderCell: (row, change) => <div className="group flex min-w-[130px] items-center gap-2">
+                      {row.setRateType === "SM" ? <><button className="font-semibold text-indigo-600 underline" onClick={() => setSeveritySetting(row)}>SM</button><button className="text-xs underline" onClick={() => change({ setRateType: "VALUE", setRate: "" })}>Use value</button></> : <>
+                        <input aria-label={`Set rate ${row.mrAccId || "new account"}`} className="w-20 rounded border border-slate-300 bg-transparent px-2 py-1" type="number" min="0" value={row.setRate ?? ""} onChange={event => change({ setRate: event.target.value, setRateType: "VALUE" })} />
+                        <button className="text-xs font-semibold text-indigo-600 opacity-0 underline group-hover:opacity-100 group-focus-within:opacity-100" onClick={async () => {
+                          if (!String(row.mrAccId || "").trim()) return toast.warning("Enter an MR Acc ID before selecting SM.");
+                          const next = { ...row, setRateType: "SM", setRate: 0 }; change(next); setSeveritySetting(next);
+                          try { const response = await api.get("/fleet"); if (!(response.data.data || []).some(asset => asset.category === "Engine" && String(asset.sn).trim().toUpperCase() === String(row.sn || "").trim().toUpperCase())) toast.warning("This SN is not an Engine in Fleet. Severity Matrix lookup uses the ESN."); } catch { /* API access errors are reported by the shared client. */ }
+                        }}>SM</button></>}
+                    </div> },
                     { label: "As on date", key: "asOnDate", type: "date", defaultValue: masterDateRange.minDate, readOnly: true },
                     {
                       label: "CCY",
@@ -3017,6 +3050,7 @@ export default function CostInputModal({ isOpen, onClose, onSaved }) {
                 />
                 <div>
                   <div className="flex justify-end gap-2 -mb-2">
+                    <button onClick={async () => { if (await handleSave({ keepOpen: true })) setInvoiceOpen(true); }} className="rounded border border-slate-300 px-3 py-2 text-sm dark:border-slate-700">Upload Invoice</button>
                     <button
                       onClick={downloadMaintenanceReserveSchedule}
                       className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-800"
@@ -3045,7 +3079,7 @@ export default function CostInputModal({ isOpen, onClose, onSaved }) {
                       { label: "PN", key: "pn" },
                       { label: "SN", key: "sn" },
                       { label: "Driver", key: "driver" },
-                      { label: "Rate", key: "rate", type: "number" },
+                      { label: "Rate", key: "rate", type: "number", renderCell: row => <span title={row.invoiceLocked ? `${row.invoiceFileName || "Invoice"} · ${row.invoiceAppliedAt || ""} · ${row.invoiceStatus || ""}` : row.smDetail ? JSON.stringify(row.smDetail) : ""}>{row.invoiceLocked && "🔒 "}{row.rate ?? ""}{row.invoiceLocked && <span className="ml-1 text-xs text-indigo-600">Invoice</span>}</span> },
                       { label: "Driver value", key: "driverValue", type: "number" },
                       { label: "Contribution", key: "contribution", type: "number" },
                       { label: "Drawdown", key: "drawdown", type: "number" },
