@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { ChevronDown, Calendar, Globe2, MapPin, Search, ArrowUp, ArrowDown } from "lucide-react";
 import api from "../../../apiConfig";
+import { runCreateConnections } from "../../../connectionsApi";
 import FlightCategorySelect from "./FlightCategorySelect";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -193,7 +194,7 @@ const ViewPage = () => {
       const accessToken = localStorage.getItem("accessToken");
 
       // 1️⃣ Create connections
-      await api.get("/createConnections");
+      await runCreateConnections();
 
       // 2️⃣ After completion → reload current view data
       const response = await api.get("/view-page-data", {

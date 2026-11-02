@@ -327,32 +327,52 @@ const ListTable = () => {
     getDropdownData();
   }, [filters.category]);
 
+  // Periodicity and metric only change the client-side pivot, so they must not trigger
+  // a refetch of every flight. Everything else is a server-side filter.
+  const serverFilters = useMemo(() => {
+    // eslint-disable-next-line no-unused-vars
+    const { periodicity, metric, ...rest } = filters;
+    return rest;
+  }, [filters]);
+  const serverFiltersKey = JSON.stringify(serverFilters);
+  const listRequestRef = useRef(null);
+
   const fetchListData = async () => {
+    // Cancel an in-flight request so a slow, older response cannot overwrite newer filters.
+    listRequestRef.current?.abort();
+    const controller = new AbortController();
+    listRequestRef.current = controller;
+
     try {
       setLoading(true);
-      const accessToken = localStorage.getItem("accessToken");
 
       const response = await api.post(
         '/list-page-data',
-        filters
+        serverFilters,
+        { signal: controller.signal }
       );
 
       const flightsData = response.data.flights || response.data || [];
       setRawFlights(Array.isArray(flightsData) ? flightsData : []);
 
     } catch (error) {
+      if (controller.signal.aborted) return;
       console.error('Error fetching list data:', error);
       setRawFlights([]);
       toast.error("Failed to load flight data.");
     } finally {
-      setLoading(false);
+      if (listRequestRef.current === controller) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     fetchListData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]);
+  }, [serverFiltersKey]);
+
+  useEffect(() => () => listRequestRef.current?.abort(), []);
 
   // --- PIVOT ALGORITHM (Memoized) ---
 

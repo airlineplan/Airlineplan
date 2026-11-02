@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import api from "../../../apiConfig";
+import { runCreateConnections } from "../../../connectionsApi";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -206,7 +207,7 @@ const ConnectionTable = () => {
       const accessToken = localStorage.getItem("accessToken");
 
       // 1️⃣ Create connections first
-      await api.get("/createConnections");
+      await runCreateConnections();
 
       // 2️⃣ After creation, fetch them
       await fetchConnections();

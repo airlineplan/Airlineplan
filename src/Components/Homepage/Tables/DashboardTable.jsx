@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import api from "../../../apiConfig";
+import { runCreateConnections } from "../../../connectionsApi";
 import FlightCategorySelect from "./FlightCategorySelect";
 import * as XLSX from "xlsx";
 import { AnimatePresence, motion } from "framer-motion";
@@ -1517,10 +1518,17 @@ const DashboardTable = () => {
     return params;
   }, [filters, selectedValues]);
 
+  const dashboardRequestRef = useRef(null);
+
   const fetchData = async () => {
+    // Cancel an in-flight request so a slow, older response cannot overwrite newer filters.
+    dashboardRequestRef.current?.abort();
+    const controller = new AbortController();
+    dashboardRequestRef.current = controller;
+
     try {
       setLoading(true);
-      const response = await api.get("/dashboard", { params: serializedFilters });
+      const response = await api.get("/dashboard", { params: serializedFilters, signal: controller.signal });
       const periods = Array.isArray(response.data?.periods) ? response.data.periods : [];
       const payload = Array.isArray(response.data) ? response.data : Array.isArray(response.data?.data) ? response.data.data : [];
       setBackendPeriods(periods);
@@ -1536,20 +1544,25 @@ const DashboardTable = () => {
         setRiskExposure(response.data.riskExposure || response.data.riskExposureData || { fuel: [], currencies: {} });
       }
     } catch (error) {
+      if (controller.signal.aborted) return;
       console.error("Error fetching dashboard data:", error);
       toast.error("Failed to load dashboard data");
       setData([]);
       setBackendPeriods([]);
       setRiskExposure({ fuel: [], currencies: {} });
     } finally {
-      setLoading(false);
+      if (dashboardRequestRef.current === controller) {
+        setLoading(false);
+      }
     }
   };
+
+  useEffect(() => () => dashboardRequestRef.current?.abort(), []);
 
   const handleUpdateConnections = async () => {
     try {
       setCreatingConnections(true);
-      await api.get("/createConnections");
+      await runCreateConnections();
       toast.success("Connections updated successfully");
       await fetchData();
     } catch (error) {
